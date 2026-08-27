@@ -156,6 +156,7 @@ button,input,select{font-family:var(--font);}
 /* ============ KONFIGIRASYON ============ */
 var APP_PASSWORD = "1201";
 var UNLOCK_KEY = "deka-log-unlocked";
+var LAST_SEEN_NOTIF_KEY = "deka-log-last-seen-notif-count";
 var STORAGE_KEY = "kontwol-container-data-v1";
 
 var COLOR = {
@@ -202,6 +203,7 @@ var TRUCKING_OPTIONS = ["CFC", "CTSA", "MAD"];
 
 var state = {
   unlocked: safeGet(UNLOCK_KEY) === "yes",
+  lastSeenNotifCount: parseInt(safeGet(LAST_SEEN_NOTIF_KEY), 10) || 0,
   gateError: false,
   containers: [],
   bills: [],
@@ -456,7 +458,7 @@ var TAB_TITLE = { dashboard: "Tablo Kontwòl", containers: "Rejis Kontenè", bil
 function renderSidebar(){
   var items = NAV.map(function(item){
     var active = state.tab === item.id;
-    var count = item.id === "notifs" ? state.notifications.length : 0;
+    var count = item.id === "notifs" ? Math.max(0, state.notifications.length - state.lastSeenNotifCount) : 0;
     return '<button class="navitem' + (active ? ' active' : '') + '" data-action="set-tab" data-tab="' + item.id + '">' +
       icon(item.icon, 16) + '<span style="flex:1">' + item.label + '</span>' +
       (count ? '<span class="count">' + count + '</span>' : '') +
@@ -1047,7 +1049,15 @@ document.addEventListener("click", function(e){
   if(!el) return;
   var action = el.getAttribute("data-action");
   var id = el.getAttribute("data-id");
-  if(action === "set-tab"){ state.tab = el.getAttribute("data-tab"); state.search=""; state.filterStatus="tout"; render(); }
+  if(action === "set-tab"){
+    state.tab = el.getAttribute("data-tab");
+    state.search=""; state.filterStatus="tout";
+    if(state.tab === "notifs" && state.lastSeenNotifCount < state.notifications.length){
+      state.lastSeenNotifCount = state.notifications.length;
+      safeSet(LAST_SEEN_NOTIF_KEY, String(state.lastSeenNotifCount));
+    }
+    render();
+  }
   else if(action === "set-filter"){ state.filterStatus = el.getAttribute("data-filter"); render(); }
   else if(action === "confirm-enter"){ confirmEnter(id); }
   else if(action === "unconfirm-enter"){ unconfirmEnter(id); }
