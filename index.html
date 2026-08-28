@@ -208,6 +208,9 @@ var state = {
   unlocked: safeGet(UNLOCK_KEY) === "yes",
   lastSeenNotifCount: parseInt(safeGet(LAST_SEEN_NOTIF_KEY), 10) || 0,
   gateError: false,
+  role: null,
+  driverTrucking: "",
+  driverSelected: {},
   containers: [],
   bills: [],
   notifications: [],
@@ -487,6 +490,7 @@ function renderGate(){
       '<input class="input gate-input" type="password" id="gate-pw" autocomplete="off" />' +
       (state.gateError ? '<div class="gate-err">Non itilizatè oswa modpass pa bon. Eseye ankò.</div>' : '') +
       '<button type="submit" class="gate-btn">Antre</button>' +
+      '<button type="button" class="linklike" data-action="reset-role" style="width:100%;justify-content:center;margin-top:14px">← Tounen</button>' +
     '</form>' +
   '</div>';
 }
@@ -1003,10 +1007,6 @@ function renderApp(){
   else if(state.tab === "rapo") body = renderRapo();
   else if(state.tab === "notifs") body = renderNotifs();
 
-  var toasts = state.toasts.map(function(t){
-    return '<div class="toast">' + icon("check",18,"#fff") + esc(t.message) + '</div>';
-  }).join("");
-
   return '' +
   '<div class="shell">' +
     renderSidebar() +
@@ -1017,18 +1017,131 @@ function renderApp(){
         body +
       '</main>' +
     '</div>' +
-  '</div>' +
-  '<div class="toasts">' + toasts + '</div>';
+  '</div>';
+}
+
+function renderToasts(){
+  var toasts = state.toasts.map(function(t){
+    return '<div class="toast">' + icon("check",18,"#fff") + esc(t.message) + '</div>';
+  }).join("");
+  return '<div class="toasts">' + toasts + '</div>';
+}
+
+/* ============ ENTÈFAS CHOFÈ ============ */
+function renderDriverApp(){
+  var vidContainers = state.containers.filter(function(c){ return containerStatus(c) === "vid"; });
+  var selectedCount = Object.keys(state.driverSelected).filter(function(k){ return state.driverSelected[k]; }).length;
+  var canConfirm = state.driverTrucking && selectedCount > 0;
+
+  var truckingOptions = [""].concat(TRUCKING_OPTIONS).map(function(t){
+    return '<option value="' + t + '"' + (state.driverTrucking === t ? " selected" : "") + '>' + (t === "" ? "— Chwazi trucking ou —" : t) + '</option>';
+  }).join("");
+
+  var rows;
+  if(vidContainers.length === 0){
+    rows = '<div class="empty">' + icon("circle", 22) + '<div>Pa gen kontenè vid disponib kounye a.</div></div>';
+  }else{
+    rows = vidContainers.map(function(c){
+      var bill = state.bills.find(function(b){ return b.id === c.billId; });
+      var checked = !!state.driverSelected[c.id];
+      return '' +
+      '<label class="row" style="cursor:pointer;border-left:4px solid ' + COLOR.vid + (checked ? ';background:#FFF9EC' : '') + '">' +
+        '<input type="checkbox" data-action="driver-toggle-select" data-id="' + c.id + '"' + (checked ? " checked" : "") + ' style="width:18px;height:18px;flex-shrink:0" />' +
+        '<div class="row-min">' +
+          '<span class="plate" style="border-color:' + COLOR.vid + '">' + esc(c.numewo) + '</span>' +
+          '<div class="row-sub">Bill: <strong style="color:var(--navy)">' + (bill ? esc(bill.numewo) : "—") + '</strong></div>' +
+          '<div class="row-sub light">Pwodwi: <strong style="color:var(--muted)">' + (bill && bill.product ? esc(bill.product) : "—") + '</strong></div>' +
+          (c.depo ? '<div class="row-sub light">Depo: <strong style="color:' + COLOR.full + '">' + esc(c.depo) + '</strong></div>' : '') +
+        '</div>' +
+        '<div class="mini">Vid Depi<strong>' + formatDate(c.dateEmpty) + '</strong></div>' +
+      '</label>';
+    }).join("");
+  }
+
+  return '' +
+  '<div style="min-height:100vh;background:var(--bg)">' +
+    '<header style="background:var(--navy);padding:18px 20px;display:flex;align-items:center;gap:12px">' +
+      '<div class="sidebar-logo"><img src="' + LOGO_DATA_URI + '" alt="Deka Group" /></div>' +
+      '<div style="flex:1">' +
+        '<div style="color:#fff;font-weight:800;font-size:16px">DEKA LOG — Chofè</div>' +
+        '<div style="color:var(--steel-light);font-size:11.5px">Konfime depa kontenè vid yo</div>' +
+      '</div>' +
+      '<button class="linklike" data-action="reset-role" style="color:#fff">← Chanje Wòl</button>' +
+    '</header>' +
+    '<main class="content" style="max-width:720px;margin:0 auto">' +
+      '<div class="card" style="margin-bottom:20px">' +
+        '<span class="field-label">Trucking ou</span>' +
+        '<select class="input" id="driver-trucking-select" style="margin-top:6px">' + truckingOptions + '</select>' +
+      '</div>' +
+      '<div class="section-head"><div><div class="eyebrow">' + vidContainers.length + ' kontenè vid</div><h2 class="h2">Chwazi Kontenè w ap Pran</h2></div></div>' +
+      '<div style="display:flex;flex-direction:column;gap:8px;margin-bottom:90px">' + rows + '</div>' +
+    '</main>' +
+    '<div style="position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid var(--line);padding:14px 20px;display:flex;align-items:center;justify-content:space-between;gap:12px;box-shadow:0 -4px 16px rgba(0,0,0,.08)">' +
+      '<span style="font-size:13px;color:var(--muted)">' + selectedCount + ' kontenè chwazi</span>' +
+      '<button class="btn teal" data-action="driver-confirm"' + (canConfirm ? '' : ' disabled') + '>' + icon("check", 15, "#fff") + ' Konfime Depa</button>' +
+    '</div>' +
+  '</div>';
+}
+
+function driverConfirmDeparture(){
+  var trucking = state.driverTrucking;
+  var ids = Object.keys(state.driverSelected).filter(function(k){ return state.driverSelected[k]; });
+  if(!trucking || ids.length === 0) return;
+
+  var takenNumewos = [];
+  state.containers = state.containers.map(function(c){
+    if(ids.indexOf(c.id) === -1) return c;
+    takenNumewos.push(c.numewo);
+    return Object.assign({}, c, { dateLeft: todayISO() });
+  });
+
+  var newNotifs = ids.map(function(id, i){
+    return { id: uid(), billNumewo: "", date: todayISO(), message: "Kontenè " + takenNumewos[i] + " kite ak chofè " + trucking + "." };
+  });
+  state.notifications = newNotifs.concat(state.notifications).slice(0, 200);
+
+  recomputeBills();
+  persist();
+
+  state.driverSelected = {};
+  pushToast(ids.length + " kontenè konfime kite ak " + trucking + ".");
+  render();
+}
+
+function renderRoleSelect(){
+  return '' +
+  '<div class="gate-wrap">' +
+    '<div class="gate-card" style="text-align:center">' +
+      '<div class="gate-brand" style="justify-content:center">' +
+        '<div class="gate-logo"><img src="' + LOGO_DATA_URI + '" alt="Deka Group" /></div>' +
+        '<div class="gate-title">DEKA LOG</div>' +
+      '</div>' +
+      '<div style="font-size:13px;color:var(--muted);margin-bottom:20px">Chwazi kijan ou vle antre</div>' +
+      '<div style="display:flex;flex-direction:column;gap:10px">' +
+        '<button class="btn navy" data-action="choose-role" data-role="admin" style="justify-content:center;padding:14px">Administratè Lojistik</button>' +
+        '<button class="btn teal" data-action="choose-role" data-role="chofe" style="justify-content:center;padding:14px">Chofè</button>' +
+      '</div>' +
+    '</div>' +
+  '</div>';
 }
 
 function render(){
   var root = document.getElementById("root");
   var mainHtml;
-  if(!state.unlocked){ mainHtml = renderGate(); }
-  else if(state.loadingData){ mainHtml = renderLoadingScreen(); }
-  else if(state.loadError){ mainHtml = renderLoadError(); }
-  else{ mainHtml = renderApp(); }
-  root.innerHTML = mainHtml + renderModal();
+  if(state.unlocked){
+    if(state.loadingData){ mainHtml = renderLoadingScreen(); }
+    else if(state.loadError){ mainHtml = renderLoadError(); }
+    else{ mainHtml = renderApp(); }
+  }else if(state.role === "admin"){
+    mainHtml = renderGate();
+  }else if(state.role === "chofe"){
+    if(state.loadingData){ mainHtml = renderLoadingScreen(); }
+    else if(state.loadError){ mainHtml = renderLoadError(); }
+    else{ mainHtml = renderDriverApp(); }
+  }else{
+    mainHtml = renderRoleSelect();
+  }
+  root.innerHTML = mainHtml + renderModal() + renderToasts();
 }
 
 function renderModal(){
@@ -1136,6 +1249,13 @@ document.addEventListener("click", function(e){
   else if(action === "submit-modal"){ submitModal(); }
   else if(action === "print-report"){ downloadReportPDF(el.getAttribute("data-status")); }
   else if(action === "retry-load"){ loadData(); }
+  else if(action === "choose-role"){ state.role = el.getAttribute("data-role"); render(); }
+  else if(action === "reset-role"){ state.role = null; state.driverSelected = {}; state.driverTrucking = ""; state.gateError = false; render(); }
+  else if(action === "driver-toggle-select"){
+    state.driverSelected[id] = !state.driverSelected[id];
+    render();
+  }
+  else if(action === "driver-confirm"){ driverConfirmDeparture(); }
   else if(action === "mark-empty"){ markEmpty(id); }
   else if(action === "undo-empty"){ undoEmpty(id); }
   else if(action === "mark-left"){ markLeft(id); }
@@ -1145,6 +1265,10 @@ document.addEventListener("click", function(e){
 });
 
 document.addEventListener("change", function(e){
+  if(e.target && e.target.id === "driver-trucking-select"){
+    state.driverTrucking = e.target.value;
+    render();
+  }
   if(e.target && e.target.id === "f-billmode"){
     var savedNumewo = document.getElementById("f-numewo") ? document.getElementById("f-numewo").value : "";
     var savedDate = document.getElementById("f-date") ? document.getElementById("f-date").value : "";
@@ -1179,6 +1303,24 @@ document.addEventListener("input", function(e){
     if(s){ s.focus(); var v = s.value; s.value=""; s.value=v; }
   }
 });
+
+function refreshDataSilently(){
+  if(state.modal) return;
+  var active = document.activeElement;
+  if(active && (active.tagName === "INPUT" || active.tagName === "SELECT" || active.tagName === "TEXTAREA")) return;
+  if(!state.unlocked && state.role !== "chofe") return;
+  if(state.loadingData || state.loadError) return;
+  fetch("/api/data")
+    .then(function(r){ if(!r.ok) throw new Error("bad response"); return r.json(); })
+    .then(function(parsed){
+      state.containers = parsed.containers || [];
+      state.bills = parsed.bills || [];
+      state.notifications = parsed.notifications || [];
+      render();
+    })
+    .catch(function(){ /* silent — next poll will retry */ });
+}
+setInterval(refreshDataSilently, 15000);
 
 /* ============ DEMARE ============ */
 render();
