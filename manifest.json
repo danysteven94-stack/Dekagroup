@@ -1,0 +1,17 @@
+{
+  "name": "DEKA LOG — Jesyon Kontenè",
+  "short_name": "DEKA LOG",
+  "description": "Sistèm jesyon kontenè, bill, ak depo pou Deka Group.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#0B2138",
+  "theme_color": "#0B2138",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-maskable-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
