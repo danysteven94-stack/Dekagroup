@@ -7,7 +7,7 @@ module.exports = async function handler(req, res) {
   try {
     if (req.method === "GET") {
       const data = await redis.get(KEY);
-      res.status(200).json(data || { containers: [], bills: [], notifications: [] });
+      res.status(200).json(data || { containers: [], bills: [], notifications: [], inventoryChecks: {} });
       return;
     }
 
@@ -20,6 +20,7 @@ module.exports = async function handler(req, res) {
         containers: Array.isArray(body.containers) ? body.containers : [],
         bills: Array.isArray(body.bills) ? body.bills : [],
         notifications: Array.isArray(body.notifications) ? body.notifications : [],
+        inventoryChecks: (body.inventoryChecks && typeof body.inventoryChecks === "object" && !Array.isArray(body.inventoryChecks)) ? body.inventoryChecks : {},
       };
       await redis.set(KEY, safe);
       res.status(200).json({ ok: true });
