@@ -27,9 +27,16 @@ async function getVapid() {
 
 async function saveSubscription(sub, deviceId, userAgent) {
   if (
-    !sub || typeof sub.endpoint !== "string" || !/^https:\/\//.test(sub.endpoint) ||
-    !sub.keys || typeof sub.keys.p256dh !== "string" || typeof sub.keys.auth !== "string"
+    !sub || typeof sub.endpoint !== "string" || !/^https:\/\//.test(sub.endpoint) || sub.endpoint.length > 1000 ||
+    !sub.keys || typeof sub.keys.p256dh !== "string" || typeof sub.keys.auth !== "string" ||
+    sub.keys.p256dh.length > 200 || sub.keys.auth.length > 100
   ) {
+    throw new Error("Subscription pa valid");
+  }
+  // Only real browser push services are accepted (the server will call this address later).
+  let host = "";
+  try { host = new URL(sub.endpoint).hostname.toLowerCase(); } catch (e) { host = ""; }
+  if (!/(^|\.)(googleapis\.com|mozilla\.com|push\.apple\.com|notify\.windows\.com)$/.test(host)) {
     throw new Error("Subscription pa valid");
   }
   const id = subId(sub.endpoint);

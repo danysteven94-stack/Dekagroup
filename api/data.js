@@ -1,52 +1,55 @@
-const { Redis } = require("@upstash/redis");
-
-const redis = Redis.fromEnv();
-const KEY = "deka-log-data";
-
-// Push notifications are optional: if anything goes wrong loading them, saving data still works.
-let notifyNew = async function () {};
-try {
-  notifyNew = require("./_lib/push").notifyNew;
-} catch (e) {
-  console.error("push disabled:", e && e.message);
-}
+"use strict";
+const A = require("./_lib/auth");
+const S = require("./_lib/store");
 
 module.exports = async function handler(req, res) {
   try {
     if (req.method === "GET") {
-      const data = await redis.get(KEY);
-      res.status(200).json(data || { containers: [], bills: [], notifications: [], inventoryChecks: {} });
+      const session = await A.requireAuth(req, res, ["admin", "depot", "daily", "chofe"]);
+      if (!session) return;
+      const data = await S.loadData();
+      res.status(200).json(S.viewFor(session.role, data));
       return;
     }
 
     if (req.method === "POST") {
-      let body = req.body;
-      if (typeof body === "string") {
-        try { body = JSON.parse(body); } catch (e) { body = {}; }
-      }
-      const safe = {
-        containers: Array.isArray(body.containers) ? body.containers : [],
-        bills: Array.isArray(body.bills) ? body.bills : [],
-        notifications: Array.isArray(body.notifications) ? body.notifications : [],
-        inventoryChecks: (body.inventoryChecks && typeof body.inventoryChecks === "object" && !Array.isArray(body.inventoryChecks)) ? body.inventoryChecks : {},
-      };
-      let prev = null;
-      try { prev = await redis.get(KEY); } catch (e) { prev = null; }
-      await redis.set(KEY, safe);
+      // Only the administrator can replace the whole data set. Other roles use the targeted actions in /api/act.
+      const session = await A.requireAuth(req, res, ["admin"]);
+      if (!session) return;
 
-      // Send a push to the other devices for every notification that did not exist before this save.
+      let clean;
       try {
-        if (prev) await notifyNew(prev, safe, { host: req.headers.host, deviceId: req.headers["x-device-id"] });
+        clean = S.sanitizeState(A.parseBody(req));
       } catch (e) {
-        console.error("push error:", e && e.message);
+        if (e instanceof S.ValidationError) {
+          res.status(400).json({ error: e.message, code: "invalid_data" });
+          return;
+        }
+        throw e;
       }
 
+      const result = await S.withLock(async function () {
+        const prev = await S.loadData();
+        // Safety net: never let an empty payload wipe existing data.
+        if (clean.containers.length === 0 && prev.containers.length > 0) return { blocked: true };
+        await S.commit(prev, clean, req);
+        return { blocked: false, before: prev.containers.length };
+      });
+
+      if (result.blocked) {
+        await A.audit(req, "data_write_blocked", { reason: "empty_payload" }, session);
+        res.status(409).json({ error: "Sove a bloke: done yo vid. Rechaje paj la.", code: "empty_payload" });
+        return;
+      }
+      await A.audit(req, "data_write", { containers: clean.containers.length, bills: clean.bills.length, before: result.before }, session);
       res.status(200).json({ ok: true });
       return;
     }
 
+    res.setHeader("Allow", "GET, POST");
     res.status(405).json({ error: "Method not allowed" });
   } catch (err) {
-    res.status(500).json({ error: String((err && err.message) || err) });
+    console.error("data error:", err && err.message);
+    res.status(err && err.status ? err.status : 500).json({ error: err && err.status === 503 ? err.message : "Erè sèvè. Eseye ankò.", code: "server_error" });
   }
 };

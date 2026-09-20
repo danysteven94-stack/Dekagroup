@@ -1,4 +1,5 @@
 const { redis, getVapid, saveSubscription, removeSubscription, sendToAll } = require("./_lib/push");
+const A = require("./_lib/auth");
 
 module.exports = async function handler(req, res) {
   res.setHeader("Cache-Control", "no-store");
@@ -10,11 +11,9 @@ module.exports = async function handler(req, res) {
     }
 
     if (req.method === "POST") {
-      let body = req.body;
-      if (typeof body === "string") {
-        try { body = JSON.parse(body); } catch (e) { body = {}; }
-      }
-      body = body && typeof body === "object" ? body : {};
+      const session = await A.requireAuth(req, res, ["admin", "depot", "daily", "chofe"]);
+      if (!session) return;
+      const body = A.parseBody(req);
 
       if (body.action === "subscribe") {
         await saveSubscription(body.subscription, body.deviceId, req.headers["user-agent"]);
@@ -29,6 +28,10 @@ module.exports = async function handler(req, res) {
       }
 
       if (body.action === "test") {
+        if (session.role !== "admin") {
+          res.status(403).json({ error: "Ou pa gen dwa pou aksyon sa a.", code: "forbidden" });
+          return;
+        }
         // small lock so the test button can't be used to spam devices
         const free = await redis.set("deka-log-push-test-lock", "1", { nx: true, ex: 15 });
         if (!free) {
@@ -51,6 +54,7 @@ module.exports = async function handler(req, res) {
 
     res.status(405).json({ error: "Method not allowed" });
   } catch (err) {
-    res.status(500).json({ error: String((err && err.message) || err) });
+    console.error("push error:", err && err.message);
+    res.status(500).json({ error: "Er\u00E8 s\u00E8v\u00E8. Eseye ank\u00F2." });
   }
 };

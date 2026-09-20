@@ -1,11 +1,14 @@
-const { Redis } = require("@upstash/redis");
+"use strict";
+const A = require("./_lib/auth");
+const { redis } = require("./_lib/redis");
 
-const redis = Redis.fromEnv();
-// Separate key on purpose: the Daily Report interface never touches the logistic data ("deka-log-data").
+// Separate key on purpose: the Daily Report interface keeps its own checks and edits.
 const KEY = "deka-daily-report";
+const ID_RE = /^[A-Za-z0-9_-]{1,64}$/;
+const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 function clean(v, max) {
-  return typeof v === "string" ? v.slice(0, max) : null;
+  return typeof v === "string" ? v.trim().slice(0, max) : null;
 }
 
 function has(o, k) {
@@ -14,6 +17,9 @@ function has(o, k) {
 
 module.exports = async function handler(req, res) {
   try {
+    const session = await A.requireAuth(req, res, ["daily", "admin"]);
+    if (!session) return;
+
     if (req.method === "GET") {
       const data = await redis.get(KEY);
       res.status(200).json({
@@ -24,32 +30,26 @@ module.exports = async function handler(req, res) {
     }
 
     if (req.method === "POST") {
-      let body = req.body;
-      if (typeof body === "string") {
-        try { body = JSON.parse(body); } catch (e) { body = {}; }
-      }
-      body = body && typeof body === "object" ? body : {};
-
-      let cur = null;
-      try { cur = await redis.get(KEY); } catch (e) { cur = null; }
+      const body = A.parseBody(req);
+      const cur = await redis.get(KEY);
       const state = {
-        checks: (cur && cur.checks && typeof cur.checks === "object") ? cur.checks : {},
-        overrides: (cur && cur.overrides && typeof cur.overrides === "object") ? cur.overrides : {},
+        checks: cur && cur.checks && typeof cur.checks === "object" ? cur.checks : {},
+        overrides: cur && cur.overrides && typeof cur.overrides === "object" ? cur.overrides : {},
       };
 
       // Partial patches are merged, so two people saving at the same time do not overwrite each other.
       if (body.checks && typeof body.checks === "object") {
-        Object.keys(body.checks).forEach(function (id) {
-          if (id.length > 64) return;
+        Object.keys(body.checks).slice(0, 500).forEach(function (id) {
+          if (!ID_RE.test(id)) return;
           const v = body.checks[id];
           if (v === null) delete state.checks[id];
-          else if (typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v)) state.checks[id] = v;
+          else if (typeof v === "string" && DATE_RE.test(v)) state.checks[id] = v;
         });
       }
 
       if (body.overrides && typeof body.overrides === "object") {
-        Object.keys(body.overrides).forEach(function (id) {
-          if (id.length > 64) return;
+        Object.keys(body.overrides).slice(0, 500).forEach(function (id) {
+          if (!ID_RE.test(id)) return;
           const p = body.overrides[id];
           if (!p || typeof p !== "object") return;
           const o = Object.assign({}, state.overrides[id]);
@@ -70,8 +70,10 @@ module.exports = async function handler(req, res) {
       return;
     }
 
+    res.setHeader("Allow", "GET, POST");
     res.status(405).json({ error: "Method not allowed" });
   } catch (err) {
-    res.status(500).json({ error: String((err && err.message) || err) });
+    console.error("daily error:", err && err.message);
+    res.status(500).json({ error: "Erè sèvè. Eseye ankò.", code: "server_error" });
   }
 };
