@@ -1,4 +1,4 @@
-var CACHE_NAME = "deka-log-shell-v5";
+var CACHE_NAME = "deka-log-shell-v7";
 var SHELL_FILES = [
   "/",
   "/index.html",

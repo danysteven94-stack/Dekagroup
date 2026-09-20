@@ -2,7 +2,7 @@
 
 ## Sa ki nan plas
 - **Koneksyon bò sèvè**: modpass yo pa nan kòd paj la ankò. Sèvè a verifye yo (hash `scrypt`) epi bay yon sesyon (cookie `HttpOnly`, `Secure`, `SameSite=Strict`).
-- **4 kont**: `logistic` (admin), `depotnord` (depo), `logisticdepot` (daily report), `chofe` (chofè). Chofè a bezwen yon modpass kounye a.
+- **Yon sèl paj koneksyon**: non itilizatè + modpass. Kont lan deside ki interface k ap louvri: `logistic` (admin), `depotnord` (depo), `logisticdepot` (daily report), `chofe` (chofè). Si yon sesyon deja louvri sou aparèy la, paj la ofri bouton "Kontinye kòm ...".
 - **Dwa pa wòl (sèvè a fòse yo)**:
   - admin: li ak ekri tout done yo.
   - depo: li done yo; sèlman "vid" ak "transfè" via `/api/act`.

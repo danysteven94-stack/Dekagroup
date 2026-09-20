@@ -50,7 +50,17 @@ module.exports = async function handler(req, res) {
       return;
     }
 
+    // The gate the person chose must match the account's role (no silent landing in another interface).
+    const wanted = typeof body.role === "string" ? body.role : "";
+    if (wanted && wanted !== account.role) {
+      const labels = { admin: "Administratè Lojistik", depot: "Depo", daily: "Daily Report", chofe: "Chofè" };
+      await A.audit(req, "login_wrong_role", { username: account.username, wanted: wanted });
+      res.status(403).json({ error: "Kont sa a se pou " + (labels[account.role] || account.role) + ", pa pou " + (labels[wanted] || wanted) + ". Retounen epi chwazi bon wòl la.", code: "wrong_role", role: account.role });
+      return;
+    }
+
     await redis.del(kUI);
+    await A.destroySession(req, res); // never reuse a previous session id
     await A.createSession(req, res, account);
     await A.audit(req, "login_ok", { username: account.username }, { username: account.username, role: account.role });
     res.status(200).json({ ok: true, role: account.role, username: account.username });

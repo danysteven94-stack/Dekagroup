@@ -69,7 +69,6 @@ function openPage(b) {
     click(attrs) { this.fire("click", { target: { closest: () => ({ getAttribute: (k) => attrs[k] }) } }); },
     change(props) { this.fire("change", { target: Object.assign({ classList: { contains: () => false }, getAttribute: () => null }, props) }); },
     async login(user, pw, role) {
-      this.click({ "data-action": "choose-role", "data-role": role });
       els["gate-user"] = { value: user }; els["gate-pw"] = { value: pw };
       this.fire("submit", { target: { id: "gate-form" }, preventDefault() {} });
       await this.settle();
@@ -93,7 +92,7 @@ async function test(name, fn) {
   await test("fresh visitor: only the role chooser, no data is requested before login", async () => {
     await H.redis.set("deka-log-data", seed());
     const b = H.browser(); const pg = openPage(b); await pg.settle();
-    assert.ok(pg.has("Daily Report") && pg.has("choose-role"));
+    assert.ok(pg.has('id="gate-form"') && !pg.has("choose-role"), "one single login page, no role buttons");
     assert.ok(!pg.has("FULL0000001"));
   });
 
@@ -115,11 +114,14 @@ async function test(name, fn) {
     pg.click({ "data-action": "toggle-inventory", "data-id": "c1" }); await pg.settle();
     assert.strictEqual((await H.redis.get("deka-log-data")).inventoryChecks.c1, today(), "admin change saved via /api/data");
     pg = openPage(b); await pg.settle(); // reload the page, same browser (cookie)
-    assert.ok(!pg.has("gate-form") && !pg.has("choose-role"), "reload keeps the session");
+    assert.ok(pg.has('id="gate-form"') && pg.has("Kontinye k\u00F2m logistic"), "reload shows the login page with a 'continue as' button");
+    assert.ok(!pg.has("FULL0000001"), "nothing opens by itself");
+    pg.click({ "data-action": "resume-session" }); await pg.settle();
+    assert.ok(!pg.has("gate-form") && pg.has("FULL0000001"), "continue resumes without a password");
     pg.click({ "data-action": "logout" }); await pg.settle();
-    assert.ok(pg.has("choose-role") && !pg.has("FULL0000001"), "back to chooser, data gone from the page");
+    assert.ok(pg.has('id="gate-form"') && !pg.has("FULL0000001"), "back to the login page, data gone from the page");
     pg = openPage(b); await pg.settle();
-    assert.ok(pg.has("choose-role"), "session is dead after logout");
+    assert.ok(pg.has('id="gate-form"') && !pg.has("Kontinye k\u00F2m"), "session is dead after logout");
   });
 
   await test("admin: Sekirite tab shows the activity log and the backups with download links (and stays safe against injected text)", async () => {
@@ -136,6 +138,37 @@ async function test(name, fn) {
     assert.ok(!pg.has("<img src=x"), "attacker-controlled text is escaped");
     pg.click({ "data-action": "sec-filter", "data-filter": "alet" });
     assert.ok(pg.has("Ech\u00E8k koneksyon") && !pg.has("Koneksyon reyisi"), "alerts-only filter");
+  });
+
+  await test("one login page: the account you type decides which interface opens", async () => {
+    await H.redis.set("deka-log-data", seed());
+    const b = H.browser(); const pg = openPage(b); await pg.settle();
+    const which = () => (pg.has("Konfime depa") ? "chofe" : pg.has("Envant\u00E8 jounalye") && pg.has("Daily Report") ? "daily" : pg.has("view-depot-division") ? "depot" : pg.has("set-tab") ? "admin" : pg.has('id="gate-form"') ? "login" : "other");
+    const out = () => { pg.click({ "data-action": "logout" }); return pg.settle(); };
+    assert.strictEqual(which(), "login");
+    await pg.login("logistic", PW.admin); assert.strictEqual(which(), "admin");
+    await out(); assert.strictEqual(which(), "login");
+    await pg.login("depotnord", PW.depot); assert.strictEqual(which(), "depot");
+    await out();
+    await pg.login("chofe", PW.chofe); assert.strictEqual(which(), "chofe");
+    await out();
+    await pg.login("LogisticDepot ", PW.daily); assert.strictEqual(which(), "daily", "username is case/space tolerant");
+    await out();
+    await pg.login("chofe", PW.daily); await new Promise((r) => setTimeout(r, 450));
+    assert.strictEqual(which(), "login", "right username + another account's password opens nothing");
+  });
+
+  await test("switching accounts on the same device: 'continue as' for the open session, or a new login that replaces it", async () => {
+    await H.redis.set("deka-log-data", seed());
+    const b = H.browser(); let pg = openPage(b); await pg.settle();
+    await pg.login("chofe", PW.chofe);
+    assert.ok(pg.has("Konfime depa"));
+    pg = openPage(b); await pg.settle(); // reload
+    assert.ok(pg.has("Kontinye k\u00F2m chofe") && pg.has('id="gate-user"'), "resume button + a form for another account");
+    await pg.login("logisticdepot", PW.daily); // log in as someone else right here
+    assert.ok(pg.has("POKO0000003") && pg.has("Daily Report"), "the other account opens its own interface");
+    const sessions = [...H.store.keys()].filter((k) => k.startsWith("dl:sess:")).length;
+    assert.strictEqual(sessions, 1, "the previous session was destroyed");
   });
 
   await test("depot: marks a container empty and transfers it through /api/act (never sends the whole data set)", async () => {
@@ -158,7 +191,6 @@ async function test(name, fn) {
   await test("chofe now needs a login, only sees Vid containers, and departs through /api/act", async () => {
     await H.redis.set("deka-log-data", seed());
     const b = H.browser(); const pg = openPage(b); await pg.settle();
-    pg.click({ "data-action": "choose-role", "data-role": "chofe" });
     assert.ok(pg.has('id="gate-form"'), "driver gets the login form, not the data");
     assert.ok(!pg.has("VIDD0000002"));
     await pg.login("chofe", PW.chofe, "chofe");
@@ -193,7 +225,7 @@ async function test(name, fn) {
     assert.ok(pg.has("FULL0000001"));
     for (const k of [...H.store.keys()]) if (k.startsWith("dl:sess:")) H.store.delete(k); // server forgets the session
     pg.click({ "data-action": "mark-empty", "data-id": "c1" }); await pg.settle();
-    assert.ok(pg.has("Sesyon an fini"), "toast shown"); assert.ok(pg.has("choose-role") && !pg.has("FULL0000001"));
+    assert.ok(pg.has("Sesyon an fini"), "toast shown"); assert.ok(pg.has('id="gate-form"') && !pg.has("FULL0000001"));
     assert.strictEqual((await H.redis.get("deka-log-data")).containers[0].dateEmpty, null, "nothing was changed");
   });
 

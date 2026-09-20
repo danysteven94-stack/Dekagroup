@@ -72,6 +72,16 @@ async function run() {
     }
   });
 
+  await test("login: the chosen gate must match the account role (no session for a mismatch)", async () => {
+    const b = H.browser();
+    const r = await b.call(login_, { method: "POST", body: { username: "logisticdepot", password: PW.daily, role: "chofe" } });
+    assert.strictEqual(r.statusCode, 403);
+    assert.strictEqual(r.body.code, "wrong_role");
+    assert.ok(!r.headers["set-cookie"] && !b.jar["__Host-dl_sid"]);
+    const ok = await b.call(login_, { method: "POST", body: { username: "logisticdepot", password: PW.daily, role: "daily" } });
+    assert.strictEqual(ok.statusCode, 200);
+  });
+
   await test("login: wrong password / unknown user give the same generic 401", async () => {
     const b = H.browser();
     const a = await b.call(login_, { method: "POST", body: { username: "logistic", password: "nope" } });
