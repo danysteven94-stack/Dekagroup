@@ -19,7 +19,7 @@ process.env.AUTH_CHOFE_PASS = PW.chofe;
 
 const routes = {
   "/api/auth/login": "auth/login", "/api/auth/me": "auth/me", "/api/auth/logout": "auth/logout",
-  "/api/data": "data", "/api/audit": "audit", "/api/backup": "backup", "/api/act": "act", "/api/daily": "daily", "/api/verify": "verify", "/api/push": "push",
+  "/api/data": "data", "/api/audit": "audit", "/api/backup": "backup", "/api/health": "health", "/api/act": "act", "/api/daily": "daily", "/api/verify": "verify", "/api/push": "push",
 };
 const today = () => new Date().toISOString().slice(0, 10);
 const seed = () => ({
@@ -90,14 +90,14 @@ async function test(name, fn) {
   });
 
   await test("fresh visitor: only the role chooser, no data is requested before login", async () => {
-    await H.redis.set("deka-log-data", seed());
+    await H.setData(seed());
     const b = H.browser(); const pg = openPage(b); await pg.settle();
     assert.ok(pg.has('id="gate-form"') && !pg.has("choose-role"), "one single login page, no role buttons");
     assert.ok(!pg.has("FULL0000001"));
   });
 
   await test("wrong password shows the server message; nothing unlocks", async () => {
-    await H.redis.set("deka-log-data", seed());
+    await H.setData(seed());
     const b = H.browser(); const pg = openPage(b); await pg.settle();
     await pg.login("logistic", "wrong", "admin");
     await new Promise((r) => setTimeout(r, 450)); // the server slows wrong answers down on purpose
@@ -107,12 +107,12 @@ async function test(name, fn) {
   });
 
   await test("admin: login, data loads, a change is saved on the server, page reload stays logged in, logout wipes everything", async () => {
-    await H.redis.set("deka-log-data", seed());
+    await H.setData(seed());
     const b = H.browser(); let pg = openPage(b); await pg.settle();
     await pg.login("logistic", PW.admin, "admin");
     assert.ok(pg.has("FULL0000001") || pg.has("Tablo"), "admin dashboard visible");
     pg.click({ "data-action": "toggle-inventory", "data-id": "c1" }); await pg.settle();
-    assert.strictEqual((await H.redis.get("deka-log-data")).inventoryChecks.c1, today(), "admin change saved via /api/data");
+    assert.strictEqual((await H.getData()).inventoryChecks.c1, today(), "admin change saved via /api/data");
     pg = openPage(b); await pg.settle(); // reload the page, same browser (cookie)
     assert.ok(pg.has('id="gate-form"') && pg.has("Kontinye k\u00F2m logistic"), "reload shows the login page with a 'continue as' button");
     assert.ok(!pg.has("FULL0000001"), "nothing opens by itself");
@@ -125,7 +125,7 @@ async function test(name, fn) {
   });
 
   await test("admin: Sekirite tab shows the activity log and the backups with download links (and stays safe against injected text)", async () => {
-    await H.redis.set("deka-log-data", seed());
+    await H.setData(seed());
     const b = H.browser(); const pg = openPage(b); await pg.settle();
     const evil = H.browser("198.51.100.5");
     await evil.call(H.api("auth/login"), { method: "POST", body: { username: "<img src=x onerror=alert(1)>", password: "x" } });
@@ -133,6 +133,7 @@ async function test(name, fn) {
     pg.click({ "data-action": "toggle-inventory", "data-id": "c1" }); await pg.settle(); // a save creates the first backup
     pg.click({ "data-action": "set-tab", "data-tab": "sekirite" }); await pg.settle();
     assert.ok(pg.has("Sekirite ak Aktivite"));
+    assert.ok(pg.has("Baz done: " + (H.BACKEND === "pg" ? "PostgreSQL" : "Redis (ansyen)")), "storage status shown");
     assert.ok(pg.has("Koneksyon reyisi") && pg.has("Ech\u00E8k koneksyon"), "events listed");
     assert.ok(pg.has('href="/api/backup?i=0"') && pg.has("Telechaje"), "backup download link");
     assert.ok(!pg.has("<img src=x"), "attacker-controlled text is escaped");
@@ -141,7 +142,7 @@ async function test(name, fn) {
   });
 
   await test("one login page: the account you type decides which interface opens", async () => {
-    await H.redis.set("deka-log-data", seed());
+    await H.setData(seed());
     const b = H.browser(); const pg = openPage(b); await pg.settle();
     const which = () => (pg.has("Konfime depa") ? "chofe" : pg.has("Envant\u00E8 jounalye") && pg.has("Daily Report") ? "daily" : pg.has("view-depot-division") ? "depot" : pg.has("set-tab") ? "admin" : pg.has('id="gate-form"') ? "login" : "other");
     const out = () => { pg.click({ "data-action": "logout" }); return pg.settle(); };
@@ -159,7 +160,7 @@ async function test(name, fn) {
   });
 
   await test("switching accounts on the same device: 'continue as' for the open session, or a new login that replaces it", async () => {
-    await H.redis.set("deka-log-data", seed());
+    await H.setData(seed());
     const b = H.browser(); let pg = openPage(b); await pg.settle();
     await pg.login("chofe", PW.chofe);
     assert.ok(pg.has("Konfime depa"));
@@ -172,24 +173,24 @@ async function test(name, fn) {
   });
 
   await test("depot: marks a container empty and transfers it through /api/act (never sends the whole data set)", async () => {
-    await H.redis.set("deka-log-data", seed());
+    await H.setData(seed());
     const b = H.browser(); const pg = openPage(b); await pg.settle();
     await pg.login("depotnord", PW.depot, "depot");
     pg.click({ "data-action": "view-depot-division", "data-division": "ACS" }); await pg.settle();
     assert.ok(pg.has("FULL0000001"), "depot sees Full containers");
     pg.click({ "data-action": "mark-empty", "data-id": "c1" }); await pg.settle();
-    let d = await H.redis.get("deka-log-data");
+    let d = await H.getData();
     assert.strictEqual(d.containers[0].dateEmpty, today());
     assert.ok(d.notifications[0].message.includes("FULL0000001"));
     pg.click({ "data-action": "transfer-depo", "data-id": "c2" }); await pg.settle();
     pg.els["modal-depo"] = { value: "Depo Nord" }; pg.els["modal-trucking"] = { value: "MAD" };
     pg.click({ "data-action": "submit-modal" }); await pg.settle();
-    d = await H.redis.get("deka-log-data");
+    d = await H.getData();
     assert.strictEqual(d.containers[1].depo, "Depo Nord");
   });
 
   await test("chofe now needs a login, only sees Vid containers, and departs through /api/act", async () => {
-    await H.redis.set("deka-log-data", seed());
+    await H.setData(seed());
     const b = H.browser(); const pg = openPage(b); await pg.settle();
     assert.ok(pg.has('id="gate-form"'), "driver gets the login form, not the data");
     assert.ok(!pg.has("VIDD0000002"));
@@ -199,26 +200,26 @@ async function test(name, fn) {
     pg.change({ id: "driver-trucking-select", value: "CTSA" });
     pg.click({ "data-action": "driver-toggle-select", "data-id": "c2" });
     pg.click({ "data-action": "driver-confirm" }); await pg.settle();
-    const d = await H.redis.get("deka-log-data");
+    const d = await H.getData();
     assert.strictEqual(d.containers[1].dateLeft, today());
     assert.ok(d.notifications.some((n) => n.message.includes("kite ak chof\u00E8 CTSA")));
     assert.ok(!pg.has("VIDD0000002") || pg.has("Pa gen konten"), "container disappears from the driver's list");
   });
 
   await test("daily report: login, verify button writes the verification to logistic data", async () => {
-    await H.redis.set("deka-log-data", seed());
+    await H.setData(seed());
     const b = H.browser(); const pg = openPage(b); await pg.settle();
     await pg.login("logisticdepot", PW.daily, "daily");
     assert.ok(pg.has("Daily Report") && pg.has("POKO0000003"));
     pg.change({ classList: { contains: (c) => c === "dr-depo-input" }, getAttribute: () => "c3", value: "Depo Q" });
     pg.click({ "data-action": "dr-verify", "data-id": "c3" }); await pg.settle();
-    const d = await H.redis.get("deka-log-data");
+    const d = await H.getData();
     assert.deepStrictEqual([d.containers[2].dateVerified, d.containers[2].depo], [today(), "Depo Q"]);
     assert.deepStrictEqual(d.inventoryChecks, {});
   });
 
   await test("expired / revoked session: the app says so and returns to the chooser, data is wiped from the page", async () => {
-    await H.redis.set("deka-log-data", seed());
+    await H.setData(seed());
     const b = H.browser(); const pg = openPage(b); await pg.settle();
     await pg.login("depotnord", PW.depot, "depot");
     pg.click({ "data-action": "view-depot-division", "data-division": "ACS" }); await pg.settle();
@@ -226,16 +227,16 @@ async function test(name, fn) {
     for (const k of [...H.store.keys()]) if (k.startsWith("dl:sess:")) H.store.delete(k); // server forgets the session
     pg.click({ "data-action": "mark-empty", "data-id": "c1" }); await pg.settle();
     assert.ok(pg.has("Sesyon an fini"), "toast shown"); assert.ok(pg.has('id="gate-form"') && !pg.has("FULL0000001"));
-    assert.strictEqual((await H.redis.get("deka-log-data")).containers[0].dateEmpty, null, "nothing was changed");
+    assert.strictEqual((await H.getData()).containers[0].dateEmpty, null, "nothing was changed");
   });
 
   await test("a stolen non-admin session cannot rewrite the data set from the console", async () => {
-    await H.redis.set("deka-log-data", seed());
+    await H.setData(seed());
     const b = H.browser(); const pg = openPage(b); await pg.settle();
     await pg.login("chofe", PW.chofe, "chofe");
     const r = await b.call(H.api("data"), { method: "POST", body: { containers: [], bills: [] } });
     assert.strictEqual(r.statusCode, 403);
-    assert.strictEqual((await H.redis.get("deka-log-data")).containers.length, 3);
+    assert.strictEqual((await H.getData()).containers.length, 3);
   });
 
   const failed = results.filter((r) => !r[0]);

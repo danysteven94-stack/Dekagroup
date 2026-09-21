@@ -37,3 +37,21 @@ Si w bliye, paj la ka rete blan sou Vercel.
 node tests/security.test.js
 node tests/client.e2e.js
 ```
+
+## Baz done PostgreSQL (rekòmande)
+Tout done yo (konteneur, bill, notifikasyon, verifikasyon) ka viv nan yon vrè baz PostgreSQL, ak yon tab pou chak bagay.
+Si `DATABASE_URL` pa konfigire, aplikasyon an kontinye sèvi ak Redis tankou anvan (anyen pa kase).
+
+**Pou aktive l (yon sèl fwa):**
+1. Vercel > pwojè a > **Storage > Create Database > Neon (Postgres)** > konekte l ak pwojè a. Vercel ajoute `DATABASE_URL` otomatikman. Chwazi menm rejyon ak fonksyon yo.
+2. **Redeploy** pwojè a.
+3. Konekte kòm admin, klike **Sekirite**: ou dwe wè "Baz done: PostgreSQL · ap mache · N konteneur". Tab yo kreye pou kont yo, epi done Redis yo kopye otomatikman yon sèl fwa (kopi Redis la rete entak kòm sekou).
+
+**Sa ki chanje:**
+- Chak ranje gen yon nimewo vèsyon. Si de moun modifye MENM konteneur an menm tan, dezyèm nan resevwa yon mesaj klè epi paj la rafrechi; lòt chanjman yo pa janm efase.
+- Yon paj vye (kache) yo mande pou rafrechi paj la.
+- Redis kontinye sèvi pou sesyon, jounal aktivite, kopi ak notifikasyon push.
+
+**Retounen sou Redis:** retire `DATABASE_URL` epi Redeploy. Atansyon: chanjman ki fèt apre migrasyon an rete nan PostgreSQL sèlman.
+
+**Tès:** `npm test` (kouri tout tès yo sou de kalite baz done; PostgreSQL la simile ak SQLite nan tès yo).

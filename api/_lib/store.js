@@ -1,10 +1,9 @@
 "use strict";
-// Logistic data helpers: validation, locking, backups, business rules and role-based views.
+// Logistic data helpers shared by every storage backend: validation, business rules, role views, backups and push.
 const crypto = require("crypto");
 const { redis } = require("./redis");
 const { audit } = require("./auth");
 
-const KEY = "deka-log-data";
 const BACKUP_KEY = "dl:backups";
 const BACKUP_EVERY_MS = 30 * 60 * 1000;
 const BACKUP_KEEP = 12;
@@ -30,17 +29,6 @@ function newId() {
 
 function emptyData() {
   return { containers: [], bills: [], notifications: [], inventoryChecks: {} };
-}
-
-async function loadData() {
-  const d = await redis.get(KEY);
-  if (!d || typeof d !== "object") return emptyData();
-  return {
-    containers: Array.isArray(d.containers) ? d.containers : [],
-    bills: Array.isArray(d.bills) ? d.bills : [],
-    notifications: Array.isArray(d.notifications) ? d.notifications : [],
-    inventoryChecks: d.inventoryChecks && typeof d.inventoryChecks === "object" && !Array.isArray(d.inventoryChecks) ? d.inventoryChecks : {},
-  };
 }
 
 // ---- same status rules as the app
@@ -108,10 +96,16 @@ function extras(src, known, out) {
   Object.keys(src).forEach(function (k) {
     if (known.indexOf(k) !== -1 || k === "__proto__" || k === "constructor" || k === "prototype") return;
     const v = src[k];
-    if (n >= 10 || k.length > 40) return;
+    if (n >= 10 || k.length > 40 || k.charAt(0) === "_") return;
     if (v === null || typeof v === "boolean" || typeof v === "number") { out[k] = v; n++; }
     else if (typeof v === "string" && v.length <= 200) { out[k] = v; n++; }
   });
+  return out;
+}
+
+// "_h" is the fingerprint of the row as the server sent it; it lets the server tell rows the client did not touch.
+function withHint(src, out) {
+  if (typeof src._h === "string" && /^[a-f0-9]{8,64}$/.test(src._h)) out._h = src._h;
   return out;
 }
 
@@ -131,7 +125,7 @@ function sanitizeState(body) {
     if (seenC[cid]) throw new ValidationError("id konteneur double");
     seenC[cid] = true;
     const known = ["id", "numewo", "billId", "size", "division", "dateEntered", "dateExpected", "dateVerified", "depo", "trucking", "dateEmpty", "dateLeft"];
-    return extras(c, known, {
+    return withHint(c, extras(c, known, {
       id: cid,
       numewo: str(c.numewo, 40, "numewo", true),
       billId: c.billId === null || c.billId === undefined || c.billId === "" ? null : id(c.billId, "billId"),
@@ -144,7 +138,7 @@ function sanitizeState(body) {
       trucking: str(c.trucking, 40, "trucking"),
       dateEmpty: dateOrNull(c.dateEmpty, "dateEmpty"),
       dateLeft: dateOrNull(c.dateLeft, "dateLeft"),
-    });
+    }));
   });
 
   const seenB = {};
@@ -153,12 +147,12 @@ function sanitizeState(body) {
     const bid = id(b.id, "id bill");
     if (seenB[bid]) throw new ValidationError("id bill double");
     seenB[bid] = true;
-    return extras(b, ["id", "numewo", "product", "completedAt"], {
+    return withHint(b, extras(b, ["id", "numewo", "product", "completedAt"], {
       id: bid,
       numewo: str(b.numewo, 60, "numewo bill", true),
       product: str(b.product, 120, "pwodwi"),
       completedAt: dateOrNull(b.completedAt, "completedAt"),
-    });
+    }));
   });
 
   const rawN = Array.isArray(body.notifications) ? body.notifications : [];
@@ -185,30 +179,6 @@ function sanitizeState(body) {
   return { containers: containers, bills: bills, notifications: notifications, inventoryChecks: inventoryChecks };
 }
 
-// ---- locking: one writer at a time, so read-modify-write cycles cannot overwrite each other
-async function withLock(fn) {
-  // The "t" prefix keeps the token from ever looking like a JSON number (Redis clients auto-parse JSON on read).
-  const token = "t" + crypto.randomBytes(8).toString("hex");
-  const lockKey = "dl:lock:data";
-  let got = false;
-  for (let i = 0; i < 40 && !got; i++) {
-    got = !!(await redis.set(lockKey, token, { nx: true, ex: 10 }));
-    if (!got) await new Promise(function (r) { setTimeout(r, 100); });
-  }
-  if (!got) {
-    const e = new Error("Sistèm nan okipe. Eseye ankò.");
-    e.status = 503;
-    throw e;
-  }
-  try {
-    return await fn();
-  } finally {
-    try {
-      if ((await redis.get(lockKey)) === token) await redis.del(lockKey);
-    } catch (e) { /* the lock expires by itself after 10 s */ }
-  }
-}
-
 // ---- backups: keep a rolling snapshot (at most every 30 minutes, last 12)
 async function snapshotIfDue(prev) {
   try {
@@ -223,10 +193,9 @@ async function snapshotIfDue(prev) {
   }
 }
 
-// Saves `next` (must be called inside withLock) and pushes notifications that did not exist before.
-async function commit(prev, next, req) {
+// After a successful save: keep a rolling backup and push the notifications that did not exist before.
+async function afterCommit(prev, next, req) {
   await snapshotIfDue(prev);
-  await redis.set(KEY, next);
   try {
     await notifyNew(prev, next, { host: req.headers.host, deviceId: (req.headers || {})["x-device-id"] });
   } catch (e) {
@@ -249,6 +218,6 @@ function viewFor(role, d) {
 }
 
 module.exports = {
-  KEY, BACKUP_KEY, ValidationError, today, newId, loadData, statusOf, billState, addNotification, recomputeBills,
-  sanitizeState, withLock, snapshotIfDue, commit, viewFor, audit,
+  BACKUP_KEY, ValidationError, today, newId, emptyData, statusOf, billState, addNotification, recomputeBills,
+  sanitizeState, snapshotIfDue, afterCommit, viewFor, audit,
 };

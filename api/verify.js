@@ -1,6 +1,8 @@
 "use strict";
 const A = require("./_lib/auth");
 const S = require("./_lib/store");
+const repo = require("./_lib/repo");
+const { ApiError } = require("./_lib/errors");
 
 // The Daily Report can mark a "Poko Verifye" container as verified in the logistic data.
 // This is the ONLY change it can make there, and it only touches that one container.
@@ -23,25 +25,31 @@ module.exports = async function handler(req, res) {
     if (!id) { res.status(400).json({ error: "Konteneur pa idantifye." }); return; }
     if (!depo) { res.status(400).json({ error: "Depo a obligatwa pou verifye." }); return; }
 
-    const out = await S.withLock(async function () {
-      const prev = await S.loadData();
-      const idx = prev.containers.findIndex(function (c) { return c.id === id; });
-      if (idx === -1) return { status: 404, error: "Pa jwenn konteneur la." };
-      const cur = prev.containers[idx];
-      if (cur.dateVerified) return { status: 200, body: { ok: true, already: true, container: cur } }; // already verified: untouched
-      if (!cur.dateEntered || cur.dateEmpty || cur.dateLeft) return { status: 409, error: "Konteneur sa a pa nan estati Poko Verifye ank\u00F2." };
+    const out = await repo.mutate(async function (data) {
+      const c = data.containers.find(function (x) { return x.id === id; });
+      if (!c) throw new ApiError(404, "not_found", "Pa jwenn konteneur la.");
+      if (c.dateVerified) return { already: true, container: Object.assign({}, c) }; // already verified: untouched
+      if (!c.dateEntered || c.dateEmpty || c.dateLeft) throw new ApiError(409, "wrong_status", "Konteneur sa a pa nan estati Poko Verifye ank\u00F2.");
+      c.dateVerified = date;
+      c.depo = depo;
+      c.trucking = trucking;
+      return { container: Object.assign({}, c), verified: c.numewo };
+    }, { cid: session.username });
 
-      const next = JSON.parse(JSON.stringify(prev));
-      next.containers[idx] = Object.assign({}, cur, { dateVerified: date, depo: depo, trucking: trucking });
-      await S.commit(prev, next, req);
-      return { status: 200, body: { ok: true, container: next.containers[idx] }, verified: cur.numewo };
-    });
-
-    if (out.error) { res.status(out.status).json({ error: out.error }); return; }
-    if (out.verified) await A.audit(req, "verify", { numewo: out.verified }, session);
-    res.status(out.status).json(out.body);
+    if (out.changed) {
+      await S.afterCommit(out.prev, out.blob, req);
+      await A.audit(req, "verify", { numewo: out.info.verified }, session);
+    }
+    const body2 = { ok: true, container: out.info.container };
+    if (out.info.already) body2.already = true;
+    res.status(200).json(body2);
   } catch (err) {
+    if (err instanceof ApiError && err.status !== 503) {
+      res.status(err.status).json({ error: err.message, code: err.code });
+      return;
+    }
     console.error("verify error:", err && err.message);
-    res.status(err && err.status ? err.status : 500).json({ error: err && err.status === 503 ? err.message : "Erè sèvè. Eseye ankò.", code: "server_error" });
+    const busy = err instanceof ApiError && err.status === 503;
+    res.status(busy ? 503 : 500).json({ error: busy ? err.message : "Erè sèvè. Eseye ankò.", code: "server_error" });
   }
 };

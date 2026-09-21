@@ -50,6 +50,13 @@ Module._load = function (request, ...rest) {
 
 const api = (p) => require(path.join(__dirname, "..", "api", p));
 
+// TEST_BACKEND=pg runs every test on the relational (PostgreSQL) layer, backed by SQLite; default is the legacy Redis storage.
+const BACKEND = process.env.TEST_BACKEND === "pg" ? "pg" : "redis";
+const DB = api("_lib/db");
+const { makeSqliteDriver } = require("./sqlite-driver");
+const useBackend = () => DB.setDriver(BACKEND === "pg" ? makeSqliteDriver() : undefined);
+useBackend();
+
 const HOST = "app.example.com";
 
 function makeRes() {
@@ -95,10 +102,13 @@ function browser(ip) {
 }
 
 module.exports = {
-  redis, store, api, browser, HOST,
+  redis, store, api, browser, HOST, BACKEND,
+  async setData(blob) { await api("_lib/repo")._testLoad(blob); },
+  async getData() { return (await api("_lib/repo").readAll()).blob; },
+  async rev() { return (await api("_lib/repo").readAll()).rev; },
   advance(ms) { clock += ms; },
   now() { return clock; },
-  reset() { store.clear(); },
+  reset() { store.clear(); useBackend(); },
 };
 // keep Date.now() in sync with the fake clock
 const realNow = Date.now;

@@ -3,6 +3,8 @@
 // on the freshest data (under a lock), so a stale screen can never overwrite someone else's work.
 const A = require("./_lib/auth");
 const S = require("./_lib/store");
+const repo = require("./_lib/repo");
+const { ApiError } = require("./_lib/errors");
 
 class ActionError extends Error {
   constructor(status, message, code) {
@@ -84,22 +86,20 @@ module.exports = async function handler(req, res) {
       return;
     }
 
-    const out = await S.withLock(async function () {
-      const prev = await S.loadData();
-      const next = JSON.parse(JSON.stringify(prev));
-      const info = def.run(next, body);
-      await S.commit(prev, next, req);
-      return { info: info, data: next };
-    });
+    const out = await repo.mutate(async function (data) {
+      return def.run(data, body);
+    }, { cid: session.username });
+    if (out.changed) await S.afterCommit(out.prev, out.blob, req);
 
     await A.audit(req, "act_" + body.action, out.info, session);
-    res.status(200).json({ ok: true, result: out.info, data: S.viewFor(session.role, out.data) });
+    res.status(200).json({ ok: true, result: out.info, data: Object.assign({}, S.viewFor(session.role, out.view || out.blob), { rev: out.rev }) });
   } catch (err) {
     if (err instanceof ActionError) {
       res.status(err.status).json({ error: err.message, code: err.code });
       return;
     }
     console.error("act error:", err && err.message);
-    res.status(err && err.status ? err.status : 500).json({ error: err && err.status === 503 ? err.message : "Erè sèvè. Eseye ankò.", code: "server_error" });
+    const busy = err instanceof ApiError && err.status === 503;
+    res.status(busy ? 503 : 500).json({ error: busy ? err.message : "Erè sèvè. Eseye ankò.", code: "server_error" });
   }
 };

@@ -21,6 +21,8 @@ async function setup() {
   delete process.env.AUTH_SESSION_EPOCH;
 }
 
+// posts the whole data set like the app does (with the revision it last saw)
+const post = async (b, body, extra) => b.call(H.api("data"), Object.assign({ method: "POST", body: Object.assign({}, body, { rev: await H.rev() }) }, extra || {}));
 const today = () => new Date().toISOString().slice(0, 10);
 const seed = () => ({
   containers: [
@@ -35,7 +37,7 @@ const seed = () => ({
     { id: "b3", numewo: "B-3", product: "Sel", completedAt: null },
   ],
   notifications: [],
-  inventoryChecks: { c1: "2026-09-19" },
+  inventoryChecks: { c1: today() },
 });
 
 async function login(user, role) {
@@ -125,10 +127,10 @@ async function run() {
   });
 
   await test("read access: admin sees all, chofe only Vid containers, others never get admin inventory checks", async () => {
-    await H.redis.set("deka-log-data", seed());
+    await H.setData(seed());
     const admin = await login("logistic", "admin"), chofe = await login("chofe", "chofe"), depot = await login("depotnord", "depot"), dr = await login("logisticdepot", "daily");
     assert.strictEqual((await admin.call(data)).body.containers.length, 4);
-    assert.deepStrictEqual((await admin.call(data)).body.inventoryChecks, { c1: "2026-09-19" });
+    assert.deepStrictEqual((await admin.call(data)).body.inventoryChecks, { c1: today() });
     const c = (await chofe.call(data)).body;
     assert.deepStrictEqual(c.containers.map((x) => x.id), ["c2"]);
     assert.deepStrictEqual(c.bills.map((x) => x.id), ["b1"]);
@@ -138,44 +140,44 @@ async function run() {
   });
 
   await test("write access: only admin can replace the data set", async () => {
-    await H.redis.set("deka-log-data", seed());
+    await H.setData(seed());
     for (const [u, r] of [["depotnord", "depot"], ["logisticdepot", "daily"], ["chofe", "chofe"]]) {
       const b = await login(u, r);
-      assert.strictEqual((await b.call(data, { method: "POST", body: seed() })).statusCode, 403, r);
+      assert.strictEqual((await post(b, seed())).statusCode, 403, r);
     }
     const admin = await login("logistic", "admin");
     const s = seed(); s.containers[0].depo = "Depo Z";
-    assert.strictEqual((await admin.call(data, { method: "POST", body: s })).statusCode, 200);
-    assert.strictEqual((await H.redis.get("deka-log-data")).containers[0].depo, "Depo Z");
+    assert.strictEqual((await post(admin, s)).statusCode, 200);
+    assert.strictEqual((await H.getData()).containers[0].depo, "Depo Z");
   });
 
   await test("admin save: rejects malformed data, wipes and script-like dates", async () => {
-    await H.redis.set("deka-log-data", seed());
+    await H.setData(seed());
     const admin = await login("logistic", "admin");
     let s = seed(); s.containers[0].dateEntered = '<img src=x onerror=alert(1)>';
-    assert.strictEqual((await admin.call(data, { method: "POST", body: s })).statusCode, 400);
+    assert.strictEqual((await post(admin, s)).statusCode, 400);
     s = seed(); s.containers[1].id = "c1";
-    assert.strictEqual((await admin.call(data, { method: "POST", body: s })).statusCode, 400);
+    assert.strictEqual((await post(admin, s)).statusCode, 400);
     s = seed(); s.containers = "nope";
-    assert.strictEqual((await admin.call(data, { method: "POST", body: s })).statusCode, 400);
+    assert.strictEqual((await post(admin, s)).statusCode, 400);
     s = seed(); s.containers = []; s.bills = [];
-    const w = await admin.call(data, { method: "POST", body: s });
+    const w = await post(admin, s);
     assert.strictEqual(w.statusCode, 409, "empty payload must not wipe the data");
-    assert.strictEqual((await H.redis.get("deka-log-data")).containers.length, 4);
+    assert.strictEqual((await H.getData()).containers.length, 4);
   });
 
   await test("admin save keeps unknown short fields, drops nested / oversized junk", async () => {
     const admin = await login("logistic", "admin");
     const s = seed(); s.containers[0].note = "keep me"; s.containers[0].evil = { a: 1 }; s.containers[0].__proto__x = 1;
     s.containers[1].big = "x".repeat(500);
-    assert.strictEqual((await admin.call(data, { method: "POST", body: s })).statusCode, 200);
-    const d = await H.redis.get("deka-log-data");
+    assert.strictEqual((await post(admin, s)).statusCode, 200);
+    const d = await H.getData();
     assert.strictEqual(d.containers[0].note, "keep me");
     assert.ok(!("evil" in d.containers[0]) && !("big" in d.containers[1]));
   });
 
   await test("targeted actions: depot marks empty / transfers, chofe departs; roles cannot cross", async () => {
-    await H.redis.set("deka-log-data", seed());
+    await H.setData(seed());
     const depot = await login("depotnord", "depot"), chofe = await login("chofe", "chofe");
 
     assert.strictEqual((await chofe.call(act, { method: "POST", body: { action: "markEmpty", id: "c1" } })).statusCode, 403);
@@ -185,7 +187,7 @@ async function run() {
 
     const e = await depot.call(act, { method: "POST", body: { action: "markEmpty", id: "c1" } });
     assert.strictEqual(e.statusCode, 200);
-    let d = await H.redis.get("deka-log-data");
+    let d = await H.getData();
     assert.strictEqual(d.containers.find((c) => c.id === "c1").dateEmpty, today());
     assert.ok(d.notifications[0].message.includes("FULL0000001") && d.notifications[0].message.includes("Bill B-1"));
     assert.strictEqual((await depot.call(act, { method: "POST", body: { action: "markEmpty", id: "c1" } })).statusCode, 409, "already empty");
@@ -193,7 +195,7 @@ async function run() {
 
     const t = await depot.call(act, { method: "POST", body: { action: "transfer", id: "c1", depo: "Depo Nord", trucking: "MAD" } });
     assert.strictEqual(t.statusCode, 200);
-    d = await H.redis.get("deka-log-data");
+    d = await H.getData();
     assert.deepStrictEqual([d.containers[0].depo, d.containers[0].trucking], ["Depo Nord", "MAD"]);
     assert.strictEqual((await depot.call(act, { method: "POST", body: { action: "transfer", id: "c1", depo: "" } })).statusCode, 400);
     assert.strictEqual((await depot.call(act, { method: "POST", body: { action: "transfer", id: "c4", depo: "X" } })).statusCode, 409, "already left");
@@ -202,7 +204,7 @@ async function run() {
     assert.strictEqual(dep.statusCode, 200);
     assert.strictEqual(dep.body.result.left, 2, "only the two Vid containers leave (c1 is now empty, c2 empty)");
     assert.ok(!JSON.stringify(dep.body.data).includes("POKO0000003"), "driver never receives non-Vid containers");
-    d = await H.redis.get("deka-log-data");
+    d = await H.getData();
     assert.strictEqual(d.containers.find((c) => c.id === "c3").dateLeft, null);
     assert.strictEqual(d.containers.find((c) => c.id === "c2").dateLeft, today());
     assert.ok(d.bills.find((b) => b.id === "b1").completedAt, "bill B-1 completes when all its containers left");
@@ -212,7 +214,7 @@ async function run() {
   });
 
   await test("daily report: only daily/admin; verify touches only that container", async () => {
-    await H.redis.set("deka-log-data", seed());
+    await H.setData(seed());
     const dr = await login("logisticdepot", "daily"), depot = await login("depotnord", "depot"), chofe = await login("chofe", "chofe");
     assert.strictEqual((await depot.call(daily)).statusCode, 403);
     assert.strictEqual((await chofe.call(verify, { method: "POST", body: { id: "c3", depo: "X" } })).statusCode, 403);
@@ -221,10 +223,10 @@ async function run() {
     assert.strictEqual((await dr.call(verify, { method: "POST", body: { id: "c3" } })).statusCode, 400, "depo required");
     const v = await dr.call(verify, { method: "POST", body: { id: "c3", depo: "Depo Q", trucking: "DNK 003", date: today() } });
     assert.strictEqual(v.statusCode, 200);
-    const d = await H.redis.get("deka-log-data");
+    const d = await H.getData();
     assert.deepStrictEqual([d.containers[2].dateVerified, d.containers[2].depo, d.containers[2].trucking], [today(), "Depo Q", "DNK 003"]);
-    assert.deepStrictEqual(d.containers[0], seed().containers[0]);
-    assert.deepStrictEqual(d.inventoryChecks, { c1: "2026-09-19" });
+    assert.deepStrictEqual([d.containers[0].depo, d.containers[0].trucking, d.containers[0].dateVerified, d.containers[0].dateEmpty], ["Depo A", "CFC", "2026-09-10", null]);
+    assert.deepStrictEqual(d.inventoryChecks, { c1: today() });
     assert.strictEqual((await dr.call(verify, { method: "POST", body: { id: "c4", depo: "X" } })).body.already, true, "already verified stays untouched");
   });
 
@@ -238,11 +240,11 @@ async function run() {
   });
 
   await test("audit + backup are admin only and record what happened", async () => {
-    await H.redis.set("deka-log-data", seed());
+    await H.setData(seed());
     const admin = await login("logistic", "admin"), depot = await login("depotnord", "depot");
-    await depot.call(data, { method: "POST", body: seed() });
+    await post(depot, seed());
     const s = seed(); s.containers[0].depo = "Depo Z";
-    await admin.call(data, { method: "POST", body: s });
+    await post(admin, s);
     assert.strictEqual((await depot.call(audit)).statusCode, 403);
     assert.strictEqual((await depot.call(backup)).statusCode, 403);
     const a = (await admin.call(audit)).body.events.map((e) => e.ev);
@@ -285,17 +287,17 @@ async function run() {
 
   await test("state-changing requests from another origin are refused even with a valid cookie", async () => {
     const b = await login("logistic", "admin");
-    const r = await b.call(data, { method: "POST", body: seed(), headers: { origin: "https://evil.example" } });
+    const r = await post(b, seed(), { headers: { origin: "https://evil.example" } });
     assert.strictEqual(r.statusCode, 403);
-    const r2 = await b.call(data, { method: "POST", body: seed(), headers: { origin: null, "sec-fetch-site": "cross-site" } });
+    const r2 = await post(b, seed(), { headers: { origin: null, "sec-fetch-site": "cross-site" } });
     assert.strictEqual(r2.statusCode, 403);
   });
 
   await test("write rate limit protects an authenticated session", async () => {
-    await H.redis.set("deka-log-data", seed());
+    await H.setData(seed());
     const b = await login("logistic", "admin");
     let last = 0;
-    for (let i = 0; i < 125; i++) last = (await b.call(data, { method: "POST", body: seed() })).statusCode;
+    for (let i = 0; i < 125; i++) last = (await post(b, seed())).statusCode;
     assert.strictEqual(last, 429);
   });
 
