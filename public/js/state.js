@@ -1,0 +1,74 @@
+// The single mutable application state object, plus the id of this browser tab.
+import { LS_LAST_SEEN_NOTIFS } from "./constants.js";
+import { storageGet } from "./utils.js";
+
+export const state = {
+  online: typeof navigator === "undefined" || navigator.onLine !== false,
+  help: false,
+  unlocked: false,
+  depotUnlocked: false,
+  authRole: null,
+  username: "",
+  authChecking: true,
+  gateMsg: "",
+  gateUser: "",
+  gateBusy: false,
+  sessionEnded: false,
+  name: "",
+  needs: null,
+  personal: false,
+  acct: false,
+  gate2fa: false,
+  sessionName: "",
+  sessionNeeds: null,
+  sessionPersonal: false,
+  lastSeenNotifCount: parseInt(storageGet(LS_LAST_SEEN_NOTIFS), 10) || 0,
+  gateError: false,
+  role: null,
+  driverTrucking: "",
+  driverSelected: {},
+  containers: [],
+  bills: [],
+  notifications: [],
+  tab: "dashboard",
+  search: "",
+  filterStatus: "tout",
+  filterBillStatus: "",
+  inventoryChecks: {},
+  inventorySearch: "",
+  billMode: "nouvo",
+  entryMode: "antre",
+  toasts: [],
+  saveErr: false,
+  loadingData: true,
+  loadError: false,
+  loadErrorDetail: "",
+  saveErrorDetail: "",
+  modal: null,
+  confirmModal: null,
+  lastSyncTime: null,
+  push: {
+    supported: false,
+    needsInstall: false,
+    perm: "default",
+    subscribed: false,
+    busy: false,
+    msg: "",
+    dismissed: storageGet("deka-log-push-banner-off") === "1"
+  },
+  pendingGatePassword: ""
+};
+
+export const TAB_ID = Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
+
+state.drUnlocked = false;
+
+state.dr = {
+  checks: {},
+  overrides: {},
+  loaded: false,
+  err: "",
+  search: "",
+  saveErr: false,
+  saveErrorDetail: ""
+};
