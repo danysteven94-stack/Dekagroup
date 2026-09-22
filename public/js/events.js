@@ -90,6 +90,8 @@ document.addEventListener("submit", function (event) {
         state.pendingGatePassword = i;
         state.gateError = false;
         state.gateMsg = "";
+        state.gateCanEmail = !!x.d.canEmail;
+        state.gateEmailMsg = x.d.emailSent ? "Kòd la voye sou imèl ou." : "";
         render();
       } else {
         state.gateError = true;

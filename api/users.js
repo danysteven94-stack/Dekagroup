@@ -1,13 +1,15 @@
 "use strict";
-// Administrator only: create and manage personal accounts.
+// Principal account only: create and manage every other personal account.
 const A = require("./_lib/auth");
 const Users = require("./_lib/users");
 const Secret = require("./_lib/secret");
+const Email = require("./_lib/email");
 const { ApiError } = require("./_lib/errors");
 
 function safe(u) {
   return {
     username: u.username, name: u.name, role: u.role, active: u.active, mustChange: u.mustChange, totpEnabled: u.totpEnabled,
+    email: u.email || null, principal: u.username === A.principalUsername(),
     lastLoginAt: u.lastLoginAt, createdAt: u.createdAt, createdBy: u.createdBy, passChangedAt: u.passChangedAt,
   };
 }
@@ -48,6 +50,10 @@ module.exports = async function handler(req, res) {
     }
     const session = await A.requireAuth(req, res, ["admin"]);
     if (!session) return;
+    if (!A.isPrincipal(session)) {
+      res.status(403).json({ error: "Sèl kont prensipal la ka jere itilizatè yo.", code: "principal_required" });
+      return;
+    }
 
     if (req.method === "GET") {
       const users = await Users.list();
@@ -68,13 +74,15 @@ module.exports = async function handler(req, res) {
     if (action === "create") {
       const role = body.role;
       const name = clean(body.name, 60);
+      const email = typeof body.email === "string" ? body.email.trim().toLowerCase() : "";
       if (!Users.USERNAME_RE.test(target)) throw new ApiError(400, "invalid_username", "Non itilizatè a dwe gen 3 a 32 karaktè (lèt ki piti, chif, pwen, tirè).");
       if (reserved()[target]) throw new ApiError(400, "reserved", "Non sa a rezève pou yon kont pataje. Chwazi yon lòt.");
       if (Users.ROLES.indexOf(role) === -1) throw new ApiError(400, "invalid_role", "Wòl la pa valid.");
       if (name.length < 2) throw new ApiError(400, "invalid_name", "Ekri non konplè moun nan.");
+      if (email && !Email.EMAIL_RE.test(email)) throw new ApiError(400, "invalid_email", "Adrès imèl la pa valid.");
       if (role === "admin" && !Secret.available()) throw new ApiError(503, "no_app_secret", "Pou kreye yon administratè, APP_SECRET dwe konfigire sou sèvè a (2FA obligatwa). Gade SEKIRITE.md.");
       const temp = Users.tempPassword();
-      const u = await Users.create({ username: target, name: name, role: role, passHash: await A.hashPassword(temp), mustChange: true, createdBy: session.username });
+      const u = await Users.create({ username: target, name: name, role: role, email: email || null, passHash: await A.hashPassword(temp), mustChange: true, createdBy: session.username });
       await A.audit(req, "user_create", { username: target, role: role }, session);
       res.status(200).json({ ok: true, user: safe(u), tempPassword: temp });
       return;
@@ -97,6 +105,7 @@ module.exports = async function handler(req, res) {
     if (action === "set_active") {
       const active = body.active === true;
       if (self) throw new ApiError(400, "self", "Ou pa ka dezaktive pwòp kont ou.");
+      if (!active && user.username === A.principalUsername()) throw new ApiError(400, "principal", "Ou pa ka dezaktive kont prensipal la.");
       if (!active && (await wouldLockOut(user.username, false, user.role))) throw new ApiError(409, "last_admin", "Sa ta kite pa gen okenn administratè aktif.");
       await Users.update(user.username, { active: active });
       if (!active) await A.killUserSessions(user.username);
@@ -109,11 +118,21 @@ module.exports = async function handler(req, res) {
       const role = body.role;
       if (Users.ROLES.indexOf(role) === -1) throw new ApiError(400, "invalid_role", "Wòl la pa valid.");
       if (self) throw new ApiError(400, "self", "Ou pa ka chanje pwòp wòl ou.");
+      if (user.username === A.principalUsername() && role !== "admin") throw new ApiError(400, "principal", "Ou pa ka retire wòl administratè kont prensipal la.");
       if (role === "admin" && !Secret.available()) throw new ApiError(503, "no_app_secret", "APP_SECRET dwe konfigire pou fè yon administratè (2FA obligatwa).");
       if (user.role === "admin" && role !== "admin" && (await wouldLockOut(user.username, user.active, role))) throw new ApiError(409, "last_admin", "Sa ta kite pa gen okenn administratè aktif.");
       await Users.update(user.username, { role: role });
       await A.killUserSessions(user.username);
       await A.audit(req, "user_set_role", { username: user.username, from: user.role, to: role }, session);
+      res.status(200).json({ ok: true });
+      return;
+    }
+
+    if (action === "set_email") {
+      const email = typeof body.email === "string" ? body.email.trim().toLowerCase() : "";
+      if (email && !Email.EMAIL_RE.test(email)) throw new ApiError(400, "invalid_email", "Adrès imèl la pa valid.");
+      await Users.update(user.username, { email: email || null });
+      await A.audit(req, "user_set_email", { username: user.username, hasEmail: !!email }, session);
       res.status(200).json({ ok: true });
       return;
     }

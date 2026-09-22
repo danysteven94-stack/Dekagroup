@@ -9,8 +9,7 @@ import { roleLabel } from "./utils.js";
 import {
   finishAccountScreen,
   loadTwoFactor
-} from "./views/account.js";
-import {
+} from "./views/account.js";import {
   loadUsers,
   userAction
 } from "./views/users.js";
@@ -100,18 +99,42 @@ document.addEventListener("submit", function (event) {
       k2.err = er.message;
       render();
     });
+  } else if (id === "acct-email-form") {
+    event.preventDefault();
+    var ae = state.acctEmail = state.acctEmail || { loaded: true, input: "" };
+    var val = document.getElementById("acct-email-input").value.trim();
+    if (ae.busy) {
+      return;
+    }
+    ae.busy = true;
+    ae.err = "";
+    ae.msg = "";
+    render();
+    apiJson("/api/auth/email", { email: val }).then(function (d) {
+      ae.busy = false;
+      ae.email = d.email || "";
+      ae.input = d.email || "";
+      ae.msg = d.email ? "Imèl la sove." : "Imèl la retire.";
+      render();
+    }).catch(function (er) {
+      ae.busy = false;
+      ae.err = er.message;
+      render();
+    });
   } else if (id === "usr-create-form") {
     event.preventDefault();
     var U = state.usr;
     var fm = U.form = U.form || {};
     fm.username = document.getElementById("usr-username").value.trim();
     fm.name = document.getElementById("usr-name").value.trim();
+    fm.email = document.getElementById("usr-email").value.trim();
     fm.role = document.getElementById("usr-role").value;
     fm.err = "";
     apiJson("/api/users", {
       action: "create",
       username: fm.username,
       name: fm.name,
+      email: fm.email,
       role: fm.role
     }).then(function (d) {
       U.temp = {
@@ -121,6 +144,7 @@ document.addEventListener("submit", function (event) {
       U.form = {
         username: "",
         name: "",
+        email: "",
         role: fm.role,
         err: ""
       };
@@ -177,7 +201,37 @@ document.addEventListener("click", function (event) {
     state.pendingGatePassword = "";
     state.gateError = false;
     state.gateMsg = "";
+    state.gateCanEmail = false;
+    state.gateEmailMsg = "";
     render();
+  } else if (a === "gate-send-email-code") {
+    state.gateEmailBusy = true;
+    state.gateEmailMsg = "";
+    render();
+    fetch("/api/auth/login", {
+      method: "POST",
+      credentials: "same-origin",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        username: state.gateUser,
+        password: state.pendingGatePassword,
+        sendEmailCode: true
+      })
+    }).then(function (r) {
+      return r.json().catch(function () {
+        return {};
+      }).then(function (d) {
+        return { ok: r.ok, d: d };
+      });
+    }).then(function (x) {
+      state.gateEmailBusy = false;
+      state.gateEmailMsg = x.ok && x.d && x.d.emailSent ? "Kòd la voye sou imèl ou." : x.d && x.d.error ? x.d.error : "Pa t kapab voye imèl la.";
+      render();
+    }).catch(function () {
+      state.gateEmailBusy = false;
+      state.gateEmailMsg = "Pa ka konekte ak sèvè a.";
+      render();
+    });
   } else if (a === "usr-refresh") {
     loadUsers();
   } else if (a === "usr-dismiss-temp") {
@@ -219,6 +273,17 @@ document.addEventListener("click", function (event) {
         username: u
       });
     }
+  } else if (a === "usr-edit-email") {
+    var current = n.getAttribute("data-email") || "";
+    var next = window.prompt(`Imèl pou ${ u } (pou kòd 2FA). Kite l vid pou retire l.`, current);
+    if (next === null) {
+      return;
+    }
+    userAction({
+      action: "set_email",
+      username: u,
+      email: next.trim()
+    });
   }
 });
 

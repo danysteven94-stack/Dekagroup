@@ -22,6 +22,8 @@ export function logout() {
   state.help = false;
   state.gate2fa = false;
   state.pendingGatePassword = "";
+  state.gateCanEmail = false;
+  state.gateEmailMsg = "";
   state.sessionName = "";
   state.sessionNeeds = null;
   state.rev = undefined;
@@ -88,6 +90,8 @@ export function applyAuth(role, username, name, needs, personal) {
   state.pwf = null;
   state.gate2fa = false;
   state.pendingGatePassword = "";
+  state.gateCanEmail = false;
+  state.gateEmailMsg = "";
   if (state.needs) {
     render();
     if (state.needs === "2fa") {

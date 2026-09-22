@@ -35,6 +35,36 @@ function newTwoFactorState() {
   };
 }
 
+function newAccountEmailState() {
+  return {
+    loaded: false,
+    busy: false,
+    email: "",
+    input: "",
+    msg: "",
+    err: ""
+  };
+}
+
+export function loadAccountEmail() {
+  if (!state.personal) {
+    return;
+  }
+  state.acctEmail = state.acctEmail || newAccountEmailState();
+  apiGet("/api/auth/email").then(function (d) {
+    var k = state.acctEmail;
+    k.loaded = true;
+    k.email = d.email || "";
+    k.input = d.email || "";
+    render();
+  }).catch(function (e) {
+    var k = state.acctEmail = state.acctEmail || newAccountEmailState();
+    k.loaded = true;
+    k.err = e.message;
+    render();
+  });
+}
+
 export function loadTwoFactor() {
   if (!state.personal) {
     state.tf = newTwoFactorState();
@@ -58,12 +88,14 @@ export function loadTwoFactor() {
     state.tf.err = e.message;
     render();
   });
+  loadAccountEmail();
 }
 
 export function finishAccountScreen() {
   state.acct = false;
   state.tf = null;
   state.pwf = null;
+  state.acctEmail = null;
   if (state.lastSyncTime) {
     render();
   } else {
@@ -98,6 +130,13 @@ export function accountView() {
     h += `${ sh("Chanje modpass") }<form id="pw-form"><span class="field-label">Modpass aktyèl${ forced === "password" ? " (modpass tanporè a)" : "" }</span><input class="input" type="password" id="pw-cur" autocomplete="current-password" style="margin-bottom:10px" /><span class="field-label">Nouvo modpass</span><input class="input" type="password" id="pw-new" autocomplete="new-password" style="margin-bottom:10px" /><span class="field-label">Konfime nouvo modpass</span><input class="input" type="password" id="pw-new2" autocomplete="new-password" />${ note("Omwen 10 karaktè. Evite mo ki twò komen oswa non itilizatè a. Chanje l dekonekte lòt aparèy ou yo.") }${ msg(f) }<button type="submit" class="gate-btn"${ f.busy ? " disabled" : "" }>${ f.busy ? "K ap sove..." : "Chanje modpass" }</button></form>`;
   }
   if (forced !== "password") {
+    var ae = state.acctEmail || newAccountEmailState();
+    h += sh("Imèl pou kòd 2FA");
+    if (!ae.loaded) {
+      h += note("K ap chaje...");
+    } else {
+      h += `<form id="acct-email-form"><span class="field-label">Adrès imèl</span><input class="input" type="email" id="acct-email-input" placeholder="non@egzanp.com" value="${ escapeHtml(ae.input || "") }" style="margin-bottom:8px" />${ note("Si w antre yon imèl, ou ka mande yon kòd 2FA voye la a olye w louvri app otantifikasyon an.") }${ msg(ae) }<button type="submit" class="gate-btn" style="background:var(--navy)"${ ae.busy ? " disabled" : "" }>${ ae.busy ? "K ap sove..." : "Sove imèl la" }</button></form>`;
+    }
     h += sh("Otantifikasyon 2 etap (2FA)");
     if (!tf.loaded) {
       h += note("K ap chaje...");

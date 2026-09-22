@@ -15,7 +15,7 @@ function recoveryCode() {
 }
 
 function status(u) {
-  return { enabled: !!u.totpEnabled, pending: !u.totpEnabled && !!u.totpSecretEnc, required: u.role === "admin", recoveryLeft: (u.recovery || []).length };
+  return { enabled: !!u.totpEnabled, pending: !u.totpEnabled && !!u.totpSecretEnc, required: u.role === "admin", recoveryLeft: (u.recovery || []).length, email: u.email || null };
 }
 
 module.exports = async function handler(req, res) {

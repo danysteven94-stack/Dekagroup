@@ -56,7 +56,10 @@ export const state = {
     msg: "",
     dismissed: storageGet("deka-log-push-banner-off") === "1"
   },
-  pendingGatePassword: ""
+  pendingGatePassword: "",
+  gateCanEmail: false,
+  gateEmailBusy: false,
+  gateEmailMsg: ""
 };
 
 export const TAB_ID = Math.random().toString(36).slice(2, 10) + Date.now().toString(36);

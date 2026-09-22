@@ -1,8 +1,10 @@
 "use strict";
+const crypto = require("crypto");
 const A = require("../auth");
 const Users = require("../users");
 const Secret = require("../secret");
 const Totp = require("../totp");
+const Email = require("../email");
 const { redis } = require("../redis");
 const { ApiError } = require("../errors");
 
@@ -71,9 +73,25 @@ module.exports = async function handler(req, res) {
     // Two-step verification (personal accounts that enabled it, and always for admins once enrolled).
     let totpCounter = 0;
     let usedRecovery = null;
+    let usedEmailCode = false;
     if (dbUser && dbUser.totpEnabled) {
+      const rlEmail = "dl:rl:2fa-email:" + username;
+
       if (!code) {
-        res.status(200).json({ needs2fa: true });
+        // The person can ask for the code by email instead of opening their authenticator app.
+        if (body.sendEmailCode === true) {
+          if (!dbUser.email) { res.status(400).json({ error: "Pa gen imèl konfigire pou kont sa a. Mande administratè a ajoute yon adrès imèl.", code: "no_email" }); return; }
+          if (!Email.available()) { res.status(503).json({ error: "Sèvis imèl la pa konfigire sou sèvè a.", code: "email_not_configured" }); return; }
+          if ((await A.count(rlEmail)) >= 3) { res.status(429).json({ error: "Twòp kòd mande. Tann 15 minit.", code: "locked" }); return; }
+          await A.bump(rlEmail, A.LOGIN_WINDOW_SEC);
+          const otp = String(crypto.randomInt(1000000)).padStart(6, "0");
+          await redis.set("dl:2fa:email:" + username, Secret.mac(otp), { ex: 300 });
+          await Email.sendEmail("DEKA LOG — Kòd verifikasyon", "Kòd verifikasyon ou se: " + otp + "\n\nKòd sa a bon pou 5 minit. Pa pataje l ak pesòn.", { also: [dbUser.email] });
+          await A.audit(req, "login_2fa_email_sent", { username: username });
+          res.status(200).json({ needs2fa: true, emailSent: true });
+          return;
+        }
+        res.status(200).json({ needs2fa: true, canEmail: !!dbUser.email });
         return;
       }
       if (!Secret.available()) throw new ApiError(503, "no_app_secret", "APP_SECRET manke sou sèvè a.");
@@ -85,6 +103,14 @@ module.exports = async function handler(req, res) {
         if (dbUser.recovery.indexOf(h) !== -1) usedRecovery = h;
       }
       if (!totpCounter && !usedRecovery) {
+        const emailKey = "dl:2fa:email:" + username;
+        const stored = await redis.get(emailKey);
+        if (stored && stored === Secret.mac(code.replace(/\s+/g, ""))) {
+          usedEmailCode = true;
+          await redis.del(emailKey);
+        }
+      }
+      if (!totpCounter && !usedRecovery && !usedEmailCode) {
         await fail("login_2fa_fail", 401, "Kòd la pa bon.", "bad_code");
         return;
       }
@@ -104,7 +130,7 @@ module.exports = async function handler(req, res) {
       account = { username: legacyAcc.username, name: null, role: legacyAcc.role, src: "env" };
     }
     await A.createSession(req, res, account);
-    await A.audit(req, usedRecovery ? "login_ok_recovery_code" : "login_ok", { username: account.username }, { username: account.username, name: account.name, role: account.role });
+    await A.audit(req, usedRecovery ? "login_ok_recovery_code" : usedEmailCode ? "login_ok_email_code" : "login_ok", { username: account.username }, { username: account.username, name: account.name, role: account.role });
     res.status(200).json({ ok: true, role: account.role, username: account.username, name: account.name, personal: account.src === "db", needs: A.limitedFor(dbUser), roleLabel: ROLE_LABEL[account.role] });
   } catch (err) {
     if (err instanceof ApiError) { res.status(err.status).json({ error: err.message, code: err.code }); return; }

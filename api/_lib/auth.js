@@ -23,6 +23,19 @@ const LIMIT_IP = 30; // failed attempts per IP per window
 const LIMIT_USER = 40; // failed attempts per username per window (distributed attacks)
 const WRITE_LIMIT = 120; // state-changing requests per user per minute
 
+// The single "principal" account: the only one allowed to create, deactivate, or change the role of
+// other accounts. Configured with PRINCIPAL_USERNAME; falls back to the default admin account
+// (AUTH_ADMIN_USER, or "logistic") so the app keeps working if it is never set.
+function principalUsername() {
+  const explicit = process.env.PRINCIPAL_USERNAME;
+  if (explicit) return String(explicit).trim().toLowerCase();
+  return String(process.env.AUTH_ADMIN_USER || "logistic").trim().toLowerCase();
+}
+
+function isPrincipal(session) {
+  return !!session && session.role === "admin" && session.username === principalUsername();
+}
+
 const ROLE_DEFS = [
   { role: "admin", key: "ADMIN", defaultUser: "logistic" },
   { role: "depot", key: "DEPOT", defaultUser: "depotnord" },
@@ -285,4 +298,5 @@ module.exports = {
   COOKIE, ROLE_DEFS, LOGIN_WINDOW_SEC, LIMIT_USER_IP, LIMIT_IP, LIMIT_USER, DUMMY_HASH,
   accounts, hashPassword, verifyPassword, clientIp, createSession, getSession, destroySession,
   sameOrigin, isJson, bump, count, audit, requireAuth, requireSession, parseBody, sleep, killUserSessions, limitedFor,
+  principalUsername, isPrincipal,
 };

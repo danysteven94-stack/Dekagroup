@@ -12,7 +12,7 @@ const USERNAME_RE = /^[a-z0-9][a-z0-9._-]{2,31}$/;
 
 const COLS = [
   ["username", "username"], ["name", "name"], ["role", "role"], ["passHash", "pass_hash"], ["active", "active"],
-  ["mustChange", "must_change"], ["totpSecretEnc", "totp_secret"], ["totpEnabled", "totp_enabled"], ["totpLast", "totp_last"],
+  ["email", "email"], ["mustChange", "must_change"], ["totpSecretEnc", "totp_secret"], ["totpEnabled", "totp_enabled"], ["totpLast", "totp_last"],
   ["recovery", "recovery"], ["createdBy", "created_by"], ["createdAt", "created_at"], ["lastLoginAt", "last_login_at"],
   ["passChangedAt", "pass_changed_at"], ["updatedAt", "updated_at"],
 ];
@@ -80,7 +80,7 @@ async function create(user) {
   guard(true);
   const d = DB.getDriver();
   const u = Object.assign({
-    active: true, mustChange: true, totpSecretEnc: null, totpEnabled: false, totpLast: 0, recovery: [],
+    active: true, email: null, mustChange: true, totpSecretEnc: null, totpEnabled: false, totpLast: 0, recovery: [],
     createdBy: null, createdAt: new Date().toISOString(), lastLoginAt: null, passChangedAt: null, updatedAt: new Date().toISOString(),
   }, user);
   if (d) {

@@ -56,7 +56,7 @@ function getDriver() {
 }
 
 // Portable DDL (same statements run on PostgreSQL in production and on SQLite in the tests).
-const SCHEMA_VERSION = 2;
+const SCHEMA_VERSION = 3;
 const DDL = [
   "CREATE TABLE IF NOT EXISTS meta (name TEXT PRIMARY KEY, value BIGINT NOT NULL)",
   "CREATE TABLE IF NOT EXISTS bills (" +
@@ -77,9 +77,11 @@ const DDL = [
   "CREATE TABLE IF NOT EXISTS inventory_checks (container_id TEXT PRIMARY KEY, checked_on TEXT NOT NULL, rev BIGINT NOT NULL, writer TEXT)",
   "CREATE TABLE IF NOT EXISTS users (" +
     "username TEXT PRIMARY KEY, name TEXT NOT NULL, role TEXT NOT NULL, pass_hash TEXT NOT NULL, " +
-    "active INTEGER NOT NULL DEFAULT 1, must_change INTEGER NOT NULL DEFAULT 1, " +
+    "active INTEGER NOT NULL DEFAULT 1, email TEXT, must_change INTEGER NOT NULL DEFAULT 1, " +
     "totp_secret TEXT, totp_enabled INTEGER NOT NULL DEFAULT 0, totp_last BIGINT NOT NULL DEFAULT 0, recovery TEXT NOT NULL DEFAULT '[]', " +
     "created_by TEXT, created_at TEXT NOT NULL, last_login_at TEXT, pass_changed_at TEXT, updated_at TEXT NOT NULL)",
+  // Existing deployments already had a "users" table before "email" existed; add it if missing (no-op otherwise).
+  "ALTER TABLE users ADD COLUMN IF NOT EXISTS email TEXT",
   "INSERT INTO meta (name, value) VALUES ('rev', 0) ON CONFLICT (name) DO NOTHING",
   "INSERT INTO meta (name, value) VALUES ('migrated', 0) ON CONFLICT (name) DO NOTHING",
 ];

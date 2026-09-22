@@ -11,6 +11,7 @@ const handlers = {
   me: require("./_lib/authHandlers/me"),
   password: require("./_lib/authHandlers/password"),
   "2fa": require("./_lib/authHandlers/2fa"),
+  email: require("./_lib/authHandlers/email"),
 };
 
 module.exports = async function handler(req, res) {
