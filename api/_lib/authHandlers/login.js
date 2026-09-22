@@ -85,8 +85,16 @@ module.exports = async function handler(req, res) {
           if ((await A.count(rlEmail)) >= 3) { res.status(429).json({ error: "Twòp kòd mande. Tann 15 minit.", code: "locked" }); return; }
           await A.bump(rlEmail, A.LOGIN_WINDOW_SEC);
           const otp = String(crypto.randomInt(1000000)).padStart(6, "0");
-          await redis.set("dl:2fa:email:" + username, Secret.mac(otp), { ex: 300 });
-          await Email.sendEmail("DEKA LOG — Kòd verifikasyon", "Kòd verifikasyon ou se: " + otp + "\n\nKòd sa a bon pou 5 minit. Pa pataje l ak pesòn.", { also: [dbUser.email] });
+          try {
+            await redis.set("dl:2fa:email:" + username, Secret.mac(otp), { ex: 300 });
+            await Email.sendEmail("DEKA LOG — Kòd verifikasyon", "Kòd verifikasyon ou se: " + otp + "\n\nKòd sa a bon pou 5 minit. Pa pataje l ak pesòn.", { also: [dbUser.email] });
+          } catch (mailErr) {
+            // Don't let a Resend/redis hiccup surface as an opaque 500 — tell the person clearly
+            // and log the real reason server-side (check it in the Vercel function logs).
+            console.error("2fa email send failed:", mailErr && mailErr.message);
+            res.status(502).json({ error: "Pa t kapab voye imèl la. Verifye RESEND_API_KEY ak EMAIL_FROM sou sèvè a, oswa itilize kòd aplikasyon an olye.", code: "email_send_failed" });
+            return;
+          }
           await A.audit(req, "login_2fa_email_sent", { username: username });
           res.status(200).json({ needs2fa: true, emailSent: true });
           return;
