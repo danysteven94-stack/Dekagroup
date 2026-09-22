@@ -245,21 +245,30 @@ function inventoryView() {
     var sl = statusOf(l);
     return oa[sa] !== oa[sl] ? oa[sa] - oa[sl] : a.numewo < l.numewo ? -1 : 1;
   });
-  var done = items.filter(function (cc) {
+  var pending = items.filter(function (cc) {
+    return state.inventoryChecks[cc.id] !== d;
+  });
+  var confirmed = items.filter(function (cc) {
     return state.inventoryChecks[cc.id] === d;
-  }).length;
-  var rows = items.map(function (cc) {
-    var ck = state.inventoryChecks[cc.id] === d;
+  });
+  function inventoryRow(cc, ck) {
     var st = statusOf(cc);
     var col = st === "full" ? COLORS.rust : st === "vid" ? COLORS.vid : COLORS.pokoverifye;
     var bl = state.bills.find(function (bill) {
       return bill.id === cc.billId;
     });
-    return `<div class="row" style="border-left:4px solid ${ col }${ ck ? ";opacity:.5" : "" }"><div data-action="toggle-inventory" data-id="${ cc.id }" style="cursor:pointer;width:24px;height:24px;border-radius:6px;border:2px solid ${ ck ? COLORS.green : "var(--border)" };background:${ ck ? COLORS.green : "transparent" };display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-right:10px">${ ck ? icon("check", 14, "#fff") : "" }</div><div class="row-min"><span class="plate" style="border-color:${ col }">${ escapeHtml(cc.numewo) }</span><div class="row-sub">${ STATUS_LABELS[st] } · ${ cc.division ? escapeHtml(cc.division) : "\u2014" }</div><div class="row-sub light">${ bl && bl.product ? `Pwodwi: <strong>${ escapeHtml(bl.product) }</strong>` : "" }</div></div><div style="width:150px;flex-shrink:0"><span class="field-label" style="font-size:9.5px">Depo</span><input class="input inv-depo-input" data-id="${ cc.id }" value="${ escapeHtml(cc.depo || "") }" placeholder="Egz. Depo Kòdòn" style="padding:6px 8px;font-size:12.5px" /></div><div style="width:130px;flex-shrink:0;margin-left:8px"><span class="field-label" style="font-size:9.5px">Trucking</span><select class="input inv-trucking-select" data-id="${ cc.id }" style="padding:6px 8px;font-size:12.5px"><option value=""${ cc.trucking ? "" : " selected" }>— Chwazi —</option>${ cc.trucking && TRUCKING_OPTIONS.indexOf(cc.trucking) === -1 ? `<option value="${ escapeHtml(cc.trucking) }" selected>${ escapeHtml(cc.trucking) }</option>` : "" }${ TRUCKING_OPTIONS.map(function (tk) {
+    return `<div class="row" style="border-left:4px solid ${ col }${ ck ? ";opacity:.6" : "" }"><div class="row-min"><span class="plate" style="border-color:${ col }">${ escapeHtml(cc.numewo) }</span><div class="row-sub">${ STATUS_LABELS[st] } · ${ cc.division ? escapeHtml(cc.division) : "\u2014" }</div><div class="row-sub light">${ bl && bl.product ? `Pwodwi: <strong>${ escapeHtml(bl.product) }</strong>` : "" }</div></div><div style="width:150px;flex-shrink:0"><span class="field-label" style="font-size:9.5px">Depo</span><input class="input inv-depo-input" data-id="${ cc.id }" value="${ escapeHtml(cc.depo || "") }" placeholder="Egz. Depo Kòdòn" style="padding:6px 8px;font-size:12.5px" /></div><div style="width:130px;flex-shrink:0;margin-left:8px"><span class="field-label" style="font-size:9.5px">Trucking</span><select class="input inv-trucking-select" data-id="${ cc.id }" style="padding:6px 8px;font-size:12.5px"><option value=""${ cc.trucking ? "" : " selected" }>— Chwazi —</option>${ cc.trucking && TRUCKING_OPTIONS.indexOf(cc.trucking) === -1 ? `<option value="${ escapeHtml(cc.trucking) }" selected>${ escapeHtml(cc.trucking) }</option>` : "" }${ TRUCKING_OPTIONS.map(function (tk) {
       return `<option value="${ tk }"${ cc.trucking === tk ? " selected" : "" }>${ tk }</option>`;
-    }).join("") }</select></div></div>`;
+    }).join("") }</select></div><button class="btn small${ ck ? "" : " ghost" }" data-action="toggle-inventory" data-id="${ cc.id }" style="flex-shrink:0;margin-left:8px;background:${ ck ? COLORS.green : "transparent" };color:${ ck ? "#fff" : "var(--ink)" };border:1.5px solid ${ ck ? COLORS.green : "var(--border)" }">${ icon("check", 14, ck ? "#fff" : "var(--ink)") } ${ ck ? "Konfime — Anile" : "Konfime" }</button></div>`;
+  }
+  var rows = pending.map(function (cc) {
+    return inventoryRow(cc, false);
   }).join("");
-  return `<div class="section-head"><div><div class="eyebrow">${ done }/${ items.length } verifye jodi a</div><h2 class="h2">Envantè Jounalye</h2></div><div class="toolbar"><div class="search-wrap"><span class="search-icon">${ icon("search", 14) }</span><input class="input" id="f-inv-search" placeholder="Chèche kontenè, divizyon oswa depo..." value="${ escapeHtml(state.inventorySearch) }" /></div></div></div><p style="font-size:12.5px;color:var(--muted);margin-top:-10px;margin-bottom:16px">Ale tcheke chak kontenè pandan w ap kontwole yo fizikman (Full, Poko Verifye ak Vid). Klike sou kare a pou make l verifye, epi ekri depo a si w bezwen. Lis la re-mize a zèro chak jou.</p><div style="display:flex;flex-direction:column;gap:8px">${ items.length === 0 ? `<div class="empty">${ icon("circle", 22) }<div>Pa gen kontenè pou envantè kounye a.</div></div>` : rows }</div>`;
+  var confirmedRows = confirmed.map(function (cc) {
+    return inventoryRow(cc, true);
+  }).join("");
+  var confirmedToggle = confirmed.length === 0 ? "" : `<button class="linklike" data-action="toggle-inventory-confirmed" style="margin:14px 0 8px">${ icon("arrow", 12) } ${ state.inventoryShowConfirmed ? "Kache" : "Wè" } kontenè konfime yo (${ confirmed.length })</button>${ state.inventoryShowConfirmed ? `<div style="display:flex;flex-direction:column;gap:8px;margin-bottom:8px">${ confirmedRows }</div>` : "" }`;
+  return `<div class="section-head"><div><div class="eyebrow">${ confirmed.length }/${ items.length } konfime jodi a</div><h2 class="h2">Envantè Jounalye</h2></div><div class="toolbar"><div class="search-wrap"><span class="search-icon">${ icon("search", 14) }</span><input class="input" id="f-inv-search" placeholder="Chèche kontenè, divizyon oswa depo..." value="${ escapeHtml(state.inventorySearch) }" /></div></div></div><p style="font-size:12.5px;color:var(--muted);margin-top:-10px;margin-bottom:16px">Ale tcheke chak kontenè pandan w ap kontwole yo fizikman (Full, Poko Verifye ak Vid). Klike bouton Konfime a, epi ekri depo a si w bezwen. Yon fwa konfime, kontenè a sot nan lis anba a pou w ka konsantre sou sa ki poko konfime. Lis la re-mize a zèro chak jou.</p><div style="display:flex;flex-direction:column;gap:8px">${ pending.length === 0 ? `<div class="empty">${ icon("circle", 22) }<div>${ items.length === 0 ? "Pa gen kontenè pou envantè kounye a." : "Tout kontenè konfime — bon travay!" }</div></div>` : rows }</div>${ confirmedToggle }`;
 }
 
 function addContainerView() {

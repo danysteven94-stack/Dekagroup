@@ -185,6 +185,12 @@ document.addEventListener("click", function (event) {
       loadDailyState();
     } else if (i === "toggle-inventory") {
       toggleInventoryCheck(o);
+    } else if (i === "toggle-inventory-confirmed") {
+      state.inventoryShowConfirmed = !state.inventoryShowConfirmed;
+      render();
+    } else if (i === "dr-toggle-confirmed") {
+      state.dr.showConfirmed = !state.dr.showConfirmed;
+      render();
     } else if (i === "view-kpi") {
       state.tab = n.getAttribute("data-tab");
       state.search = "";

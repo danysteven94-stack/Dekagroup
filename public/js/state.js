@@ -36,6 +36,7 @@ export const state = {
   filterBillStatus: "",
   inventoryChecks: {},
   inventorySearch: "",
+  inventoryShowConfirmed: false,
   billMode: "nouvo",
   entryMode: "antre",
   toasts: [],
@@ -73,5 +74,6 @@ state.dr = {
   err: "",
   search: "",
   saveErr: false,
-  saveErrorDetail: ""
+  saveErrorDetail: "",
+  showConfirmed: false
 };

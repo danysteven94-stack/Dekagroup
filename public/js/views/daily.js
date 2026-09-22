@@ -320,18 +320,46 @@ export function dailyReportView() {
     var sl = statusOf(l);
     return oa[sa] !== oa[sl] ? oa[sa] - oa[sl] : a.numewo < l.numewo ? -1 : 1;
   });
-  var done = items.filter(function (cc) {
+  var pending = items.filter(function (cc) {
+    return state.dr.checks[cc.id] !== d;
+  });
+  var confirmed = items.filter(function (cc) {
     return state.dr.checks[cc.id] === d;
-  }).length;
-  var rows = items.map(function (cc) {
-    var ck = state.dr.checks[cc.id] === d;
+  });
+  function dailyRow(cc, ck) {
     var sx = statusOf(cc);
     var col = sx === "full" ? COLORS.rust : sx === "vid" ? COLORS.vid : COLORS.pokoverifye;
     var bl = state.bills.find(function (bill) {
       return bill.id === cc.billId;
     });
     var ef = effectiveDailyValues(cc);
-    return `<div class="row" style="border-left:4px solid ${ col }${ ck ? ";opacity:.5" : "" }"><div data-action="dr-toggle" data-id="${ cc.id }" style="cursor:pointer;width:24px;height:24px;border-radius:6px;border:2px solid ${ ck ? COLORS.green : "var(--border)" };background:${ ck ? COLORS.green : "transparent" };display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-right:10px">${ ck ? icon("check", 14, "#fff") : "" }</div><div class="row-min"><span class="plate" style="border-color:${ col }">${ escapeHtml(cc.numewo) }</span> <span style="display:inline-block;font-family:var(--font-mono);font-weight:700;font-size:11px;background:var(--navy);color:#fff;padding:2px 6px;border-radius:4px;vertical-align:middle">${ cc.size || "\u2014" }'</span><div class="row-sub">${ STATUS_LABELS[sx] } · ${ cc.division ? escapeHtml(cc.division) : "\u2014" }</div><div class="row-sub light">${ bl && bl.product ? `Pwodwi: <strong>${ escapeHtml(bl.product) }</strong>` : "" }</div></div><div style="width:150px;flex-shrink:0"><span class="field-label" style="font-size:9.5px">Depo</span><input class="input dr-depo-input" data-id="${ cc.id }" value="${ escapeHtml(ef.depo || "") }" placeholder="Egz. Depo Kòdòn" style="padding:6px 8px;font-size:12.5px" /></div>${ dailyTruckingCell(cc, ef) }${ sx === "pokoverifye" ? `<button class="btn" data-action="dr-verify" data-id="${ cc.id }" style="background:${ COLORS.pokoverifye };color:#fff;padding:8px 14px;font-size:12px;flex-shrink:0;align-self:flex-end">Verifye</button>` : "" }</div>`;
+    return `<div class="row" style="border-left:4px solid ${ col }${ ck ? ";opacity:.6" : "" }"><div class="row-min"><span class="plate" style="border-color:${ col }">${ escapeHtml(cc.numewo) }</span> <span style="display:inline-block;font-family:var(--font-mono);font-weight:700;font-size:11px;background:var(--navy);color:#fff;padding:2px 6px;border-radius:4px;vertical-align:middle">${ cc.size || "\u2014" }'</span><div class="row-sub">${ STATUS_LABELS[sx] } · ${ cc.division ? escapeHtml(cc.division) : "\u2014" }</div><div class="row-sub light">${ bl && bl.product ? `Pwodwi: <strong>${ escapeHtml(bl.product) }</strong>` : "" }</div></div><div style="width:150px;flex-shrink:0"><span class="field-label" style="font-size:9.5px">Depo</span><input class="input dr-depo-input" data-id="${ cc.id }" value="${ escapeHtml(ef.depo || "") }" placeholder="Egz. Depo Kòdòn" style="padding:6px 8px;font-size:12.5px" /></div>${ dailyTruckingCell(cc, ef) }${ sx === "pokoverifye" ? `<button class="btn" data-action="dr-verify" data-id="${ cc.id }" style="background:${ COLORS.pokoverifye };color:#fff;padding:8px 14px;font-size:12px;flex-shrink:0;align-self:flex-end">Verifye</button>` : "" }<button class="btn small${ ck ? "" : " ghost" }" data-action="dr-toggle" data-id="${ cc.id }" style="flex-shrink:0;margin-left:8px;align-self:flex-end;background:${ ck ? COLORS.green : "transparent" };color:${ ck ? "#fff" : "var(--ink)" };border:1.5px solid ${ ck ? COLORS.green : "var(--border)" }">${ icon("check", 14, ck ? "#fff" : "var(--ink)") } ${ ck ? "Konfime — Anile" : "Konfime" }</button></div>`;
+  }
+  var rows = pending.map(function (cc) {
+    return dailyRow(cc, false);
   }).join("");
-  return `<div style="min-height:100vh;background:var(--bg)"><header style="background:var(--navy);padding:18px 20px;display:flex;align-items:center;gap:12px"><div class="sidebar-logo"><img src="${ LOGO_URL }" alt="Deka Group" /></div><div style="flex:1"><div style="color:#fff;font-weight:800;font-size:16px">DEKA LOG — Daily Report</div><div style="color:var(--steel-light);font-size:11.5px">Envantè jounalye · ${ formatLongDate() }</div></div>${ state.lastSyncTime ? `<div style="color:var(--steel-light);font-size:10.5px;text-align:right">Dènye sinkwonizasyon<br/>${ formatTime(state.lastSyncTime) }</div>` : "" }${ helpButton("#fff") + accountButton("#fff") }<button class="linklike" data-action="logout" style="color:#fff">${ icon("undo", 12) } Dekonekte</button></header><main class="content" style="max-width:1000px;margin:0 auto">${ state.dr.notice ? `<div class="alert" style="${ state.dr.notice.ok ? "background:#E4F3EC;color:#1D7A5A;border-color:#1D7A5A" : "" }">${ escapeHtml(state.dr.notice.msg) }</div>` : "" }${ state.dr.saveErr ? `<div class="alert">${ icon("alert", 14) }Pa t kapab sove chanjman an. Verifye epi eseye ankò.${ state.dr.saveErrorDetail ? ` (${ escapeHtml(state.dr.saveErrorDetail) })` : "" }</div>` : "" }<div class="section-head"><div><div class="eyebrow">${ done }/${ items.length } verifye jodi a</div><h2 class="h2">Envantè Jounalye</h2></div><div class="toolbar"><div class="search-wrap"><span class="search-icon">${ icon("search", 14) }</span><input class="input" id="f-dr-search" placeholder="Chèche kontenè, divizyon, depo oswa trucking..." value="${ escapeHtml(state.dr.search) }" /></div></div></div><p style="font-size:12.5px;color:var(--muted);margin-top:-10px;margin-bottom:16px">Kontenè Full, Poko Verifye ak Vid yo soti nan Lojistik. Sa w make oswa chanje isit la (verifikasyon, depo, trucking) rete nan Daily Report sèlman. Sèl bouton Verifye a ki sove nan Lojistik tou. Lis verifikasyon an re-mize a zèro chak jou.</p>${ dailyReportBar() }<div style="display:flex;flex-direction:column;gap:8px">${ items.length === 0 ? `<div class="empty">${ icon("circle", 22) }<div>Pa gen kontenè pou envantè kounye a.</div></div>` : rows }</div></main><div style="text-align:center;font-size:10px;color:var(--muted-light);padding:20px">© ${ new Date().getFullYear() } Deka Group · v1.0</div></div>`;
+  var confirmedRows = confirmed.map(function (cc) {
+    return dailyRow(cc, true);
+  }).join("");
+  var confirmedToggle = confirmed.length === 0 ? "" : `<button class="linklike" data-action="dr-toggle-confirmed" style="margin:14px 0 8px">${ icon("arrow", 12) } ${ state.dr.showConfirmed ? "Kache" : "Wè" } kontenè konfime yo (${ confirmed.length })</button>${ state.dr.showConfirmed ? `<div style="display:flex;flex-direction:column;gap:8px;margin-bottom:8px">${ confirmedRows }</div>` : "" }`;
+  var statTotal = items.length;
+  var statPoko = items.filter(function (container) {
+    return statusOf(container) === "pokoverifye";
+  }).length;
+  var statFull = items.filter(function (container) {
+    return statusOf(container) === "full";
+  }).length;
+  var statVid = items.filter(function (container) {
+    return statusOf(container) === "vid";
+  }).length;
+  var statCards = [
+    { label: "Nan Depo a", value: statTotal, color: COLORS.navy },
+    { label: "Poko Verifye", value: statPoko, color: COLORS.pokoverifye },
+    { label: "Full", value: statFull, color: COLORS.rust },
+    { label: "Vid", value: statVid, color: COLORS.vid }
+  ].map(function (s) {
+    return `<div class="kpi"><div class="kpi-top"><span class="kpi-label">${ s.label }</span><div class="kpi-icon" style="background:${ s.color }1A;color:${ s.color }">${ icon("boxes", 14, s.color) }</div></div><div class="kpi-value">${ s.value }</div></div>`;
+  }).join("");
+  var statsBar = `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:20px">${ statCards }</div>`;
+  return `<div style="min-height:100vh;background:var(--bg)"><header style="background:var(--navy);padding:18px 20px;display:flex;align-items:center;gap:12px"><div class="sidebar-logo"><img src="${ LOGO_URL }" alt="Deka Group" /></div><div style="flex:1"><div style="color:#fff;font-weight:800;font-size:16px">DEKA LOG — Daily Report</div><div style="color:var(--steel-light);font-size:11.5px">Envantè jounalye · ${ formatLongDate() }</div></div>${ state.lastSyncTime ? `<div style="color:var(--steel-light);font-size:10.5px;text-align:right">Dènye sinkwonizasyon<br/>${ formatTime(state.lastSyncTime) }</div>` : "" }${ helpButton("#fff") + accountButton("#fff") }<button class="linklike" data-action="logout" style="color:#fff">${ icon("undo", 12) } Dekonekte</button></header><main class="content" style="max-width:1000px;margin:0 auto">${ state.dr.notice ? `<div class="alert" style="${ state.dr.notice.ok ? "background:#E4F3EC;color:#1D7A5A;border-color:#1D7A5A" : "" }">${ escapeHtml(state.dr.notice.msg) }</div>` : "" }${ state.dr.saveErr ? `<div class="alert">${ icon("alert", 14) }Pa t kapab sove chanjman an. Verifye epi eseye ankò.${ state.dr.saveErrorDetail ? ` (${ escapeHtml(state.dr.saveErrorDetail) })` : "" }</div>` : "" }${ statsBar }<div class="section-head"><div><div class="eyebrow">${ confirmed.length }/${ items.length } konfime jodi a</div><h2 class="h2">Envantè Jounalye</h2></div><div class="toolbar"><div class="search-wrap"><span class="search-icon">${ icon("search", 14) }</span><input class="input" id="f-dr-search" placeholder="Chèche kontenè, divizyon, depo oswa trucking..." value="${ escapeHtml(state.dr.search) }" /></div></div></div><p style="font-size:12.5px;color:var(--muted);margin-top:-10px;margin-bottom:16px">Kontenè Full, Poko Verifye ak Vid yo soti nan Lojistik. Sa w make oswa chanje isit la (depo, trucking) rete nan Daily Report sèlman. Sèl bouton Verifye a ki sove nan Lojistik tou. Klike bouton Konfime a pou make yon kontenè kontwole jodi a — li ap sot nan lis anba a pou w ka konsantre sou sa ki poko konfime. Lis la re-mize a zèro chak jou.</p>${ dailyReportBar() }<div style="display:flex;flex-direction:column;gap:8px">${ pending.length === 0 ? `<div class="empty">${ icon("circle", 22) }<div>${ items.length === 0 ? "Pa gen kontenè pou envantè kounye a." : "Tout kontenè konfime — bon travay!" }</div></div>` : rows }</div>${ confirmedToggle }</main><div style="text-align:center;font-size:10px;color:var(--muted-light);padding:20px">© ${ new Date().getFullYear() } Deka Group · v1.0</div></div>`;
 }
