@@ -20,7 +20,7 @@ process.env.AUTH_CHOFE_PASS = PW.chofe;
 
 const routes = {
   "/api/auth/login": "auth/login", "/api/auth/me": "auth/me", "/api/auth/logout": "auth/logout",
-  "/api/data": "data", "/api/audit": "audit", "/api/backup": "backup", "/api/health": "health", "/api/act": "act", "/api/daily": "daily", "/api/verify": "verify", "/api/push": "push",
+  "/api/data": "data", "/api/audit": "audit", "/api/backup": "backup", "/api/health": "health", "/api/email": "email", "/api/act": "act", "/api/daily": "daily", "/api/verify": "verify", "/api/push": "push",
 };
 const today = () => new Date().toISOString().slice(0, 10);
 const seed = () => ({
@@ -54,6 +54,7 @@ function openPage(b) {
       return { ok: res.statusCode >= 200 && res.statusCode < 300, status: res.statusCode, statusText: "", json: async () => res.body, text: async () => JSON.stringify(res.body) };
     },
   };
+  ctx.addEventListener = (t, f) => { (handlers["window:" + t] = handlers["window:" + t] || []).push(f); };
   ctx.window = ctx;
   ctx.document = {
     getElementById: (id) => (id === "root" ? root : id === "app-favicon" ? {} : els[id] || null),

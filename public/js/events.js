@@ -24,6 +24,7 @@ import {
   undoContainerEntered,
   undoContainerLeft
 } from "./mutations.js";
+import { exportContainersCsv } from "./csv.js";
 import { downloadReport } from "./pdf.js";
 import { render } from "./render.js";
 import {
@@ -39,7 +40,10 @@ import {
   toggleDailyCheck,
   verifyFromDaily
 } from "./views/daily.js";
-import { loadSecurityTab } from "./views/security.js";
+import {
+  emailAction,
+  loadSecurityTab
+} from "./views/security.js";
 import { loadUsers } from "./views/users.js";
 
 document.addEventListener("submit", function (event) {
@@ -126,6 +130,16 @@ document.addEventListener("submit", function (event) {
     }
     addContainer(o);
   }
+  if (event.target && event.target.id === "sec-email-add-form") {
+    event.preventDefault();
+    var S = state.sec;
+    var email = document.getElementById("sec-email-input").value.trim();
+    S.emailForm = { email: email, err: "" };
+    render();
+    emailAction({ action: "add", email: email }, function () {
+      state.sec.emailForm = { email: "", err: "" };
+    });
+  }
 });
 
 document.addEventListener("click", function (event) {
@@ -151,6 +165,13 @@ document.addEventListener("click", function (event) {
     } else if (i === "sec-filter") {
       state.sec.filter = n.getAttribute("data-filter");
       render();
+    } else if (i === "sec-email-remove") {
+      emailAction({ action: "remove", email: n.getAttribute("data-email") });
+    } else if (i === "sec-email-test") {
+      showToast("K ap voye tès la...");
+      emailAction({ action: "test" }, function () {
+        showToast("Tès la voye.");
+      });
     } else if (i === "dr-toggle") {
       toggleDailyCheck(o);
     } else if (i === "dr-verify") {
@@ -203,6 +224,8 @@ document.addEventListener("click", function (event) {
       submitModal();
     } else if (i === "print-report") {
       downloadReport(n.getAttribute("data-status"), n.getAttribute("data-group"));
+    } else if (i === "export-containers-csv") {
+      exportContainersCsv();
     } else if (i === "retry-load") {
       loadData();
     } else if (i === "resume-session") {

@@ -148,6 +148,12 @@ document.addEventListener("click", function (event) {
   } else if (a === "close-account") {
     state.acct = false;
     render();
+  } else if (a === "open-help") {
+    state.help = true;
+    render();
+  } else if (a === "close-help") {
+    state.help = false;
+    render();
   } else if (a === "tf-begin") {
     var k = state.tf;
     k.busy = true;

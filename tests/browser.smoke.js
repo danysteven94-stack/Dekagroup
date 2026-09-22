@@ -231,6 +231,57 @@ function loadPuppeteer() {
     await page.waitForSelector('[data-action="set-tab"][data-tab="itilizate"]');
   });
 
+  await step("Help ('Èd'): each role has its own guide, reachable next to 'Kont mwen'", async () => {
+    await page.evaluate(() => document.querySelector('[data-action="open-help"]').click());
+    await waitText("Gid Rapid");
+    assert.ok((await bodyText()).includes("Tablo Kontwòl"), "admin guide content shown");
+    await page.click('[data-action="close-help"]');
+    await page.waitForSelector('[data-action="set-tab"][data-tab="itilizate"]');
+  });
+
+  await step("Excel/CSV export: the Rapò tab downloads a real file with no console error", async () => {
+    await page.evaluateOnNewDocument(() => {
+      window.__downloads = [];
+      const origClick = HTMLAnchorElement.prototype.click;
+      HTMLAnchorElement.prototype.click = function () {
+        if (this.download) window.__downloads.push({ name: this.download, href: this.href.slice(0, 30) });
+        return origClick.call(this);
+      };
+    });
+    await page.reload({ waitUntil: "networkidle0" });
+    await loginAs(creds.admin.user, creds.admin.pass);
+    await page.waitForSelector('[data-action="set-tab"][data-tab="itilizate"]');
+    await page.click('[data-action="set-tab"][data-tab="rapo"]');
+    await waitText("Rejis Konplè");
+    await page.click('[data-action="export-containers-csv"]');
+    await page.waitForFunction(() => window.__downloads && window.__downloads.length > 0, { timeout: 5000 });
+    const dl = await page.evaluate(() => window.__downloads[0]);
+    assert.ok(dl.name.endsWith(".csv") && dl.href.startsWith("blob:"), "a real CSV blob download was triggered: " + JSON.stringify(dl));
+  });
+
+  await step("Notifikasyon Imèl: shows 'not configured' without RESEND_API_KEY, and recipients can still be managed", async () => {
+    await page.click('[data-action="set-tab"][data-tab="sekirite"]');
+    await waitText("Notifikasyon Imèl");
+    assert.ok((await bodyText()).includes("RESEND_API_KEY pa konfigire"), "clear warning shown");
+    assert.ok(!(await page.$('[data-action="sec-email-test"]')), "no test button while unavailable");
+    await fill("#sec-email-input", "teams@example.com");
+    await page.click('#sec-email-add-form button[type="submit"]');
+    await waitText("teams@example.com");
+    await page.click('[data-action="sec-email-remove"]');
+    await page.waitForFunction(() => !document.body.innerText.includes("teams@example.com"), { timeout: 5000 });
+  });
+
+  await step("Offline mode: a banner appears when the connection drops, and the app resyncs automatically when it returns", async () => {
+    assert.ok(!(await bodyText()).includes("Ou pa gen entènèt"), "no banner while online");
+    await page.setOfflineMode(true);
+    await page.evaluate(() => window.dispatchEvent(new Event("offline")));
+    await waitText("Ou pa gen entènèt");
+    fs.writeFileSync("/tmp/shot-offline.png", await page.screenshot());
+    await page.setOfflineMode(false);
+    await page.evaluate(() => window.dispatchEvent(new Event("online")));
+    await page.waitForFunction(() => !document.body.innerText.includes("Ou pa gen entènèt"), { timeout: 8000 });
+  });
+
   await step("through the whole session: no CSP violation and no console error", async () => {
     assert.deepStrictEqual(await page.evaluate(() => window.__csp), [], "CSP violations: " + JSON.stringify(await page.evaluate(() => window.__csp)));
     const real = errors.filter((e) => !/favicon|401|403|Failed to load resource/i.test(e));

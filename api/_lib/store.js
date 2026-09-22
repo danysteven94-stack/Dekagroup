@@ -16,6 +16,14 @@ try {
   console.error("push disabled:", e && e.message);
 }
 
+// Email notifications are optional too (active only with RESEND_API_KEY).
+let notifyNewEmail = async function () {};
+try {
+  notifyNewEmail = require("./email").notifyNewEmail;
+} catch (e) {
+  console.error("email disabled:", e && e.message);
+}
+
 const ID_RE = /^[A-Za-z0-9_-]{1,64}$/;
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -193,13 +201,18 @@ async function snapshotIfDue(prev) {
   }
 }
 
-// After a successful save: keep a rolling backup and push the notifications that did not exist before.
+// After a successful save: keep a rolling backup and push/email the notifications that did not exist before.
 async function afterCommit(prev, next, req) {
   await snapshotIfDue(prev);
   try {
     await notifyNew(prev, next, { host: req.headers.host, deviceId: (req.headers || {})["x-device-id"] });
   } catch (e) {
     console.error("push error:", e && e.message);
+  }
+  try {
+    await notifyNewEmail(prev, next);
+  } catch (e) {
+    console.error("email error:", e && e.message);
   }
 }
 

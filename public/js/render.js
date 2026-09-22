@@ -1,6 +1,8 @@
 // Root render(): decides which screen to show and paints it into #root.
+import { icon } from "./icons.js";
 import { state } from "./state.js";
 import { accountView } from "./views/account.js";
+import { helpView } from "./views/help.js";
 import { adminContent } from "./views/admin.js";
 import { dailyReportView } from "./views/daily.js";
 import { depotView } from "./views/depot.js";
@@ -24,6 +26,8 @@ export function render() {
     html = loadingView();
   } else if (state.authRole && (state.needs || state.acct)) {
     html = accountView();
+  } else if (state.authRole && state.help) {
+    html = helpView();
   } else if (state.gate2fa && !state.authRole) {
     html = twoFactorLoginView();
   } else if (state.unlocked) {
@@ -61,5 +65,6 @@ export function render() {
   } else {
     html = loginView();
   }
-  root.innerHTML = html + modalView() + confirmModalView() + toastsView();
+  var offlineBanner = state.online ? "" : `<div class="offline-banner">${ icon("alert", 15, "#fff") }Ou pa gen entènèt kounye a. App la ap kontinye ak dènye done ki te sove a; li ap rekonekte otomatikman.</div>`;
+  root.innerHTML = offlineBanner + html + modalView() + confirmModalView() + toastsView();
 }

@@ -19,6 +19,7 @@ export function logout() {
   state.needs = null;
   state.personal = false;
   state.acct = false;
+  state.help = false;
   state.gate2fa = false;
   state.pendingGatePassword = "";
   state.sessionName = "";
@@ -82,6 +83,7 @@ export function applyAuth(role, username, name, needs, personal) {
   state.needs = needs || null;
   state.personal = !!personal;
   state.acct = false;
+  state.help = false;
   state.tf = null;
   state.pwf = null;
   state.gate2fa = false;

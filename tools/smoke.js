@@ -47,7 +47,7 @@ const ok = (c, m) => { if (!c) throw new Error(m); };
   });
 
   await check("data and admin endpoints refuse anonymous visitors", async () => {
-    for (const p of ["/api/data", "/api/audit", "/api/backup", "/api/health", "/api/daily", "/api/users"]) {
+    for (const p of ["/api/data", "/api/audit", "/api/backup", "/api/health", "/api/daily", "/api/users", "/api/email"]) {
       const r = await fetch(base + p);
       ok(r.status === 401, p + " -> " + r.status + " (expected 401)");
     }

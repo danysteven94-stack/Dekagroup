@@ -176,7 +176,10 @@ export const AUDIT_LABELS = {
   act_transfer: "Transfè depo",
   act_depart: "Depa chofè",
   verify: "Konteneur verifye",
-  backup_download: "Kopi telechaje"
+  backup_download: "Kopi telechaje",
+  email_recipient_add: "Adrès imèl ajoute",
+  email_recipient_remove: "Adrès imèl retire",
+  email_test: "Tès imèl voye"
 };
 
 export const AUDIT_WARNINGS = {

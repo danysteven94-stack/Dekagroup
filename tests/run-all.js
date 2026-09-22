@@ -10,6 +10,8 @@ const runs = [
   ["browser app (PostgreSQL layer)", "client.e2e.js", { TEST_BACKEND: "pg" }],
   ["accounts (Redis users)", "accounts.test.js", {}],
   ["accounts (PostgreSQL users)", "accounts.test.js", { TEST_BACKEND: "pg" }],
+  ["email (Redis)", "email.test.js", {}],
+  ["email (PostgreSQL layer)", "email.test.js", { TEST_BACKEND: "pg" }],
   ["database layer", "db.test.js", {}],
 ];
 let bad = 0;
