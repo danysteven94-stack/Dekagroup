@@ -9,10 +9,14 @@
   },
   "scripts": {
     "test": "node tests/run-all.js",
-    "csp": "node tools/update-csp.js",
-    "csp:check": "node tools/update-csp.js --check"
+    "demo": "node --no-warnings tools/dev-server.js",
+    "smoke": "node tools/smoke.js",
+    "test:browser": "node --no-warnings tests/browser.smoke.js"
   },
   "engines": {
     "node": ">=18"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.0"
   }
 }

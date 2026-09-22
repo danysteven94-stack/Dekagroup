@@ -7,9 +7,10 @@ const path = require("path");
 const assert = require("assert");
 const H = require("./helpers");
 
-const html = fs.readFileSync(path.join(__dirname, "..", "index.html"), "utf8");
-const scripts = [...html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g)].map((m) => m[1]);
-const main = scripts.reduce((a, b) => (b.length > a.length ? b : a), "");
+const { bundleClient, clientSources } = require("./client-bundle");
+
+const main = bundleClient(); // the whole app as one script (it is native ES modules in the browser)
+const html = clientSources(); // every source file of the app, for the "no secrets in the page code" check
 
 const PW = { admin: "Adm1n-Strong-Pass", depot: "Dep0t-Strong-Pass", daily: "Da1ly-Strong-Pass", chofe: "Chof3-Strong-Pass" };
 process.env.AUTH_ADMIN_PASS = PW.admin;

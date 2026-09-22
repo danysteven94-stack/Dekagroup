@@ -7,6 +7,9 @@ const crypto = require("crypto");
 const { promisify } = require("util");
 const { redis } = require("./redis");
 
+// users.js is loaded lazily: it depends (indirectly) on this file.
+const Users = function () { return require("./users"); };
+
 const scrypt = promisify(crypto.scrypt);
 
 const COOKIE = "__Host-dl_sid";
@@ -34,6 +37,7 @@ function sleep(ms) {
 // Accounts come from environment variables: AUTH_<ROLE>_HASH (preferred) or AUTH_<ROLE>_PASS, optional AUTH_<ROLE>_USER.
 function accounts() {
   const out = [];
+  if (process.env.AUTH_LEGACY_DISABLED === "1") return out; // shared accounts switched off
   ROLE_DEFS.forEach(function (d) {
     const secret = process.env["AUTH_" + d.key + "_HASH"] || process.env["AUTH_" + d.key + "_PASS"] || "";
     if (!secret) return;
@@ -99,16 +103,45 @@ function cookieString(token, maxAge) {
   return COOKIE + "=" + token + "; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=" + maxAge;
 }
 
+const USESS_TTL = 15 * 86400;
+
 async function createSession(req, res, account) {
   const token = crypto.randomBytes(32).toString("base64url");
   const now = Date.now();
+  const key = sessKey(token);
   await redis.set(
-    sessKey(token),
-    { u: account.username, role: account.role, ct: now, ls: now, e: epoch(), ip: clientIp(req), ua: String((req.headers || {})["user-agent"] || "").slice(0, 160) },
+    key,
+    { u: account.username, n: account.name || null, src: account.src || "env", role: account.role, ct: now, ls: now, e: epoch(), ip: clientIp(req), ua: String((req.headers || {})["user-agent"] || "").slice(0, 160) },
     { ex: IDLE_SEC }
   );
+  // index of the sessions of each person, so they can all be closed at once (password change, disabled account...)
+  const h = {}; h[key] = now;
+  await redis.hset("dl:usess:" + account.username, h);
+  await redis.expire("dl:usess:" + account.username, USESS_TTL);
   res.setHeader("Set-Cookie", cookieString(token, ABS_SEC[account.role] || 86400));
   return token;
+}
+
+// Closes every session of a person (optionally keeping the current one). Returns how many were closed.
+async function killUserSessions(username, exceptKey) {
+  const idx = "dl:usess:" + username;
+  const all = (await redis.hgetall(idx)) || {};
+  let n = 0;
+  for (const k of Object.keys(all)) {
+    if (k === exceptKey) continue;
+    await redis.del(k);
+    await redis.hdel(idx, k);
+    n++;
+  }
+  return n;
+}
+
+// What a person must do before using the app: change a temporary password / set up 2-step verification (admins).
+function limitedFor(u) {
+  if (!u) return null;
+  if (u.mustChange) return "password";
+  if (u.role === "admin" && !u.totpEnabled) return "2fa";
+  return null;
 }
 
 async function getSession(req) {
@@ -119,7 +152,14 @@ async function getSession(req) {
   if (!s || typeof s !== "object") return null;
 
   const now = Date.now();
-  const stillExists = accounts().some(function (a) { return a.username === s.u && a.role === s.role; });
+  let user = null;
+  let stillExists;
+  if (s.src === "db") {
+    user = await Users().get(s.u);
+    stillExists = !!(user && user.active && user.role === s.role);
+  } else {
+    stillExists = accounts().some(function (a) { return a.username === s.u && a.role === s.role; });
+  }
   const expired = now - s.ct > (ABS_SEC[s.role] || ABS_SEC.admin) * 1000;
   if (!stillExists || expired || s.e !== epoch()) {
     await redis.del(key);
@@ -129,12 +169,17 @@ async function getSession(req) {
     s.ls = now;
     await redis.set(key, s, { ex: IDLE_SEC });
   }
-  return { key: key, username: s.u, role: s.role };
+  return { key: key, username: s.u, name: user ? user.name : s.n || null, role: s.role, src: s.src || "env", limited: limitedFor(user) };
 }
 
 async function destroySession(req, res) {
   const token = parseCookies((req.headers || {}).cookie)[COOKIE];
-  if (token && /^[A-Za-z0-9_-]{43}$/.test(token)) await redis.del(sessKey(token));
+  if (token && /^[A-Za-z0-9_-]{43}$/.test(token)) {
+    const key = sessKey(token);
+    const s = await redis.get(key);
+    await redis.del(key);
+    if (s && s.u) await redis.hdel("dl:usess:" + s.u, key);
+  }
   res.setHeader("Set-Cookie", cookieString("", 0));
 }
 
@@ -179,6 +224,7 @@ async function audit(req, event, detail, session) {
       t: new Date().toISOString(),
       ev: event,
       u: (session && session.username) || (detail && detail.username) || null,
+      n: (session && session.name) || null,
       role: (session && session.role) || null,
       ip: req ? clientIp(req) : null,
       ua: String(h["user-agent"] || "").slice(0, 120),
@@ -197,7 +243,7 @@ function fail(res, status, error, code) {
 }
 
 // Guards an API route. Returns the session or null (response already sent).
-async function requireAuth(req, res, roles) {
+async function requireAuth(req, res, roles, opts) {
   res.setHeader("Cache-Control", "no-store");
   if (!sameOrigin(req)) return fail(res, 403, "Demann sa a pa soti nan sit la.", "bad_origin");
   const writes = req.method !== "GET" && req.method !== "HEAD";
@@ -205,6 +251,11 @@ async function requireAuth(req, res, roles) {
 
   const session = await getSession(req);
   if (!session) return fail(res, 401, "Ou dwe konekte.", "unauthenticated");
+  if (session.limited && !(opts && opts.allowLimited)) {
+    return session.limited === "password"
+      ? fail(res, 403, "Ou dwe chanje modpass ou anvan w kontinye.", "must_change_password")
+      : fail(res, 403, "Ou dwe aktive otantifikasyon 2 etap anvan w kontinye.", "must_enroll_2fa");
+  }
 
   if (roles && roles.indexOf(session.role) === -1) {
     await audit(req, "forbidden", { path: req.url, method: req.method }, session);
@@ -215,6 +266,11 @@ async function requireAuth(req, res, roles) {
     if (n > WRITE_LIMIT) return fail(res, 429, "Twòp aksyon nan yon ti tan. Tann yon minit.", "rate_limited");
   }
   return session;
+}
+
+// For the account endpoints: any logged-in person, even when they still have to change their password / enable 2FA.
+function requireSession(req, res) {
+  return requireAuth(req, res, null, { allowLimited: true });
 }
 
 function parseBody(req) {
@@ -228,5 +284,5 @@ function parseBody(req) {
 module.exports = {
   COOKIE, ROLE_DEFS, LOGIN_WINDOW_SEC, LIMIT_USER_IP, LIMIT_IP, LIMIT_USER, DUMMY_HASH,
   accounts, hashPassword, verifyPassword, clientIp, createSession, getSession, destroySession,
-  sameOrigin, isJson, bump, count, audit, requireAuth, parseBody, sleep,
+  sameOrigin, isJson, bump, count, audit, requireAuth, requireSession, parseBody, sleep, killUserSessions, limitedFor,
 };

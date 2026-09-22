@@ -56,7 +56,7 @@ function getDriver() {
 }
 
 // Portable DDL (same statements run on PostgreSQL in production and on SQLite in the tests).
-const SCHEMA_VERSION = 1;
+const SCHEMA_VERSION = 2;
 const DDL = [
   "CREATE TABLE IF NOT EXISTS meta (name TEXT PRIMARY KEY, value BIGINT NOT NULL)",
   "CREATE TABLE IF NOT EXISTS bills (" +
@@ -75,6 +75,11 @@ const DDL = [
     "extra TEXT NOT NULL DEFAULT '{}', rev BIGINT NOT NULL, writer TEXT, created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP)",
   "CREATE INDEX IF NOT EXISTS notifications_seq_idx ON notifications (seq)",
   "CREATE TABLE IF NOT EXISTS inventory_checks (container_id TEXT PRIMARY KEY, checked_on TEXT NOT NULL, rev BIGINT NOT NULL, writer TEXT)",
+  "CREATE TABLE IF NOT EXISTS users (" +
+    "username TEXT PRIMARY KEY, name TEXT NOT NULL, role TEXT NOT NULL, pass_hash TEXT NOT NULL, " +
+    "active INTEGER NOT NULL DEFAULT 1, must_change INTEGER NOT NULL DEFAULT 1, " +
+    "totp_secret TEXT, totp_enabled INTEGER NOT NULL DEFAULT 0, totp_last BIGINT NOT NULL DEFAULT 0, recovery TEXT NOT NULL DEFAULT '[]', " +
+    "created_by TEXT, created_at TEXT NOT NULL, last_login_at TEXT, pass_changed_at TEXT, updated_at TEXT NOT NULL)",
   "INSERT INTO meta (name, value) VALUES ('rev', 0) ON CONFLICT (name) DO NOTHING",
   "INSERT INTO meta (name, value) VALUES ('migrated', 0) ON CONFLICT (name) DO NOTHING",
 ];

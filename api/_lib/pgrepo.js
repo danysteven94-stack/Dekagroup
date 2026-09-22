@@ -458,4 +458,4 @@ async function _testLoad(blob) {
   });
 }
 
-module.exports = { name: "postgres", readAll, writeClient, mutate, health, _testLoad, withHashes, rowHash, stripHint };
+module.exports = { name: "postgres", driver, readAll, writeClient, mutate, health, _testLoad, withHashes, rowHash, stripHint };

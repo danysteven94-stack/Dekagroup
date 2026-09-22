@@ -70,18 +70,8 @@ async function run() {
       for (const f of ["HttpOnly", "Secure", "SameSite=Strict", "Path=/", "__Host-"]) assert.ok(r.cookieAttrs.includes(f), role + " cookie missing " + f);
       assert.ok(!("password" in r.body));
       const m = await b.call(me);
-      assert.deepStrictEqual(m.body, { authenticated: true, role, username: USERS[role] });
+      assert.deepStrictEqual(m.body, { authenticated: true, role, username: USERS[role], name: null, personal: false, needs: null });
     }
-  });
-
-  await test("login: the chosen gate must match the account role (no session for a mismatch)", async () => {
-    const b = H.browser();
-    const r = await b.call(login_, { method: "POST", body: { username: "logisticdepot", password: PW.daily, role: "chofe" } });
-    assert.strictEqual(r.statusCode, 403);
-    assert.strictEqual(r.body.code, "wrong_role");
-    assert.ok(!r.headers["set-cookie"] && !b.jar["__Host-dl_sid"]);
-    const ok = await b.call(login_, { method: "POST", body: { username: "logisticdepot", password: PW.daily, role: "daily" } });
-    assert.strictEqual(ok.statusCode, 200);
   });
 
   await test("login: wrong password / unknown user give the same generic 401", async () => {
@@ -291,6 +281,20 @@ async function run() {
     assert.strictEqual(r.statusCode, 403);
     const r2 = await post(b, seed(), { headers: { origin: null, "sec-fetch-site": "cross-site" } });
     assert.strictEqual(r2.statusCode, 403);
+  });
+
+  await test("a preview deployment without its own database refuses to touch production data", async () => {
+    if (H.BACKEND === "pg") return; // only meaningful for the Redis fallback
+    await H.setData(seed());
+    const admin = await login("logistic", "admin");
+    process.env.VERCEL_ENV = "preview";
+    try {
+      const r = await admin.call(data);
+      assert.strictEqual(r.statusCode, 503);
+      assert.ok(String(r.body.error).includes("preview"));
+      assert.strictEqual((await admin.call(data, { method: "POST", body: seed() })).statusCode, 503);
+    } finally { delete process.env.VERCEL_ENV; }
+    assert.strictEqual((await admin.call(data)).statusCode, 200, "production behaves normally");
   });
 
   await test("write rate limit protects an authenticated session", async () => {

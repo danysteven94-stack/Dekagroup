@@ -24,18 +24,13 @@ Pou fòse tout sesyon yo fini: chanje `AUTH_SESSION_EPOCH`.
 ## Gade jounal aktivite / kopi
 Konekte kòm admin, epi klike sou **Sekirite** nan meni a: ou wè jounal aktivite a (koneksyon, echèk, aksyon refize...) ak kopi otomatik yo (bouton Telechaje). Done yo tou disponib sou `/api/audit` ak `/api/backup`.
 
-## ATANSYON: chak fwa `index.html` chanje
-CSP a otorize sèlman script yo ki nan `index.html` (pa hash). Apre CHAK modifikasyon `index.html`:
-```
-node tools/update-csp.js        # rekonstwi vercel.json
-node tools/update-csp.js --check
-```
-Si w bliye, paj la ka rete blan sou Vercel.
+## Kòd la (public/js)
+Pa gen script "inline" ditou nan paj la — CSP a se `script-src 'self'` san eksepsyon, epi li pa bezwen chanje lè kòd la chanje. Tout kòd JavaScript la se fichye separe anba `public/js/` (modil ES: `import`/`export`), chaje ak `<script type="module" src="/js/main.js">`. Estrikti a: `constants.js`, `utils.js`, `state.js`, `api.js`, `session.js`, `push.js`, `mutations.js`, `pdf.js`, `render.js`, `events.js`, `events-account.js`, ak `views/*.js` (yon fichye pa ekran: `gate`, `admin`, `depot`, `driver`, `daily`, `account`, `security`, `users`, `modals`). Chak fichye gen yon kòmantè anlè ki di sa li fè. `app.css` gen tout style yo apa.
 
 ## Tès
 ```
-node tests/security.test.js
-node tests/client.e2e.js
+npm test                 # tout tès yo, sou de kalite baz done
+npm run test:browser     # vrè Chrome (bezwen puppeteer)
 ```
 
 ## Baz done PostgreSQL (rekòmande)
@@ -55,3 +50,19 @@ Si `DATABASE_URL` pa konfigire, aplikasyon an kontinye sèvi ak Redis tankou anv
 **Retounen sou Redis:** retire `DATABASE_URL` epi Redeploy. Atansyon: chanjman ki fèt apre migrasyon an rete nan PostgreSQL sèlman.
 
 **Tès:** `npm test` (kouri tout tès yo sou de kalite baz done; PostgreSQL la simile ak SQLite nan tès yo).
+
+## Kont pèsonèl, 2FA ak jesyon itilizatè
+Chak moun gen pwòp kont li (non itilizatè + modpass pa li). Jounal aktivite a di **ki moun** ki fè kisa.
+
+**Aktive l (yon sèl fwa):**
+1. Vercel > Environment Variables > ajoute `APP_SECRET` (valè a nan `SEKRE-PRIVE-etap2.txt`) > **Redeploy**.
+   ⚠️ Pa janm chanje `APP_SECRET` pita: sekrè 2FA yo chifre avèk li, epi chanje l fòse tout moun konfigire 2FA ankò. Kenbe yon kopi sekirize.
+2. Konekte ak kont pataje admin lan (`logistic`) > tab **Itilizatè** > kreye yon kont pou chak moun (menm pou ou menm kòm admin). Sèvè a bay yon **modpass tanporè** (montre yon sèl fwa): ba moun nan li.
+3. Nan premye koneksyon, moun nan **dwe chanje modpass la**. Yon admin dwe tou **aktive 2FA** (yon aplikasyon tankou Google/Microsoft Authenticator oswa Authy sou telefòn li; li antre kle a manyèlman) epi sove 8 kòd sekou.
+4. Lè tout moun gen kont pèsonèl: dezaktive kont pataje yo (Vercel: `AUTH_LEGACY_DISABLED=1` > Redeploy). Kont pataje yo (`logistic`, `depotnord`, `logisticdepot`, `chofe`) pa gen 2FA epi nenpòt moun ki konn modpass yo ka sèvi ak yo.
+
+**Sa admin ka fè (tab Itilizatè):** kreye kont, reyinisyalize modpass (nouvo modpass tanporè + dekonekte moun nan), dezaktive/aktive, chanje wòl, reyinisyalize 2FA (si moun nan pèdi telefòn li). Yon admin pa ka dezaktive, demote oswa reyinisyalize pwòp kont li; yon admin pa ka dezaktive 2FA li.
+
+**Chak moun ("Kont mwen"):** chanje modpass li (sa dekonekte lòt aparèy li yo), aktive 2FA (opsyonèl pou depo/chofè/daily, obligatwa pou admin). Modpass: omwen 10 karaktè, pa twò komen. Yon kòd 2FA pa ka itilize de fwa; kòd sekou yo sèvi yon sèl fwa.
+
+**Limit:** pa gen kòd QR (ou antre kle a manyèlman, oswa ou tape lyen an sou telefòn nan). Kont yo estoke nan PostgreSQL si li konfigire, sinon nan Redis.
