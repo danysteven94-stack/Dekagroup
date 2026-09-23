@@ -40,7 +40,7 @@ module.exports = async function handler(req, res) {
 
       if (body.action === "test") {
         if (!Email.available()) {
-          res.status(503).json({ error: "RESEND_API_KEY manke sou sèvè a.", code: "not_configured" });
+          res.status(503).json({ error: "BREVO_API_KEY manke sou sèvè a.", code: "not_configured" });
           return;
         }
         const free = await require("./_lib/redis").redis.set("deka-log-email-test-lock", "1", { nx: true, ex: 15 });

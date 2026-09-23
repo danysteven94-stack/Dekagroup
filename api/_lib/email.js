@@ -1,13 +1,29 @@
 "use strict";
-// Email notifications via the Resend API (https://resend.com) — a plain HTTPS call, no SDK needed.
-// Active only when RESEND_API_KEY is set; everything else keeps working without it.
+// Email notifications via the Brevo API (https://www.brevo.com) — a plain HTTPS call, no SDK needed.
+// Chosen over Resend because Brevo's free plan only requires verifying ONE sender address (any inbox
+// you already own, e.g. a Gmail address — a confirmation link, no domain purchase or DNS records) and
+// can then send to any recipient. Active only when BREVO_API_KEY is set; everything else keeps working
+// without it.
 const { redis } = require("./redis");
 
 const LIST_KEY = "deka-log-email-recipients";
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 function available() {
-  return !!process.env.RESEND_API_KEY;
+  return !!process.env.BREVO_API_KEY;
+}
+
+// EMAIL_FROM is the verified sender, as "Name <address@example.com>" or a bare address.
+function parseFrom() {
+  const raw = String(process.env.EMAIL_FROM || "").trim();
+  const m = raw.match(/^(.*)<([^>]+)>\s*$/);
+  if (m) {
+    const email = m[2].trim();
+    if (!EMAIL_RE.test(email)) return null;
+    return { name: m[1].trim().replace(/^"|"$/g, "") || "DEKA LOG", email: email };
+  }
+  if (EMAIL_RE.test(raw)) return { name: "DEKA LOG", email: raw };
+  return null;
 }
 
 async function listRecipients() {
@@ -42,8 +58,8 @@ async function removeRecipient(email) {
   return next;
 }
 
-// One HTTPS call to Resend. `to` is a single address the emails are formally addressed to (so recipients
-// don't see each other in the To header); everyone else on the list is BCC'd.
+// One HTTPS call to Brevo. `to` is the verified sender itself (so recipients don't see each other in
+// the To header); everyone else on the list is BCC'd.
 async function sendEmail(subject, text, opts) {
   if (!available()) return { sent: 0, skipped: true };
   const recipients = (await listRecipients()).map(function (r) { return r.email; });
@@ -51,18 +67,26 @@ async function sendEmail(subject, text, opts) {
   const all = [...new Set(recipients.concat(extra))];
   if (!all.length) return { sent: 0, skipped: true };
 
-  const from = process.env.EMAIL_FROM || "DEKA LOG <onboarding@resend.dev>";
+  const from = parseFrom();
+  if (!from) throw new Error("EMAIL_FROM pa konfigire byen. Egzanp: \"DEKA LOG <ou@gmail.com>\" — dwe menm adrès ou verifye sou Brevo.");
   const html = "<p>" + String(text).split("\n").map(escapeHtml).join("<br/>") + "</p>";
-  const body = { from: from, to: [from.replace(/^.*<([^>]+)>.*$/, "$1") || from], bcc: all, subject: subject, text: text, html: html };
+  const body = {
+    sender: { name: from.name, email: from.email },
+    to: [{ email: from.email }],
+    bcc: all.map(function (email) { return { email: email }; }),
+    subject: subject,
+    textContent: text,
+    htmlContent: html,
+  };
 
-  const res = await fetch("https://api.resend.com/emails", {
+  const res = await fetch("https://api.brevo.com/v3/smtp/email", {
     method: "POST",
-    headers: { "Content-Type": "application/json", Authorization: "Bearer " + process.env.RESEND_API_KEY },
+    headers: { "Content-Type": "application/json", "api-key": process.env.BREVO_API_KEY },
     body: JSON.stringify(body),
   });
   if (!res.ok) {
     const detail = await res.text().catch(function () { return ""; });
-    throw new Error("Resend HTTP " + res.status + (detail ? ": " + detail.slice(0, 200) : ""));
+    throw new Error("Brevo HTTP " + res.status + (detail ? ": " + detail.slice(0, 200) : ""));
   }
   return { sent: all.length, skipped: false };
 }

@@ -16,7 +16,7 @@ Objektif: chak chanjman pase pa GitHub → tès yo kouri pou kont yo → Vercel 
    - Redis: `KV_REST_API_URL` ak `KV_REST_API_TOKEN` (oswa `UPSTASH_REDIS_REST_URL`/`UPSTASH_REDIS_REST_TOKEN`) — menm valè w te deja genyen.
    - Push (si w sèvi ak li): variab VAPID ou te deja genyen.
    - `APP_SECRET` (kont pèsonèl + 2FA; gade `SEKIRITE.md`, pa janm chanje l) epi pita `AUTH_LEGACY_DISABLED=1` lè tout moun gen kont pèsonèl.
-   - Opsyonèl: `RESEND_API_KEY` (ak `EMAIL_FROM` si w vle) pou notifikasyon imèl — gade `SEKIRITE.md`.
+   - Opsyonèl: `BREVO_API_KEY` ak `EMAIL_FROM` pou notifikasyon imèl — gade `SEKIRITE.md`.
    - Baz done: **Storage > Create Database > Neon** (gade `SEKIRITE.md`). Nan entegrasyon Neon an, aktive **"Create a branch for each preview deployment"**: konsa chak preview gen pwòp baz li, epi li pa manyen done reyèl yo.
 4. **Deploy.** Apre sa chak `git push` sou `main` redeplwaye otomatikman.
 

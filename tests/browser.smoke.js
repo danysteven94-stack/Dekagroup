@@ -259,10 +259,10 @@ function loadPuppeteer() {
     assert.ok(dl.name.endsWith(".csv") && dl.href.startsWith("blob:"), "a real CSV blob download was triggered: " + JSON.stringify(dl));
   });
 
-  await step("Notifikasyon Imèl: shows 'not configured' without RESEND_API_KEY, and recipients can still be managed", async () => {
+  await step("Notifikasyon Imèl: shows 'not configured' without BREVO_API_KEY, and recipients can still be managed", async () => {
     await page.click('[data-action="set-tab"][data-tab="sekirite"]');
     await waitText("Notifikasyon Imèl");
-    assert.ok((await bodyText()).includes("RESEND_API_KEY pa konfigire"), "clear warning shown");
+    assert.ok((await bodyText()).includes("BREVO_API_KEY pa konfigire"), "clear warning shown");
     assert.ok(!(await page.$('[data-action="sec-email-test"]')), "no test button while unavailable");
     await fill("#sec-email-input", "teams@example.com");
     await page.click('#sec-email-add-form button[type="submit"]');

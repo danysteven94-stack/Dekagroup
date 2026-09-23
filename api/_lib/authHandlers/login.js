@@ -92,7 +92,7 @@ module.exports = async function handler(req, res) {
             // Don't let a Resend/redis hiccup surface as an opaque 500 — tell the person clearly
             // and log the real reason server-side (check it in the Vercel function logs).
             console.error("2fa email send failed:", mailErr && mailErr.message);
-            res.status(502).json({ error: "Pa t kapab voye imèl la. Verifye RESEND_API_KEY ak EMAIL_FROM sou sèvè a, oswa itilize kòd aplikasyon an olye.", code: "email_send_failed" });
+            res.status(502).json({ error: "Pa t kapab voye imèl la. Verifye BREVO_API_KEY ak EMAIL_FROM sou sèvè a, oswa itilize kòd aplikasyon an olye.", code: "email_send_failed" });
             return;
           }
           await A.audit(req, "login_2fa_email_sent", { username: username });

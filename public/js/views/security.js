@@ -111,7 +111,7 @@ function auditDetailText(detail) {
 function emailSection(S) {
   var e = S.email && Array.isArray(S.email.recipients) ? S.email : { available: false, recipients: [] };
   var f = S.emailForm || { email: "", err: "" };
-  var warn = e.available ? "" : `<div class="alert" style="margin-bottom:14px">${ icon("alert", 14) }RESEND_API_KEY pa konfigire sou sèvè a: imèl yo p ap voye toutotan sa poko fèt. Gade SEKIRITE.md.</div>`;
+  var warn = e.available ? "" : `<div class="alert" style="margin-bottom:14px">${ icon("alert", 14) }BREVO_API_KEY pa konfigire sou sèvè a: imèl yo p ap voye toutotan sa poko fèt. Gade SEKIRITE.md.</div>`;
   var rows = e.recipients.length === 0 ? `<div class="empty" style="padding:16px">${ icon("circle", 18) }<div>Poko gen adrès imèl.</div></div>` : e.recipients.map(function (r) {
     return `<div class="row"><div class="row-min"><div class="row-sub"><strong style="color:var(--navy)">${ escapeHtml(r.email) }</strong></div></div><button class="btn ghost" data-action="sec-email-remove" data-email="${ escapeHtml(r.email) }" style="background:transparent;color:${ COLORS.urgent };border:1px solid var(--border);font-size:12px">Retire</button></div>`;
   }).join("");

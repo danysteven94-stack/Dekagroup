@@ -16,7 +16,7 @@ try {
   console.error("push disabled:", e && e.message);
 }
 
-// Email notifications are optional too (active only with RESEND_API_KEY).
+// Email notifications are optional too (active only with BREVO_API_KEY).
 let notifyNewEmail = async function () {};
 try {
   notifyNewEmail = require("./email").notifyNewEmail;

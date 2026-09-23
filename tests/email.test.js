@@ -1,5 +1,5 @@
 "use strict";
-// Email notifications (Resend API). Mocks global.fetch so no real network call is ever made.
+// Email notifications (Brevo API). Mocks global.fetch so no real network call is ever made.
 //   node tests/email.test.js            (Redis storage)      TEST_BACKEND=pg node tests/email.test.js   (PostgreSQL layer)
 const assert = require("assert");
 const H = require("./helpers");
@@ -12,7 +12,7 @@ async function test(name, fn) {
     failNext = 0;
     process.env.AUTH_ADMIN_PASS = "Adm1n-Strong-Pass";
     process.env.AUTH_DEPOT_PASS = "Dep0t-Strong-Pass";
-    delete process.env.RESEND_API_KEY;
+    delete process.env.BREVO_API_KEY;
     delete process.env.EMAIL_FROM;
     await fn();
     results.push([true, name]);
@@ -21,13 +21,13 @@ async function test(name, fn) {
   }
 }
 
-// ---- fetch mock: records every call, lets a test simulate Resend failures.
+// ---- fetch mock: records every call, lets a test simulate Brevo failures.
 let calls = [];
 let failNext = 0;
 const realFetch = global.fetch;
 global.fetch = async function (url, opts) {
-  if (String(url).indexOf("api.resend.com") === -1) return realFetch(url, opts);
-  calls.push({ url: String(url), body: JSON.parse((opts && opts.body) || "{}"), auth: opts && opts.headers && opts.headers.Authorization });
+  if (String(url).indexOf("api.brevo.com") === -1) return realFetch(url, opts);
+  calls.push({ url: String(url), body: JSON.parse((opts && opts.body) || "{}"), auth: opts && opts.headers && opts.headers["api-key"] });
   if (failNext > 0) {
     failNext--;
     return { ok: false, status: 422, text: async () => JSON.stringify({ message: "invalid domain" }) };
@@ -49,7 +49,7 @@ const seed = () => ({
 });
 
 (async () => {
-  await test("without RESEND_API_KEY: GET says unavailable, sending is a silent no-op, test button refuses clearly", async () => {
+  await test("without BREVO_API_KEY: GET says unavailable, sending is a silent no-op, test button refuses clearly", async () => {
     const admin = await login();
     const g = await admin.call(H.api("email"));
     assert.deepStrictEqual(g.body, { available: false, recipients: [] });
@@ -90,8 +90,9 @@ const seed = () => ({
     assert.strictEqual(full.statusCode, 400);
   });
 
-  await test("with RESEND_API_KEY: test button sends via the Resend API to every recipient (BCC), audited", async () => {
-    process.env.RESEND_API_KEY = "re_test_key_123";
+  await test("with BREVO_API_KEY: test button sends via the Brevo API to every recipient (BCC), audited", async () => {
+    process.env.BREVO_API_KEY = "re_test_key_123";
+    process.env.EMAIL_FROM = "DEKA LOG <test@example.com>";
     const admin = await login();
     await post(admin, { action: "add", email: "marie@example.com" });
     await post(admin, { action: "add", email: "jean@example.com" });
@@ -101,15 +102,16 @@ const seed = () => ({
     assert.strictEqual(t.statusCode, 200);
     assert.strictEqual(t.body.sent, 2);
     assert.strictEqual(calls.length, 1);
-    assert.strictEqual(calls[0].auth, "Bearer re_test_key_123");
-    assert.deepStrictEqual(calls[0].body.bcc.sort(), ["jean@example.com", "marie@example.com"]);
+    assert.strictEqual(calls[0].auth, "re_test_key_123");
+    assert.deepStrictEqual(calls[0].body.bcc.map((x) => x.email).sort(), ["jean@example.com", "marie@example.com"]);
     assert.ok(calls[0].body.subject.includes("Tès"));
     const ev = (await admin.call(H.api("audit"))).body.events.map((e) => e.ev);
     assert.ok(ev.includes("email_test") && ev.includes("email_recipient_add"));
   });
 
   await test("test button is rate limited (15s lock) so it cannot be used to spam the list", async () => {
-    process.env.RESEND_API_KEY = "re_test_key_123";
+    process.env.BREVO_API_KEY = "re_test_key_123";
+    process.env.EMAIL_FROM = "DEKA LOG <test@example.com>";
     const admin = await login();
     await post(admin, { action: "add", email: "marie@example.com" });
     assert.strictEqual((await post(admin, { action: "test" })).statusCode, 200);
@@ -117,8 +119,9 @@ const seed = () => ({
     assert.strictEqual(again.statusCode, 429);
   });
 
-  await test("Resend API failure surfaces as a clear error, not a 500 crash", async () => {
-    process.env.RESEND_API_KEY = "re_test_key_123";
+  await test("Brevo API failure surfaces as a clear error, not a 500 crash", async () => {
+    process.env.BREVO_API_KEY = "re_test_key_123";
+    process.env.EMAIL_FROM = "DEKA LOG <test@example.com>";
     const admin = await login();
     await post(admin, { action: "add", email: "marie@example.com" });
     failNext = 1;
@@ -128,7 +131,8 @@ const seed = () => ({
   });
 
   await test("saving data / a targeted action that creates a fresh notification triggers exactly one digest email; old ones are not resent", async () => {
-    process.env.RESEND_API_KEY = "re_test_key_123";
+    process.env.BREVO_API_KEY = "re_test_key_123";
+    process.env.EMAIL_FROM = "DEKA LOG <test@example.com>";
     const admin = await login();
     await post(admin, { action: "add", email: "marie@example.com" });
     await H.setData(seed());
@@ -138,14 +142,15 @@ const seed = () => ({
     const r = await depot.call(H.api("act"), { method: "POST", body: { action: "markEmpty", id: "c1", rev } });
     assert.strictEqual(r.statusCode, 200);
     assert.strictEqual(calls.length, 1, "one email sent for the new notification");
-    assert.ok(calls[0].body.text.includes("NUM1"));
+    assert.ok(calls[0].body.textContent.includes("NUM1"));
     // saving again with no new notification must not send another email
     await depot.call(H.api("act"), { method: "POST", body: { action: "markEmpty", id: "c1", rev: await H.rev() } });
     assert.strictEqual(calls.length, 1, "no duplicate email for unchanged notifications");
   });
 
   await test("with no recipients configured, a save still succeeds and sends nothing", async () => {
-    process.env.RESEND_API_KEY = "re_test_key_123";
+    process.env.BREVO_API_KEY = "re_test_key_123";
+    process.env.EMAIL_FROM = "DEKA LOG <test@example.com>";
     await H.setData(seed());
     const depot = H.browser();
     await depot.call(H.api("auth/login"), { method: "POST", body: { username: "depotnord", password: "Dep0t-Strong-Pass" } });
@@ -155,7 +160,8 @@ const seed = () => ({
   });
 
   await test("no recipient email address or password ever appears in the audit log", async () => {
-    process.env.RESEND_API_KEY = "re_test_key_123";
+    process.env.BREVO_API_KEY = "re_test_key_123";
+    process.env.EMAIL_FROM = "DEKA LOG <test@example.com>";
     const admin = await login();
     await post(admin, { action: "add", email: "secret.person@example.com" });
     const ev = (await admin.call(H.api("audit"))).body.events;

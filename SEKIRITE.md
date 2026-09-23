@@ -70,13 +70,14 @@ Chak moun gen pwòp kont li (non itilizatè + modpass pa li). Jounal aktivite a 
 ## Notifikasyon Imèl
 Chak fwa gen yon nouvo notifikasyon (yon bill fini, yon kontenè kite...), yon imèl rezime ka voye bay yon lis adrès, an menm tan ak notifikasyon push la.
 
-**Aktive l (opsyonèl):**
-1. Kreye yon kont gratis sou [resend.com](https://resend.com) epi pran yon **API key**.
-2. Vercel > Environment Variables > ajoute `RESEND_API_KEY` (valè a soti Resend) > **Redeploy**.
-3. Opsyonèl: `EMAIL_FROM` pou chanje adrès ki voye yo (default: `DEKA LOG <onboarding@resend.dev>` — yon adrès tès Resend bay ki mache san w pa konfigire pwòp domèn ou). Pou sèvi ak yon adrès tankou `notifikasyon@dekagroup.com`, ou dwe **verifye domèn nan** nan Resend anvan.
-4. Konekte kòm admin, tab **Sekirite**, seksyon **Notifikasyon Imèl** — ajoute adrès moun ki dwe resevwa yo, epi klike **Voye yon tès** pou konfime li mache.
+**Aktive l (opsyonèl, gratis — pa bezwen achte yon domèn):**
+1. Kreye yon kont gratis sou [brevo.com](https://www.brevo.com) (plan gratis: 300 imèl/jou).
+2. **Senders & IP > Senders** > ajoute adrès ou vle voye yo soti a (egzanp yon adrès Gmail ou deja genyen), epi konfime l — Brevo voye yon lyen konfimasyon nan bwat lèt ou a. **Pa bezwen domèn ni DNS**, jis konfime ou posede adrès la.
+3. **SMTP & API > API Keys** > jenere yon **API key**.
+4. Vercel > Environment Variables > ajoute `BREVO_API_KEY` (valè a soti Brevo) ak `EMAIL_FROM` (menm adrès ou te konfime a, egzanp `DEKA LOG <ou@gmail.com>`) > **Redeploy**.
+5. Konekte kòm admin, tab **Sekirite**, seksyon **Notifikasyon Imèl** — ajoute adrès moun ki dwe resevwa yo, epi klike **Voye yon tès** pou konfime li mache.
 
-San `RESEND_API_KEY`, seksyon an montre yon mesaj ki di sa poko konfigire; ou ka toujou ajoute/retire adrès yo davans, yo pral kòmanse resevwa yo depi w konfigire kle a.
+San `BREVO_API_KEY`, seksyon an montre yon mesaj ki di sa poko konfigire; ou ka toujou ajoute/retire adrès yo davans, yo pral kòmanse resevwa yo depi w konfigire kle a.
 
 ## Mòd San Entènèt ak Èd
 - **San entènèt:** yon bandwol wouj parèt anlè app la lè aparèy la pèdi konesyon. App la kenbe dènye done ki te chaje yo; li rekonekte epi resenkronize otomatikman lè entènèt la retounen. Sove yon chanjman pandan w san entènèt pa mache — tann bandwol la disparèt anvan w kontinye.
