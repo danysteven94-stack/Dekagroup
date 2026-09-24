@@ -132,7 +132,7 @@ function sanitizeState(body) {
     const cid = id(c.id, "id konteneur");
     if (seenC[cid]) throw new ValidationError("id konteneur double");
     seenC[cid] = true;
-    const known = ["id", "numewo", "billId", "size", "division", "dateEntered", "dateExpected", "dateVerified", "depo", "trucking", "dateEmpty", "dateLeft"];
+    const known = ["id", "numewo", "billId", "size", "division", "dateEntered", "dateExpected", "dateVerified", "depo", "trucking", "chofer", "dateEmpty", "dateLeft"];
     return withHint(c, extras(c, known, {
       id: cid,
       numewo: str(c.numewo, 40, "numewo", true),
@@ -144,6 +144,7 @@ function sanitizeState(body) {
       dateVerified: dateOrNull(c.dateVerified, "dateVerified"),
       depo: str(c.depo, 80, "depo"),
       trucking: str(c.trucking, 40, "trucking"),
+      chofer: str(c.chofer, 80, "chofer"),
       dateEmpty: dateOrNull(c.dateEmpty, "dateEmpty"),
       dateLeft: dateOrNull(c.dateLeft, "dateLeft"),
     }));

@@ -8,7 +8,6 @@ import {
   LOGO_URL,
   STATUS_LABELS,
   TAB_TITLES,
-  TRUCKING_OPTIONS,
   URGENT_AFTER_DAYS
 } from "../constants.js";
 import { icon } from "../icons.js";
@@ -27,7 +26,8 @@ import {
   formatTime,
   isUrgent,
   statusOf,
-  today
+  today,
+  truckingOptionsHtml
 } from "../utils.js";
 import { accountButton } from "./account.js";
 import { helpButton } from "./help.js";
@@ -257,9 +257,7 @@ function inventoryView() {
     var bl = state.bills.find(function (bill) {
       return bill.id === cc.billId;
     });
-    return `<div class="row" style="border-left:4px solid ${ col }${ ck ? ";opacity:.6" : "" }"><div class="row-min"><span class="plate" style="border-color:${ col }">${ escapeHtml(cc.numewo) }</span><div class="row-sub">${ STATUS_LABELS[st] } · ${ cc.division ? escapeHtml(cc.division) : "\u2014" }</div><div class="row-sub light">${ bl && bl.product ? `Pwodwi: <strong>${ escapeHtml(bl.product) }</strong>` : "" }</div></div><div style="width:150px;flex-shrink:0"><span class="field-label" style="font-size:9.5px">Depo</span><input class="input inv-depo-input" data-id="${ cc.id }" value="${ escapeHtml(cc.depo || "") }" placeholder="Egz. Depo Kòdòn" style="padding:6px 8px;font-size:12.5px" /></div><div style="width:130px;flex-shrink:0;margin-left:8px"><span class="field-label" style="font-size:9.5px">Trucking</span><select class="input inv-trucking-select" data-id="${ cc.id }" style="padding:6px 8px;font-size:12.5px"><option value=""${ cc.trucking ? "" : " selected" }>— Chwazi —</option>${ cc.trucking && TRUCKING_OPTIONS.indexOf(cc.trucking) === -1 ? `<option value="${ escapeHtml(cc.trucking) }" selected>${ escapeHtml(cc.trucking) }</option>` : "" }${ TRUCKING_OPTIONS.map(function (tk) {
-      return `<option value="${ tk }"${ cc.trucking === tk ? " selected" : "" }>${ tk }</option>`;
-    }).join("") }</select></div><button class="btn small${ ck ? "" : " ghost" }" data-action="toggle-inventory" data-id="${ cc.id }" style="flex-shrink:0;margin-left:8px;background:${ ck ? COLORS.green : "transparent" };color:${ ck ? "#fff" : "var(--ink)" };border:1.5px solid ${ ck ? COLORS.green : "var(--border)" }">${ icon("check", 14, ck ? "#fff" : "var(--ink)") } ${ ck ? "Konfime — Anile" : "Konfime" }</button></div>`;
+    return `<div class="row" style="border-left:4px solid ${ col }${ ck ? ";opacity:.6" : "" }"><div class="row-min"><span class="plate" style="border-color:${ col }">${ escapeHtml(cc.numewo) }</span><div class="row-sub">${ STATUS_LABELS[st] } · ${ cc.division ? escapeHtml(cc.division) : "\u2014" }</div><div class="row-sub light">${ bl && bl.product ? `Pwodwi: <strong>${ escapeHtml(bl.product) }</strong>` : "" }</div></div><div style="width:150px;flex-shrink:0"><span class="field-label" style="font-size:9.5px">Depo</span><input class="input inv-depo-input" data-id="${ cc.id }" value="${ escapeHtml(cc.depo || "") }" placeholder="Egz. Depo Kòdòn" style="padding:6px 8px;font-size:12.5px" /></div><div style="width:130px;flex-shrink:0;margin-left:8px"><span class="field-label" style="font-size:9.5px">Trucking</span><select class="input inv-trucking-select" data-id="${ cc.id }" style="padding:6px 8px;font-size:12.5px">${ truckingOptionsHtml(cc.trucking) }</select></div>${ st === "pokoverifye" ? `<button class="btn small teal" data-action="verify-container" data-id="${ cc.id }" style="flex-shrink:0;margin-left:8px">Verifye</button>` : "" }<button class="btn small${ ck ? "" : " ghost" }" data-action="toggle-inventory" data-id="${ cc.id }" style="flex-shrink:0;margin-left:8px;background:${ ck ? COLORS.green : "transparent" };color:${ ck ? "#fff" : "var(--ink)" };border:1.5px solid ${ ck ? COLORS.green : "var(--border)" }">${ icon("check", 14, ck ? "#fff" : "var(--ink)") } ${ ck ? "Konfime — Anile" : "Konfime" }</button></div>`;
   }
   var rows = pending.map(function (cc) {
     return inventoryRow(cc, false);
@@ -286,9 +284,7 @@ function addContainerView() {
   var a = state.entryMode === "planifye" ? `<div><span class="field-label">Dat Prevwa (opsyonèl)</span><input class="input" type="date" id="f-date-expected" /></div>` : `<div><span class="field-label">Dat Antre</span><input class="input" type="date" id="f-date" value="${ today() }" /></div>`;
   return `<div class="section-head"><div><div class="eyebrow">Aksyon Rapid</div><h2 class="h2">Ajoute yon Kontenè</h2></div></div><form class="form-grid" id="add-form"><div><span class="field-label">Nimewo Kontenè</span><input class="input" id="f-numewo" placeholder="Egz. MSCU1234567" required /></div><div><span class="field-label">Gwosè (Pye)</span><select class="input" id="f-size" required><option value="">— Chwazi —</option><option value="20">20 Pye</option><option value="40">40 Pye</option></select></div><div><span class="field-label">Divizyon</span><select class="input" id="f-division" required><option value="">— Chwazi —</option>${ ALL_DIVISIONS.map(function (l) {
     return `<option value="${ l }">${ l }</option>`;
-  }).join("") }</select></div><div><span class="field-label">Trucking (opsyonèl)</span><select class="input" id="f-trucking"><option value="">— Chwazi —</option>${ TRUCKING_OPTIONS.map(function (l) {
-    return `<option value="${ l }">${ l }</option>`;
-  }).join("") }</select></div><div><span class="field-label">Bill</span><div style="display:flex;gap:6px"><select class="input" style="width:96px" id="f-billmode"><option value="nouvo"${ state.billMode === "nouvo" ? " selected" : "" }>Nouvo/Egz.</option><option value="ekzistan"${ state.billMode === "ekzistan" ? " selected" : "" }>Chwazi</option></select>${ n }</div></div><div><span class="field-label">Pwodwi nan Bill la</span>${ i }</div>${ o }${ a }<button type="submit" class="btn teal">${ icon("plus", 15, "#fff") } Ajoute</button></form><p class="form-hint">Tout kontenè ki nan menm bill la otomatikman gen menm pwodwi a. Si kontenè a "Poko Antre", li ap parèt kòm <strong>Disponib</strong> jiskaske w konfime antre l.</p>`;
+  }).join("") }</select></div><div><span class="field-label">Trucking (opsyonèl)</span><select class="input" id="f-trucking">${ truckingOptionsHtml("") }</select></div><div><span class="field-label">Bill</span><div style="display:flex;gap:6px"><select class="input" style="width:96px" id="f-billmode"><option value="nouvo"${ state.billMode === "nouvo" ? " selected" : "" }>Nouvo/Egz.</option><option value="ekzistan"${ state.billMode === "ekzistan" ? " selected" : "" }>Chwazi</option></select>${ n }</div></div><div><span class="field-label">Pwodwi nan Bill la</span>${ i }</div>${ o }${ a }<button type="submit" class="btn teal">${ icon("plus", 15, "#fff") } Ajoute</button></form><p class="form-hint">Tout kontenè ki nan menm bill la otomatikman gen menm pwodwi a. Si kontenè a "Poko Antre", li ap parèt kòm <strong>Disponib</strong> jiskaske w konfime antre l.</p>`;
 }
 
 function containersView() {
@@ -415,6 +411,20 @@ function billsView() {
   return e + n;
 }
 
+function dknReportSection() {
+  var items = state.containers.filter(function (container) {
+    return /^DNK\s?\d+/i.test(container.trucking || "") && statusOf(container) !== "kite";
+  }).sort(function (a, b) {
+    return (a.trucking || "").localeCompare(b.trucking || "") || (a.numewo < b.numewo ? -1 : 1);
+  });
+  var rows = items.map(function (cc) {
+    var st = statusOf(cc);
+    var col = st === "full" ? COLORS.rust : st === "vid" ? COLORS.vid : COLORS.pokoverifye;
+    return `<div class="row" style="border-left:4px solid ${ col }"><div class="row-min"><span class="plate" style="border-color:${ col }">${ escapeHtml(cc.numewo) }</span><div class="row-sub">${ STATUS_LABELS[st] } · ${ escapeHtml(cc.trucking || "") } · ${ cc.division ? escapeHtml(cc.division) : "\u2014" }</div></div><div style="width:200px;flex-shrink:0"><span class="field-label" style="font-size:9.5px">Non Chofè</span><input class="input dkn-chofer-input" data-id="${ cc.id }" value="${ escapeHtml(cc.chofer || "") }" placeholder="Non chofè a" style="padding:6px 8px;font-size:12.5px" /></div></div>`;
+  }).join("");
+  return `<div class="section-head" style="margin-top:28px"><div><div class="eyebrow">${ items.length } kontenè</div><h2 class="h2">Rapò Trucking DNK</h2></div></div><p style="font-size:12.5px;color:var(--muted-light);margin-top:-10px;margin-bottom:16px">Tout kontenè ki asiyen a yon trucking DNK. Ekri non chofè ki vini ak chak kontenè a.</p><div style="display:flex;flex-direction:column;gap:8px">${ items.length === 0 ? `<div class="empty">${ icon("circle", 22) }<div>Pa gen kontenè sou trucking DNK kounye a.</div></div>` : rows }</div>`;
+}
+
 function reportsView() {
   var e = state.containers.filter(function (container) {
     return (statusOf(container) === "full" || statusOf(container) === "pokoverifye") && DIVISIONS_GROUP_1.indexOf(container.division) !== -1;
@@ -428,7 +438,7 @@ function reportsView() {
   function o(a, l, s, f, g, v) {
     return `<div class="card" style="display:flex;flex-direction:column;gap:14px"><div style="display:flex;align-items:center;gap:12px"><div style="width:40px;height:40px;border-radius:9px;background:${ f }16;display:flex;align-items:center;justify-content:center;flex-shrink:0">${ icon("filetext", 19, f) }</div><div><div class="h3">${ a }</div><div style="font-size:12px;color:var(--muted)">${ l }</div></div></div><div style="font-family:var(--font-mono);font-weight:800;font-size:26px;color:var(--ink)">${ s } <span style="font-size:12px;font-weight:600;color:var(--muted-light)">kontenè</span></div><button class="btn teal" data-action="print-report" data-status="${ g }"${ v ? ` data-group="${ v }"` : "" } style="align-self:flex-start">${ icon("download", 15, "#fff") } Telechaje PDF</button></div>`;
   }
-  return `<div class="section-head"><div><div class="eyebrow">Dokiman</div><h2 class="h2">Rapò Kontenè</h2></div></div><p style="font-size:12.5px;color:var(--muted-light);margin-top:-10px;margin-bottom:20px">Klike "Telechaje PDF" pou telechaje fichye a dirèkteman sou aparèy ou.</p><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px">${ o("Rapò Full \u2014 Gwoup 1", "CRISTO AL, CRISTO COMM, CONFIDEKA, DEKAV", e, COLORS.rust, "full", "1") }${ o("Rapò Full \u2014 Gwoup 2", "ACS, MIKADO, LA COLLECTION, DEKA TIRES", n, COLORS.rust, "full", "2") }${ o("Rapò Kontenè Vid", "Tout kontenè ki vide men poko kite", i, COLORS.vid, "vid", null) }<div class="card" style="display:flex;flex-direction:column;gap:14px"><div style="display:flex;align-items:center;gap:12px"><div style="width:40px;height:40px;border-radius:9px;background:${ COLORS.green }16;display:flex;align-items:center;justify-content:center;flex-shrink:0">${ icon("filetext", 19, COLORS.green) }</div><div><div class="h3">Rejis Konplè — Excel</div><div style="font-size:12px;color:var(--muted)">Tout kontenè yo, yon fichye .csv ki louvri nan Excel</div></div></div><div style="font-family:var(--font-mono);font-weight:800;font-size:26px;color:var(--ink)">${ state.containers.length } <span style="font-size:12px;font-weight:600;color:var(--muted-light)">kontenè</span></div><button class="btn teal" data-action="export-containers-csv" style="align-self:flex-start">${ icon("download", 15, "#fff") } Telechaje CSV</button></div></div>`;
+  return `<div class="section-head"><div><div class="eyebrow">Dokiman</div><h2 class="h2">Rapò Kontenè</h2></div></div><p style="font-size:12.5px;color:var(--muted-light);margin-top:-10px;margin-bottom:20px">Klike "Telechaje PDF" pou telechaje fichye a dirèkteman sou aparèy ou.</p><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px">${ o("Rapò Full \u2014 Gwoup 1", "CRISTO AL, CRISTO COMM, CONFIDEKA, DEKAV", e, COLORS.rust, "full", "1") }${ o("Rapò Full \u2014 Gwoup 2", "ACS, MIKADO, LA COLLECTION, DEKA TIRES", n, COLORS.rust, "full", "2") }${ o("Rapò Kontenè Vid", "Tout kontenè ki vide men poko kite", i, COLORS.vid, "vid", null) }<div class="card" style="display:flex;flex-direction:column;gap:14px"><div style="display:flex;align-items:center;gap:12px"><div style="width:40px;height:40px;border-radius:9px;background:${ COLORS.green }16;display:flex;align-items:center;justify-content:center;flex-shrink:0">${ icon("filetext", 19, COLORS.green) }</div><div><div class="h3">Rejis Konplè — Excel</div><div style="font-size:12px;color:var(--muted)">Tout kontenè yo, yon fichye .csv ki louvri nan Excel</div></div></div><div style="font-family:var(--font-mono);font-weight:800;font-size:26px;color:var(--ink)">${ state.containers.length } <span style="font-size:12px;font-weight:600;color:var(--muted-light)">kontenè</span></div><button class="btn teal" data-action="export-containers-csv" style="align-self:flex-start">${ icon("download", 15, "#fff") } Telechaje CSV</button></div></div>${ dknReportSection() }`;
 }
 
 function notificationsView() {

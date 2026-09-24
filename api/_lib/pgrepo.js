@@ -18,7 +18,7 @@ const LEGACY_KEY = "deka-log-data";
 const CMAP = [
   ["id", "id"], ["numewo", "numewo"], ["bill_id", "billId"], ["size", "size"], ["division", "division"],
   ["date_entered", "dateEntered"], ["date_expected", "dateExpected"], ["date_verified", "dateVerified"],
-  ["depo", "depo"], ["trucking", "trucking"], ["date_empty", "dateEmpty"], ["date_left", "dateLeft"],
+  ["depo", "depo"], ["trucking", "trucking"], ["chofer", "chofer"], ["date_empty", "dateEmpty"], ["date_left", "dateLeft"],
 ];
 const BMAP = [["id", "id"], ["numewo", "numewo"], ["product", "product"], ["completed_at", "completedAt"]];
 

@@ -353,6 +353,16 @@ document.addEventListener("change", function (event) {
     render();
     return;
   }
+  if (event.target && event.target.classList && event.target.classList.contains("dkn-chofer-input")) {
+    var chId = event.target.getAttribute("data-id");
+    var chVal = event.target.value.trim();
+    state.containers = state.containers.map(function (container) {
+      return container.id === chId ? Object.assign({}, container, { chofer: chVal || null }) : container;
+    });
+    saveData();
+    render();
+    return;
+  }
   if (event.target && event.target.id === "driver-trucking-select" && (state.driverTrucking = event.target.value, render()), event.target && event.target.id === "f-billmode") {
     var n = document.getElementById("f-numewo") ? document.getElementById("f-numewo").value : "";
     var i = document.getElementById("f-date") ? document.getElementById("f-date").value : "";

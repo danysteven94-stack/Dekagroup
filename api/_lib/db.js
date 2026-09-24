@@ -75,6 +75,8 @@ const DDL = [
     "extra TEXT NOT NULL DEFAULT '{}', rev BIGINT NOT NULL, writer TEXT, created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP)",
   "CREATE INDEX IF NOT EXISTS notifications_seq_idx ON notifications (seq)",
   "CREATE TABLE IF NOT EXISTS inventory_checks (container_id TEXT PRIMARY KEY, checked_on TEXT NOT NULL, rev BIGINT NOT NULL, writer TEXT)",
+  // Existing deployments already had a "containers" table before "chofer" (driver name) existed; add it if missing.
+  "ALTER TABLE containers ADD COLUMN IF NOT EXISTS chofer TEXT",
   "CREATE TABLE IF NOT EXISTS users (" +
     "username TEXT PRIMARY KEY, name TEXT NOT NULL, role TEXT NOT NULL, pass_hash TEXT NOT NULL, " +
     "active INTEGER NOT NULL DEFAULT 1, email TEXT, must_change INTEGER NOT NULL DEFAULT 1, " +

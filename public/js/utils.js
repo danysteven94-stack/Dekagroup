@@ -1,5 +1,7 @@
 // Small pure helpers: dates, escaping, container/bill status rules, localStorage wrappers.
 import {
+  DAILY_DNK_OPTIONS,
+  DAILY_TRUCKING_BASE,
   MONTHS,
   URGENT_AFTER_DAYS,
   WEEKDAYS
@@ -33,6 +35,20 @@ export function escapeHtml(text) {
       "'": "&#39;"
     }[n];
   });
+}
+
+// Shared <option> list for every trucking dropdown in the app: the base carriers plus a "DNK"
+// group (DNK 001-015). Keeps an unknown/legacy value visible instead of silently dropping it.
+export function truckingOptionsHtml(current) {
+  var known = DAILY_TRUCKING_BASE.indexOf(current) !== -1 || DAILY_DNK_OPTIONS.indexOf(current) !== -1;
+  var customOpt = current && !known ? `<option value="${ escapeHtml(current) }" selected>${ escapeHtml(current) }</option>` : "";
+  var baseOpts = DAILY_TRUCKING_BASE.map(function (o) {
+    return `<option value="${ o }"${ current === o ? " selected" : "" }>${ o }</option>`;
+  }).join("");
+  var dnkOpts = DAILY_DNK_OPTIONS.map(function (o) {
+    return `<option value="${ o }"${ current === o ? " selected" : "" }>${ o }</option>`;
+  }).join("");
+  return `<option value=""${ current ? "" : " selected" }>\u2014 Chwazi \u2014</option>${ customOpt }${ baseOpts }<optgroup label="DNK">${ dnkOpts }</optgroup>`;
 }
 
 export function formatDateShort(isoDate) {
