@@ -108,6 +108,14 @@ const modelReply = (obj) => ({ ok: true, status: 200, json: async () => ({ stop_
     try {
       global.fetch = async () => ({ ok: false, status: 401, json: async () => ({}) });
       assert.strictEqual((await b.call(scan, { method: "POST", body: { image: png, mime: "image/png" } })).body.code, "scan_bad_key");
+      global.fetch = async () => ({ ok: false, status: 400, json: async () => ({ error: { type: "invalid_request_error", message: "Your credit balance is too low to access the Anthropic API." } }) });
+      const cr = await b.call(scan, { method: "POST", body: { image: png, mime: "image/png" } });
+      assert.strictEqual(cr.body.code, "scan_no_credit");
+      global.fetch = async () => ({ ok: false, status: 404, json: async () => ({ error: { message: "model: nope" } }) });
+      assert.strictEqual((await b.call(scan, { method: "POST", body: { image: png, mime: "image/png" } })).body.code, "scan_bad_model");
+      global.fetch = async () => ({ ok: false, status: 400, json: async () => ({ error: { message: "messages.0.content.0.image: bad" } }) });
+      const other = await b.call(scan, { method: "POST", body: { image: png, mime: "image/png" } });
+      assert.ok(other.body.code === "scan_upstream" && /400/.test(other.body.error) && /image: bad/.test(other.body.error));
       global.fetch = async () => ({ ok: false, status: 529, json: async () => ({}) });
       assert.strictEqual((await b.call(scan, { method: "POST", body: { image: png, mime: "image/png" } })).statusCode, 503);
       global.fetch = async () => ({ ok: true, status: 200, json: async () => ({ content: [{ type: "text", text: "sorry, I cannot read this" }] }) });

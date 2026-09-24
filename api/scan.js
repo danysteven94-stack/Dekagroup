@@ -79,10 +79,15 @@ module.exports = async function handler(req, res) {
     }
 
     if (!r.ok) {
-      console.error("scan upstream status:", r.status);
-      if (r.status === 401 || r.status === 403) send(res, 502, "Kle API skane a pa bon. Verifye ANTHROPIC_API_KEY.", "scan_bad_key");
+      // Anthropic's error text never contains our key; it is logged (Vercel > Logs) and mapped to a clear message.
+      let up = "";
+      try { const j = await r.json(); up = String((j && j.error && j.error.message) || "").slice(0, 300); } catch (e) { up = ""; }
+      console.error("scan upstream status:", r.status, up);
+      if (/credit balance|billing/i.test(up)) send(res, 402, "Kont Anthropic la pa gen kredi. Ajoute kredi sou console.anthropic.com (Billing), epi eseye ankò.", "scan_no_credit");
+      else if (r.status === 401 || r.status === 403) send(res, 502, "Kle API skane a pa bon. Verifye ANTHROPIC_API_KEY.", "scan_bad_key");
+      else if (r.status === 404) send(res, 502, "Modèl skane a pa egziste. Verifye SCAN_MODEL nan Vercel (oswa retire l).", "scan_bad_model");
       else if (r.status === 429 || r.status === 529) send(res, 503, "Sèvis skane a okipe. Eseye ankò nan yon ti moman.", "scan_busy");
-      else send(res, 502, "Sèvis skane a pa reponn kòrèkteman.", "scan_upstream");
+      else send(res, 502, "Sèvis skane a refize demann lan (" + r.status + ")" + (up ? ": " + up : "."), "scan_upstream");
       return;
     }
 
