@@ -56,7 +56,7 @@ function getDriver() {
 }
 
 // Portable DDL (same statements run on PostgreSQL in production and on SQLite in the tests).
-const SCHEMA_VERSION = 3;
+const SCHEMA_VERSION = 4;
 const DDL = [
   "CREATE TABLE IF NOT EXISTS meta (name TEXT PRIMARY KEY, value BIGINT NOT NULL)",
   "CREATE TABLE IF NOT EXISTS bills (" +
