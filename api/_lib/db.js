@@ -56,7 +56,7 @@ function getDriver() {
 }
 
 // Portable DDL (same statements run on PostgreSQL in production and on SQLite in the tests).
-const SCHEMA_VERSION = 4;
+const SCHEMA_VERSION = 5;
 const DDL = [
   "CREATE TABLE IF NOT EXISTS meta (name TEXT PRIMARY KEY, value BIGINT NOT NULL)",
   "CREATE TABLE IF NOT EXISTS bills (" +
@@ -77,6 +77,8 @@ const DDL = [
   "CREATE TABLE IF NOT EXISTS inventory_checks (container_id TEXT PRIMARY KEY, checked_on TEXT NOT NULL, rev BIGINT NOT NULL, writer TEXT)",
   // Existing deployments already had a "containers" table before "chofer" (driver name) existed; add it if missing.
   "ALTER TABLE containers ADD COLUMN IF NOT EXISTS chofer TEXT",
+  // Truck licence plate that carried the container out (archive).
+  "ALTER TABLE containers ADD COLUMN IF NOT EXISTS plak TEXT",
   "CREATE TABLE IF NOT EXISTS users (" +
     "username TEXT PRIMARY KEY, name TEXT NOT NULL, role TEXT NOT NULL, pass_hash TEXT NOT NULL, " +
     "active INTEGER NOT NULL DEFAULT 1, email TEXT, must_change INTEGER NOT NULL DEFAULT 1, " +

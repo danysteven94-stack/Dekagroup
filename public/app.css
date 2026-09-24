@@ -141,3 +141,29 @@ button,input,select{font-family:var(--font);}
   .content{padding:18px 14px 50px;}
   .topbar{padding:14px 16px;}
 }
+
+/* ---------- ARCHIVE ---------- */
+.modal-card.wide{max-width:780px;max-height:calc(100vh - 40px);display:flex;flex-direction:column;}
+.arch-body{overflow-y:auto;flex:1;min-height:0;padding-right:2px;}
+.arch-foot{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:16px;padding-top:14px;border-top:1px solid var(--line);}
+.arch-rec{border:1px solid var(--line);border-radius:10px;padding:12px;margin-bottom:12px;background:var(--bg);}
+.arch-rec-head{display:flex;align-items:center;gap:8px;margin-bottom:10px;}
+.arch-rec-n{font-family:var(--font-mono);font-weight:800;font-size:12px;color:var(--muted);}
+.arch-issues{display:flex;flex-wrap:wrap;gap:5px;flex:1;}
+.arch-chip{font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;}
+.arch-chip.err{background:#FBE4E8;color:#C81E3A;}
+.arch-chip.warn{background:#FFF3D6;color:#8A5A00;}
+.arch-chip.ok{background:#E2F3EC;color:var(--green-deep);}
+.arch-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;}
+.arch-scan-btns{display:flex;gap:8px;flex-wrap:wrap;}
+.arch-scan-btns label{cursor:pointer;}
+.arch-more{margin:6px 0 12px;}
+.arch-note{font-size:12.5px;color:var(--muted);background:var(--line-soft);border-radius:6px;padding:8px 10px;margin-bottom:12px;}
+.arch-reading{text-align:center;padding:24px 10px;display:flex;flex-direction:column;align-items:center;gap:10px;}
+.arch-thumb{max-width:160px;max-height:160px;border-radius:6px;border:1px solid var(--line);}
+.arch-table-wrap{overflow-x:auto;background:var(--panel);border:1px solid var(--line);border-radius:10px;}
+.arch-table{width:100%;border-collapse:collapse;font-size:13px;}
+.arch-table th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);padding:10px 12px;border-bottom:1px solid var(--line);white-space:nowrap;}
+.arch-table td{padding:9px 12px;border-bottom:1px solid var(--line-soft);white-space:nowrap;}
+.arch-table tbody tr:last-child td{border-bottom:none;}
+.arch-actions{display:flex;gap:6px;}

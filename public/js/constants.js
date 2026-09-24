@@ -105,6 +105,11 @@ export const ADMIN_TABS = [
     icon: "clipboard"
   },
   {
+    id: "achiv",
+    label: "Achiv",
+    icon: "filetext"
+  },
+  {
     id: "rapo",
     label: "Rapò",
     icon: "download"
@@ -132,6 +137,7 @@ export const TAB_TITLES = {
   containers: "Rejis Kontenè",
   inventory: "Envantè Jounalye",
   bills: "Rejis Bill",
+  achiv: "Achiv Kontenè Kite",
   rapo: "Rapò",
   notifs: "Istwa Notifikasyon",
   sekirite: "Sekirite ak Aktivite",

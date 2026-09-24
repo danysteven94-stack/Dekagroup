@@ -1,6 +1,7 @@
 // Generates and downloads CSV files (open directly in Excel, Google Sheets, LibreOffice) — no library needed.
 import { state } from "./state.js";
 import {
+  daysBetween,
   formatDateShort,
   statusOf
 } from "./utils.js";
@@ -31,7 +32,7 @@ export function downloadCsv(filename, headers, rows) {
 
 // One row per container, every container regardless of the current screen's filter — the full register.
 export function exportContainersCsv() {
-  var headers = ["Numewo", "Divizyon", "Estati", "Depo", "Trucking", "Bill", "Pwodwi", "Dat Antre", "Dat Verifye", "Dat Vid", "Dat Kite"];
+  var headers = ["Numewo", "Divizyon", "Estati", "Depo", "Trucking", "Bill", "Pwodwi", "Dat Antre", "Dat Verifye", "Dat Vid", "Dat Kite", "Plak", "Chofè"];
   var statusLabel = { disponib: "Disponib", pokoverifye: "Poko Verifye", full: "Full", vid: "Vid", kite: "Kite" };
   var rows = state.containers.slice().sort(function (a, b) {
     return a.numewo < b.numewo ? -1 : 1;
@@ -50,8 +51,36 @@ export function exportContainersCsv() {
       formatDateShort(c.dateEntered),
       formatDateShort(c.dateVerified),
       formatDateShort(c.dateEmpty),
-      formatDateShort(c.dateLeft)
+      formatDateShort(c.dateLeft),
+      c.plak || "",
+      c.chofer || ""
     ];
   });
   downloadCsv("deka-log-kontene-" + new Date().toISOString().slice(0, 10) + ".csv", headers, rows);
+}
+
+// The archive: every container that has left, newest exit first, with the truck plate.
+export function exportArchiveCsv() {
+  var headers = ["Kontenè", "Bill", "Pwodwi", "Gwosè", "Dat Antre", "Dat Kite", "Jou nan Tèminal", "Plak", "Chofè"];
+  var rows = state.containers.filter(function (c) {
+    return statusOf(c) === "kite";
+  }).sort(function (a, b) {
+    return (b.dateLeft || "") < (a.dateLeft || "") ? -1 : 1;
+  }).map(function (c) {
+    var bill = state.bills.find(function (b) {
+      return b.id === c.billId;
+    });
+    return [
+      c.numewo,
+      bill ? bill.numewo : "",
+      bill && bill.product ? bill.product : "",
+      c.size || "",
+      formatDateShort(c.dateEntered),
+      formatDateShort(c.dateLeft),
+      c.dateEntered && c.dateLeft ? daysBetween(c.dateEntered, c.dateLeft) : "",
+      c.plak || "",
+      c.chofer || ""
+    ];
+  });
+  downloadCsv("deka-log-achiv-" + new Date().toISOString().slice(0, 10) + ".csv", headers, rows);
 }

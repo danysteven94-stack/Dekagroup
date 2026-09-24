@@ -13,6 +13,9 @@ const runs = [
   ["email (Redis)", "email.test.js", {}],
   ["email (PostgreSQL layer)", "email.test.js", { TEST_BACKEND: "pg" }],
   ["database layer", "db.test.js", {}],
+  ["archive + scan (Redis)", "archive.server.test.js", {}],
+  ["archive + scan (PostgreSQL layer)", "archive.server.test.js", { TEST_BACKEND: "pg" }],
+  ["archive (browser logic)", "archive.client.test.mjs", {}],
 ];
 let bad = 0;
 runs.forEach(function (r) {

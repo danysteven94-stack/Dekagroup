@@ -7,6 +7,7 @@ import { render } from "./render.js";
 import { state } from "./state.js";
 import "./events.js";
 import "./events-account.js";
+import "./events-archive.js";
 
 setInterval(pollData, 15000);
 

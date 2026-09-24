@@ -9,6 +9,11 @@ function makeSqliteDriver() {
   let chain = Promise.resolve();
   const toSqlite = (sql) => sql.replace(/\$(\d+)/g, "?$1");
   const run = (sql, params) => {
+    // SQLite has no "ADD COLUMN IF NOT EXISTS": drop the clause and ignore "duplicate column name".
+    if (/^\s*alter\s+table\s+\w+\s+add\s+column\s+if\s+not\s+exists/i.test(sql)) {
+      try { db.exec(sql.replace(/if\s+not\s+exists\s+/i, "")); } catch (e) { if (!/duplicate column/i.test(e.message)) throw e; }
+      return [];
+    }
     const st = db.prepare(toSqlite(sql));
     const reads = /^\s*(select|with)\b/i.test(sql) || /\breturning\b/i.test(sql);
     if (reads) return st.all(...(params || [])).map((r) => Object.assign({}, r));

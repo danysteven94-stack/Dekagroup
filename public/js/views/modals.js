@@ -1,6 +1,7 @@
 // Toasts and modal dialogs.
 import { COLORS } from "../constants.js";
 import { icon } from "../icons.js";
+import { archiveModalView } from "./archive.js";
 import { state } from "../state.js";
 import {
   escapeHtml,
@@ -27,6 +28,9 @@ export function modalView() {
     return "";
   }
   var e = state.modal;
+  if (e.mode === "arch") {
+    return archiveModalView(e);
+  }
   if (e.mode === "correct") {
     return `<div class="modal-overlay"><div class="modal-card"><div class="h3" style="margin-bottom:16px">Korije Dat Antre</div><p style="font-size:12.5px;color:var(--muted);margin-top:-8px;margin-bottom:16px">Chanje dat antre a si te gen yon erè. Sa ap rekalkile jou Full otomatikman.</p><div><span class="field-label">Dat Antre</span><input class="input" type="date" id="modal-correct-date" value="${ escapeHtml(e.date) }" /></div><div style="display:flex;gap:8px;justify-content:flex-end;margin-top:22px"><button class="btn ghost" data-action="close-modal">Anile</button><button class="btn teal" data-action="submit-modal">Konfime</button></div></div></div>`;
   }

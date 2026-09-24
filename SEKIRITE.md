@@ -82,3 +82,8 @@ San `BREVO_API_KEY`, seksyon an montre yon mesaj ki di sa poko konfigire; ou ka 
 ## Mòd San Entènèt ak Èd
 - **San entènèt:** yon bandwol wouj parèt anlè app la lè aparèy la pèdi konesyon. App la kenbe dènye done ki te chaje yo; li rekonekte epi resenkronize otomatikman lè entènèt la retounen. Sove yon chanjman pandan w san entènèt pa mache — tann bandwol la disparèt anvan w kontinye.
 - **Èd:** yon bouton "Èd" bò kote "Kont mwen" nan tout entèfas yo montre yon gid rapid espesifik pou wòl moun nan.
+
+## Skane papye (tab Achiv)
+- `/api/scan` sèlman administratè a ka sèvi ak li (sesyon + CSRF + limit 60 skane/èdtan). Foto a pa sove nan okenn baz done: li voye bay sèvis Anthropic pou li, epi sèvè a retounen sèlman chan yo (kontenè, bill, dat, plak).
+- Sa modèl la li trete kòm done ki pa fè konfyans: sèvè a revalide chak chan (fòma nimewo kontenè, chif kontwòl ISO 6346, dat, longè). Anyen pa sove otomatikman: administratè a verifye epi klike "Sove".
+- Achiv la itilize menm tab `containers` la (kontenè ak dat kite), ak yon nouvo chan `plak`. Yon migrasyon otomatik ajoute kolòn nan (SCHEMA_VERSION 5).

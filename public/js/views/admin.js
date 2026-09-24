@@ -31,6 +31,7 @@ import {
 } from "../utils.js";
 import { accountButton } from "./account.js";
 import { helpButton } from "./help.js";
+import { archiveView } from "./archive.js";
 import { securityView } from "./security.js";
 import { usersView } from "./users.js";
 
@@ -355,8 +356,9 @@ function containersView() {
     var u = a.dateExpected ? `<div class="mini">Dat Prevwa<strong style="color:${ COLORS.disponib }">${ formatDateShort(a.dateExpected) }</strong></div>` : "";
     var E = a.depo ? `<div class="row-sub light">Depo: <strong style="color:${ COLORS.full }">${ escapeHtml(a.depo) }</strong></div>` : "";
     var y = a.trucking ? `<div class="row-sub light">Trucking: <strong style="color:var(--muted)">${ escapeHtml(a.trucking) }</strong></div>` : "";
+    var P = a.plak ? `<div class="row-sub light">Plak: <strong style="color:var(--muted)">${ escapeHtml(a.plak) }</strong></div>` : "";
     var U = a.division ? `<div class="row-sub light">Divizyon: <strong style="color:var(--navy)">${ escapeHtml(a.division) }</strong></div>` : "";
-    return `<div class="row" style="border-left:4px solid ${ r }"><div class="row-min"><span class="plate" style="border-color:${ r }">${ escapeHtml(a.numewo) }</span> <span style="display:inline-block;font-family:var(--font-mono);font-weight:700;font-size:11px;background:var(--navy);color:#fff;padding:2px 6px;border-radius:4px;vertical-align:middle">${ a.size || "\u2014" }'</span><div class="row-sub">Bill: <strong style="color:var(--navy)">${ l ? escapeHtml(l.numewo) : "\u2014" }</strong></div><div class="row-sub light">Pwodwi: <strong style="color:var(--muted)">${ l && l.product ? escapeHtml(l.product) : "\u2014" }</strong></div>${ U }${ E }${ y }</div>${ u }<div class="mini">Antre<strong>${ formatDateShort(a.dateEntered) }</strong></div><div class="mini">Jou Full<strong style="color:${ s === "full" && v ? COLORS.urgent : COLORS.rust }">${ g }</strong></div><div class="mini">Jou Vid<strong style="color:${ s === "vid" && v ? COLORS.urgent : "var(--ink)" }">${ A }</strong></div><div class="mini">Vid Depi<strong>${ formatDateShort(a.dateEmpty) }</strong></div><div class="mini">Kite Depi<strong>${ formatDateShort(a.dateLeft) }</strong></div><div style="margin-left:auto;display:flex;gap:6px;align-items:center">${ v ? `<span class="chip" style="color:#fff;background:${ COLORS.urgent }">⚠ Ijan</span>` : "" }<span class="chip" style="color:${ COLORS[s] };background:${ COLORS[s] }1A;border:1px solid ${ COLORS[s] }55"><span class="mini-dot" style="background:${ COLORS[s] }"></span>${ STATUS_LABELS[s] }</span></div><div class="row-actions">${ d }</div></div>`;
+    return `<div class="row" style="border-left:4px solid ${ r }"><div class="row-min"><span class="plate" style="border-color:${ r }">${ escapeHtml(a.numewo) }</span> <span style="display:inline-block;font-family:var(--font-mono);font-weight:700;font-size:11px;background:var(--navy);color:#fff;padding:2px 6px;border-radius:4px;vertical-align:middle">${ a.size || "\u2014" }'</span><div class="row-sub">Bill: <strong style="color:var(--navy)">${ l ? escapeHtml(l.numewo) : "\u2014" }</strong></div><div class="row-sub light">Pwodwi: <strong style="color:var(--muted)">${ l && l.product ? escapeHtml(l.product) : "\u2014" }</strong></div>${ U }${ E }${ y }${ P }</div>${ u }<div class="mini">Antre<strong>${ formatDateShort(a.dateEntered) }</strong></div><div class="mini">Jou Full<strong style="color:${ s === "full" && v ? COLORS.urgent : COLORS.rust }">${ g }</strong></div><div class="mini">Jou Vid<strong style="color:${ s === "vid" && v ? COLORS.urgent : "var(--ink)" }">${ A }</strong></div><div class="mini">Vid Depi<strong>${ formatDateShort(a.dateEmpty) }</strong></div><div class="mini">Kite Depi<strong>${ formatDateShort(a.dateLeft) }</strong></div><div style="margin-left:auto;display:flex;gap:6px;align-items:center">${ v ? `<span class="chip" style="color:#fff;background:${ COLORS.urgent }">⚠ Ijan</span>` : "" }<span class="chip" style="color:${ COLORS[s] };background:${ COLORS[s] }1A;border:1px solid ${ COLORS[s] }55"><span class="mini-dot" style="background:${ COLORS[s] }"></span>${ STATUS_LABELS[s] }</span></div><div class="row-actions">${ d }</div></div>`;
   }).join("");
   return i + o;
 }
@@ -464,6 +466,8 @@ export function adminContent() {
     e = inventoryView();
   } else if (state.tab === "bills") {
     e = billsView();
+  } else if (state.tab === "achiv") {
+    e = archiveView();
   } else if (state.tab === "rapo") {
     e = reportsView();
   } else if (state.tab === "notifs") {
