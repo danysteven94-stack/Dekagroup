@@ -60,7 +60,16 @@ export const state = {
   pendingGatePassword: "",
   gateCanEmail: false,
   gateEmailBusy: false,
-  gateEmailMsg: ""
+  gateEmailMsg: "",
+  depotDivision: null,
+  depotTab: "dashboard",
+  stockEntries: [],
+  stockLoaded: false,
+  stockLoading: false,
+  stockErr: "",
+  stockBusy: false,
+  stockFilterBill: "",
+  landingBillId: ""
 };
 
 export const TAB_ID = Math.random().toString(36).slice(2, 10) + Date.now().toString(36);

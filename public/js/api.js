@@ -295,6 +295,40 @@ export function apiJson(url, body2) {
   });
 }
 
+export function loadStockEntries() {
+  state.stockLoading = true;
+  state.stockErr = "";
+  render();
+  apiGet("/api/stock").then(function (d) {
+    state.stockEntries = d.entries || [];
+    state.stockLoaded = true;
+    state.stockLoading = false;
+    render();
+  }).catch(function (e) {
+    state.stockLoading = false;
+    state.stockErr = e && e.message ? e.message : String(e);
+    render();
+  });
+}
+
+export function createStockEntry(payload) {
+  state.stockBusy = true;
+  state.stockErr = "";
+  render();
+  apiJson("/api/stock", Object.assign({ action: "create" }, payload)).then(function (d) {
+    state.stockBusy = false;
+    if (d.entry) {
+      state.stockEntries = [d.entry].concat(state.stockEntries);
+    }
+    showToast("Antre estòk la anrejistre.");
+    render();
+  }).catch(function (e) {
+    state.stockBusy = false;
+    state.stockErr = e && e.message ? e.message : String(e);
+    render();
+  });
+}
+
 export function apiGet(url) {
   return apiFetch(url).then(function (r) {
     return r.json().catch(function () {

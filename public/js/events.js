@@ -1,6 +1,8 @@
 // The global event listeners (clicks, submits, changes, input) that route data-action attributes to functions.
 import {
+  createStockEntry,
   loadData,
+  loadStockEntries,
   saveData,
   showToast
 } from "./api.js";
@@ -27,6 +29,7 @@ import {
 import { exportContainersCsv } from "./csv.js";
 import {
   downloadDnkReport,
+  downloadLandingSheet,
   downloadReport
 } from "./pdf.js";
 import { normalizePlate } from "./iso6346.js";
@@ -136,6 +139,21 @@ document.addEventListener("submit", function (event) {
     }
     addContainer(o);
   }
+  if (event.target && event.target.id === "stock-entry-form") {
+    event.preventDefault();
+    if (state.stockBusy) {
+      return;
+    }
+    createStockEntry({
+      billId: document.getElementById("stock-f-bill").value,
+      entryDate: document.getElementById("stock-f-date").value,
+      quantity: document.getElementById("stock-f-qty").value,
+      unit: document.getElementById("stock-f-unit").value.trim(),
+      containerNumewo: document.getElementById("stock-f-container").value.trim(),
+      description: document.getElementById("stock-f-desc").value.trim(),
+      remarks: document.getElementById("stock-f-remarks").value.trim()
+    });
+  }
   if (event.target && event.target.id === "sec-email-add-form") {
     event.preventDefault();
     var S = state.sec;
@@ -162,6 +180,9 @@ document.addEventListener("click", function (event) {
     } else if (i === "set-depot-tab") {
       state.depotTab = n.getAttribute("data-tab");
       state.depotDivision = null;
+      if ((state.depotTab === "stock" || state.depotTab === "landing") && !state.stockLoaded && !state.stockLoading) {
+        loadStockEntries();
+      }
       render();
     } else if (i === "clear-bill-filter") {
       state.filterBillStatus = "";
@@ -238,6 +259,8 @@ document.addEventListener("click", function (event) {
       downloadReport(n.getAttribute("data-status"), n.getAttribute("data-group"));
     } else if (i === "print-dnk") {
       downloadDnkReport();
+    } else if (i === "download-landing-sheet") {
+      downloadLandingSheet(o);
     } else if (i === "export-containers-csv") {
       exportContainersCsv();
     } else if (i === "retry-load") {
@@ -304,6 +327,16 @@ document.addEventListener("click", function (event) {
 });
 
 document.addEventListener("change", function (event) {
+  if (event.target && event.target.id === "stock-filter-bill") {
+    state.stockFilterBill = event.target.value;
+    render();
+    return;
+  }
+  if (event.target && event.target.id === "stock-landing-bill") {
+    state.landingBillId = event.target.value;
+    render();
+    return;
+  }
   if (event.target && event.target.classList) {
     var drC = event.target.classList;
     var drId = event.target.getAttribute("data-id");
