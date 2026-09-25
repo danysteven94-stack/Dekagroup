@@ -43,7 +43,7 @@ export function archiveView() {
     return `<tr><td><span class="plate" style="border-color:${ COLORS.kite }">${ escapeHtml(c.numewo) }</span></td><td>${ b ? escapeHtml(b.numewo) : "\u2014" }</td><td>${ b && b.product ? escapeHtml(b.product) : "\u2014" }</td><td>${ formatDateShort(c.dateEntered) }</td><td>${ formatDateShort(c.dateLeft) }</td><td>${ c.dateEntered && c.dateLeft ? daysBetween(c.dateEntered, c.dateLeft) + " jou" : "\u2014" }</td><td><strong>${ c.plak ? escapeHtml(c.plak) : "\u2014" }</strong></td><td>${ c.chofer ? escapeHtml(c.chofer) : "" }</td><td class="arch-actions"><button class="btn small ghost" data-action="arch-edit" data-id="${ c.id }">Modifye</button><button class="btn small danger" data-action="delete-container" data-id="${ c.id }">${ icon("trash", 12) }</button></td></tr>`;
   }).join("");
   var more = list.length > MAX_SHOWN ? `<div style="font-size:12px;color:var(--muted-light);margin-top:8px">Montre ${ MAX_SHOWN } sou ${ list.length }. Itilize rechèch la pou rafine.</div>` : "";
-  return `${ head }<div class="arch-table-wrap"><table class="arch-table"><thead><tr><th>Kontenè</th><th>Bill</th><th>Pwodwi</th><th>Dat Antre</th><th>Dat Kite</th><th>Dire</th><th>Plak</th><th>Chofè</th><th></th></tr></thead><tbody>${ rows }</tbody></table></div>${ more }`;
+  return `${ head }<div class="arch-table-wrap"><table class="arch-table"><thead><tr><th data-fr="Conteneur">Kontenè</th><th>Bill</th><th>Pwodwi</th><th>Dat Antre</th><th>Dat Kite</th><th>Dire</th><th>Plak</th><th>Chofè</th><th></th></tr></thead><tbody>${ rows }</tbody></table></div>${ more }`;
 }
 
 // Chips shown on each record: red = blocks saving, amber = check it, green = ok.

@@ -25,7 +25,11 @@ import {
   undoContainerLeft
 } from "./mutations.js";
 import { exportContainersCsv } from "./csv.js";
-import { downloadReport } from "./pdf.js";
+import {
+  downloadDnkReport,
+  downloadReport
+} from "./pdf.js";
+import { normalizePlate } from "./iso6346.js";
 import { render } from "./render.js";
 import {
   applyAuth,
@@ -232,6 +236,8 @@ document.addEventListener("click", function (event) {
       submitModal();
     } else if (i === "print-report") {
       downloadReport(n.getAttribute("data-status"), n.getAttribute("data-group"));
+    } else if (i === "print-dnk") {
+      downloadDnkReport();
     } else if (i === "export-containers-csv") {
       exportContainersCsv();
     } else if (i === "retry-load") {
@@ -349,6 +355,16 @@ document.addEventListener("change", function (event) {
       return container.id === did ? Object.assign({}, container, { depo: dval || null }) : container;
     });
     syncBillCompletion();
+    saveData();
+    render();
+    return;
+  }
+  if (event.target && event.target.classList && event.target.classList.contains("dkn-plak-input")) {
+    var pkId = event.target.getAttribute("data-id");
+    var pkVal = normalizePlate(event.target.value);
+    state.containers = state.containers.map(function (container) {
+      return container.id === pkId ? Object.assign({}, container, { plak: pkVal || null }) : container;
+    });
     saveData();
     render();
     return;

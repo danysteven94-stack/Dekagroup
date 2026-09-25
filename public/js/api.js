@@ -1,4 +1,5 @@
 // Talking to the server: fetch wrapper, loading, saving (with conflict handling), polling, actions, toasts.
+import { translateDom } from "./i18n.js";
 import { render } from "./render.js";
 import {
   TAB_ID,
@@ -39,6 +40,7 @@ function renderSyncStatus() {
   var e = document.querySelector(".sidebar-foot");
   if (e) {
     e.innerHTML = `<div style="display:flex;align-items:center;gap:7px;margin-bottom:10px"><span class="dot${ state.saveErr ? " err" : "" }"></span>${ state.saveErr ? "Erè pandan sovgad \u2014 chanjman an lokal sèlman" : "Done yo sove nan baz done pataje a" }</div>${ state.lastSyncTime ? `<div style="font-size:10.5px;color:var(--steel-light);margin-bottom:8px">Dènye sinkwonizasyon: ${ formatTime(state.lastSyncTime) }</div>` : "" }${ helpButton("var(--steel-light)") + accountButton("var(--steel-light)") }<button class="linklike" data-action="logout" style="color:var(--steel-light)">${ escapeHtml("undo", 12) } Dekonekte</button><div style="font-size:10px;color:var(--steel-light);margin-top:10px;opacity:.7">© ${ new Date().getFullYear() } Deka Group · v1.0</div>`;
+    translateDom(e);
     if (state.saveErr && state.saveErrorDetail) {
       e.title = state.saveErrorDetail;
     }

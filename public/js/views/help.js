@@ -1,6 +1,7 @@
 // In-app help ("Èd"): a quick guide per role, reachable from every screen next to "Kont mwen".
 // This is the onboarding document for a new person — nothing here calls the server.
 import { LOGO_URL } from "../constants.js";
+import { langButton } from "../i18n.js";
 import { icon } from "../icons.js";
 import { state } from "../state.js";
 import {
@@ -9,7 +10,7 @@ import {
 } from "../utils.js";
 
 export function helpButton(color) {
-  return `<button class="linklike" data-action="open-help" style="color:${ color }">${ icon("clipboard", 13) } Èd</button> `;
+  return `<button class="linklike" data-action="open-help" style="color:${ color }">${ icon("clipboard", 13) } Èd</button> ${ langButton(color) } `;
 }
 
 function step(title, body) {

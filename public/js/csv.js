@@ -1,4 +1,5 @@
 // Generates and downloads CSV files (open directly in Excel, Google Sheets, LibreOffice) — no library needed.
+import { t } from "./i18n.js";
 import { state } from "./state.js";
 import {
   daysBetween,
@@ -12,7 +13,9 @@ function csvCell(value) {
 }
 
 export function downloadCsv(filename, headers, rows) {
-  var lines = [headers.map(csvCell).join(",")].concat(rows.map(function (r) {
+  var lines = [headers.map(function (h) {
+    return csvCell(t(h));
+  }).join(",")].concat(rows.map(function (r) {
     return r.map(csvCell).join(",");
   }));
   // A UTF-8 BOM so Excel shows accented Kreyòl letters (è, ò, à...) correctly instead of garbled text.
@@ -43,7 +46,7 @@ export function exportContainersCsv() {
     return [
       c.numewo,
       c.division || "",
-      statusLabel[statusOf(c)] || "",
+      t(statusLabel[statusOf(c)] || ""),
       c.depo || "",
       c.trucking || "",
       bill ? bill.numewo : "",

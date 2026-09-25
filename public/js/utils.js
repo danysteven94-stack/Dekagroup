@@ -6,6 +6,10 @@ import {
   URGENT_AFTER_DAYS,
   WEEKDAYS
 } from "./constants.js";
+import {
+  monthName,
+  weekdayName
+} from "./i18n.js";
 
 export function isUrgent(container) {
   var n = statusOf(container);
@@ -84,6 +88,15 @@ export function billStatus(bill, containers) {
   }) ? "fini" : "aktif";
 }
 
+// Containers assigned to a DNK trucking (DNK 001...) that have not left yet, grouped by trucking then number.
+export function dnkContainers(containers) {
+  return containers.filter(function (container) {
+    return /^DNK\s?\d+/i.test(container.trucking || "") && statusOf(container) !== "kite";
+  }).sort(function (a, b) {
+    return (a.trucking || "").localeCompare(b.trucking || "") || (a.numewo < b.numewo ? -1 : 1);
+  });
+}
+
 export function storageGet(key) {
   try {
     return localStorage.getItem(key);
@@ -121,7 +134,7 @@ export function getDeviceId() {
 
 export function formatLongDate(date) {
   date = date || new Date;
-  return `${ WEEKDAYS[date.getDay()] } ${ date.getDate() } ${ MONTHS[date.getMonth()] } ${ date.getFullYear() }`;
+  return `${ weekdayName(date.getDay(), WEEKDAYS[date.getDay()]) } ${ date.getDate() } ${ monthName(date.getMonth(), MONTHS[date.getMonth()]) } ${ date.getFullYear() }`;
 }
 
 export function formatTime(date) {

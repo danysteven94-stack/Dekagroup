@@ -2,16 +2,19 @@
 import { pollData } from "./api.js";
 import { initOffline } from "./offline.js";
 import { LOGO_URL } from "./constants.js";
+import { applyDocumentLang } from "./i18n.js";
 import { pushInit } from "./push.js";
 import { render } from "./render.js";
 import { state } from "./state.js";
 import "./events.js";
 import "./events-account.js";
 import "./events-archive.js";
+import "./events-lang.js";
 
 setInterval(pollData, 15000);
 
 initOffline();
+applyDocumentLang();
 
 const faviconLink = document.getElementById("app-favicon");
 

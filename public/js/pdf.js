@@ -7,10 +7,16 @@ import {
 import { state } from "./state.js";
 import {
   daysBetween,
+  dnkContainers,
   formatDateShort,
   statusOf,
   today
 } from "./utils.js";
+import { STATUS_LABELS } from "./constants.js";
+import {
+  isFr,
+  t
+} from "./i18n.js";
 
 function toWinAnsiCode(char) {
   var n = char.charCodeAt(0);
@@ -44,7 +50,7 @@ export function buildTablePdf(rows, title, headers) {
     return `${ h } ${ F } ${ G } rg ${ k } ${ O } ${ z } ${ w } re f\n`;
   }
   var A = today();
-  var r = `Jenere ${ formatDateShort(A) } — Total: ${ rows.length } kontenè`;
+  var r = isFr() ? `Généré le ${ formatDateShort(A) } — Total : ${ rows.length } conteneur${ rows.length > 1 ? "s" : "" }` : `Jenere ${ formatDateShort(A) } — Total: ${ rows.length } kontenè`;
   var d = headers;
   var _nc = d.length;
   var _tw = 812 - l;
@@ -105,7 +111,7 @@ export function buildTablePdf(rows, title, headers) {
       h -= s;
     }
     if (k.length === 0) {
-      w += f("F1", 10, l, h - 10, "Pa gen kontenè.");
+      w += f("F1", 10, l, h - 10, t("Pa gen kontenè."));
     }
     return w;
   }
@@ -261,5 +267,43 @@ export function downloadReport(status, group) {
   document.body.removeChild(d);
   setTimeout(function () {
     URL.revokeObjectURL(r);
+  }, 4000);
+}
+
+// DNK trucking report: every container on a DNK trucking that has not left, with driver name and truck plate.
+export function dnkReportRows(containers) {
+  return dnkContainers(containers).map(function (c) {
+    return {
+      cells: [
+        c.numewo,
+        c.trucking || "\u2014",
+        t(STATUS_LABELS[statusOf(c)] || ""),
+        c.depo || "\u2014",
+        c.chofer || "\u2014",
+        c.plak || "\u2014"
+      ]
+    };
+  });
+}
+
+export function downloadDnkReport() {
+  var bytes = buildTablePdf(dnkReportRows(state.containers), isFr() ? "RAPPORT TRUCKING DNK" : "RAPO TRUCKING DNK", [
+    "#",
+    "Container",
+    "Trucking",
+    "Status",
+    "Depot",
+    isFr() ? "Chauffeur" : "Chofè",
+    isFr() ? "Plaque" : "Plak"
+  ]);
+  var url = URL.createObjectURL(new Blob([bytes], { type: "application/pdf" }));
+  var a = document.createElement("a");
+  a.href = url;
+  a.download = "deka-log-rapo-dnk-" + today() + ".pdf";
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(function () {
+    URL.revokeObjectURL(url);
   }, 4000);
 }

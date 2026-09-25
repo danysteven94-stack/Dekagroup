@@ -1,4 +1,5 @@
 // Root render(): decides which screen to show and paints it into #root.
+import { translateDom } from "./i18n.js";
 import { icon } from "./icons.js";
 import { state } from "./state.js";
 import { accountView } from "./views/account.js";
@@ -67,4 +68,5 @@ export function render() {
   }
   var offlineBanner = state.online ? "" : `<div class="offline-banner">${ icon("alert", 15, "#fff") }Ou pa gen entènèt kounye a. App la ap kontinye ak dènye done ki te sove a; li ap rekonekte otomatikman.</div>`;
   root.innerHTML = offlineBanner + html + modalView() + confirmModalView() + toastsView();
+  translateDom(root);
 }
