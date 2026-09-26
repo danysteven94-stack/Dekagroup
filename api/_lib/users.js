@@ -13,10 +13,11 @@ const USERNAME_RE = /^[a-z0-9][a-z0-9._-]{2,31}$/;
 const COLS = [
   ["username", "username"], ["name", "name"], ["role", "role"], ["passHash", "pass_hash"], ["active", "active"],
   ["email", "email"], ["mustChange", "must_change"], ["totpSecretEnc", "totp_secret"], ["totpEnabled", "totp_enabled"], ["totpLast", "totp_last"],
-  ["recovery", "recovery"], ["createdBy", "created_by"], ["createdAt", "created_at"], ["lastLoginAt", "last_login_at"],
+  ["recovery", "recovery"], ["divisions", "divisions"], ["createdBy", "created_by"], ["createdAt", "created_at"], ["lastLoginAt", "last_login_at"],
   ["passChangedAt", "pass_changed_at"], ["updatedAt", "updated_at"],
 ];
 const BOOLS = { active: 1, mustChange: 1, totpEnabled: 1 };
+const JSON_ARR = { recovery: 1, divisions: 1 };
 
 function guard(write) {
   if (DB.getDriver()) return;
@@ -33,7 +34,7 @@ function fromSql(r) {
     let v = r[c[1]];
     if (BOOLS[c[0]]) v = Number(v) === 1;
     else if (c[0] === "totpLast") v = Number(v) || 0;
-    else if (c[0] === "recovery") { try { v = JSON.parse(v || "[]"); } catch (e) { v = []; } }
+    else if (JSON_ARR[c[0]]) { try { v = JSON.parse(v || "[]"); } catch (e) { v = []; } }
     else if (v === undefined) v = null;
     u[c[0]] = v;
   });
@@ -42,7 +43,7 @@ function fromSql(r) {
 
 function toSqlValue(key, v) {
   if (BOOLS[key]) return v ? 1 : 0;
-  if (key === "recovery") return JSON.stringify(v || []);
+  if (JSON_ARR[key]) return JSON.stringify(v || []);
   return v === undefined ? null : v;
 }
 
@@ -80,7 +81,7 @@ async function create(user) {
   guard(true);
   const d = DB.getDriver();
   const u = Object.assign({
-    active: true, email: null, mustChange: true, totpSecretEnc: null, totpEnabled: false, totpLast: 0, recovery: [],
+    active: true, email: null, mustChange: true, totpSecretEnc: null, totpEnabled: false, totpLast: 0, recovery: [], divisions: [],
     createdBy: null, createdAt: new Date().toISOString(), lastLoginAt: null, passChangedAt: null, updatedAt: new Date().toISOString(),
   }, user);
   if (d) {

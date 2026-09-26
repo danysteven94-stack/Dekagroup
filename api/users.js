@@ -4,14 +4,26 @@ const A = require("./_lib/auth");
 const Users = require("./_lib/users");
 const Secret = require("./_lib/secret");
 const Email = require("./_lib/email");
+const Div = require("./_lib/divisions");
 const { ApiError } = require("./_lib/errors");
 
 function safe(u) {
   return {
     username: u.username, name: u.name, role: u.role, active: u.active, mustChange: u.mustChange, totpEnabled: u.totpEnabled,
-    email: u.email || null, principal: u.username === A.principalUsername(),
+    email: u.email || null, principal: u.username === A.principalUsername(), divisions: u.divisions || [],
     lastLoginAt: u.lastLoginAt, createdAt: u.createdAt, createdBy: u.createdBy, passChangedAt: u.passChangedAt,
   };
+}
+
+// Only real, known division names may be assigned to an account, and duplicates are dropped.
+function cleanDivisions(list) {
+  if (!Array.isArray(list)) return [];
+  const seen = {};
+  const out = [];
+  list.forEach(function (d) {
+    if (typeof d === "string" && Div.isValid(d) && !seen[d]) { seen[d] = true; out.push(d); }
+  });
+  return out;
 }
 
 // Usernames of the shared accounts (environment variables) are reserved.
@@ -63,6 +75,9 @@ module.exports = async function handler(req, res) {
         legacyDisabled: process.env.AUTH_LEGACY_DISABLED === "1",
         twoFactorAvailable: Secret.available(),
         me: session.username,
+        divisionGroups: [
+          { pool: "default", divisions: Div.GROUP_1 },
+        ].concat(Object.keys(Div.GROUP_2_POOLS).map(function (name) { return { pool: Div.GROUP_2_POOLS[name], divisions: [name] }; })),
       });
       return;
     }
@@ -81,9 +96,10 @@ module.exports = async function handler(req, res) {
       if (name.length < 2) throw new ApiError(400, "invalid_name", "Ekri non konplè moun nan.");
       if (email && !Email.EMAIL_RE.test(email)) throw new ApiError(400, "invalid_email", "Adrès imèl la pa valid.");
       if (role === "admin" && !Secret.available()) throw new ApiError(503, "no_app_secret", "Pou kreye yon administratè, APP_SECRET dwe konfigire sou sèvè a (2FA obligatwa). Gade SEKIRITE.md.");
+      const divisions = cleanDivisions(body.divisions);
       const temp = Users.tempPassword();
-      const u = await Users.create({ username: target, name: name, role: role, email: email || null, passHash: await A.hashPassword(temp), mustChange: true, createdBy: session.username });
-      await A.audit(req, "user_create", { username: target, role: role }, session);
+      const u = await Users.create({ username: target, name: name, role: role, email: email || null, passHash: await A.hashPassword(temp), mustChange: true, divisions: divisions, createdBy: session.username });
+      await A.audit(req, "user_create", { username: target, role: role, divisions: divisions }, session);
       res.status(200).json({ ok: true, user: safe(u), tempPassword: temp });
       return;
     }
@@ -142,6 +158,14 @@ module.exports = async function handler(req, res) {
       await A.killUserSessions(user.username, self ? session.key : undefined);
       await A.audit(req, "user_reset_2fa", { username: user.username }, session);
       res.status(200).json({ ok: true });
+      return;
+    }
+
+    if (action === "set_divisions") {
+      const divisions = cleanDivisions(body.divisions);
+      await Users.update(user.username, { divisions: divisions });
+      await A.audit(req, "user_set_divisions", { username: user.username, divisions: divisions }, session);
+      res.status(200).json({ ok: true, divisions: divisions });
       return;
     }
 

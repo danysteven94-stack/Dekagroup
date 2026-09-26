@@ -1,5 +1,5 @@
 // French translations of the app's Kreyòl text. EXACT: whole text -> French. PATTERNS: texts with numbers/names inside.
-// Business words kept as people use them at the terminal: Bill, Trucking, Daily Report, DNK, CFC.
+// Business words kept as people use them at the terminal: Bill, Trucking, Daily Report, DKN, CFC.
 export const EXACT = {
   // ---- statuses, tabs, titles
   "Disponib": "Disponible",
@@ -197,9 +197,9 @@ export const EXACT = {
   "Telechaje CSV": "Télécharger CSV",
   "Telechaje PDF": "Télécharger PDF",
   "Telechaje": "Télécharger",
-  "Rapò Trucking DNK": "Rapport Trucking DNK",
-  "Tout kontenè ki asiyen a yon trucking DNK. Ekri non chofè ak plak kamyon ki vini ak chak kontenè a, epi telechaje rapò a an PDF.": "Tous les conteneurs assignés à un trucking DNK. Saisissez le nom du chauffeur et la plaque du camion venu chercher chaque conteneur, puis téléchargez le rapport en PDF.",
-  "Pa gen kontenè sou trucking DNK kounye a.": "Aucun conteneur sur un trucking DNK pour le moment.",
+  "Rapò Trucking DKN": "Rapport Trucking DKN",
+  "Tout kontenè ki asiyen a yon trucking DKN. Ekri non chofè ak plak kamyon ki vini ak chak kontenè a, epi telechaje rapò a an PDF.": "Tous les conteneurs assignés à un trucking DKN. Saisissez le nom du chauffeur et la plaque du camion venu chercher chaque conteneur, puis téléchargez le rapport en PDF.",
+  "Pa gen kontenè sou trucking DKN kounye a.": "Aucun conteneur sur un trucking DKN pour le moment.",
   "Non Chofè": "Nom du chauffeur",
   "Non chofè a": "Nom du chauffeur",
   "Plak": "Plaque",
@@ -549,7 +549,7 @@ export const EXACT = {
   "Menm lis konteneur ak Lojistik (Full, Poko Verifye, Vid), men chanjman ou fè isit yo rete apa — yo pa modifye Lojistik.": "Même liste de conteneurs que la Logistique (Plein, À vérifier, Vide), mais vos modifications ici restent à part — elles ne modifient pas la Logistique.",
   "Si w wè yon kontenè ki verifye deja sou teren an men ki poko make «Verifye» nan sistèm nan, klike bouton Verifye a. Se sèl aksyon isit la ki ekri nan Lojistik.": "Si vous voyez un conteneur déjà vérifié sur le terrain mais pas encore marqué « Vérifié » dans le système, cliquez sur le bouton Vérifier. C’est la seule action ici qui écrit dans la Logistique.",
   "Trucking ak Depo": "Trucking et dépôt",
-  "Chanje trucking (CFC ak yon nimewo, oswa DNK 001-015) ak depo a dirèkteman nan lis la.": "Changez le trucking (CFC avec un numéro, ou DNK 001-015) et le dépôt directement dans la liste.",
+  "Chanje trucking (CFC ak yon nimewo, oswa DKN 001-015) ak depo a dirèkteman nan lis la.": "Changez le trucking (CFC avec un numéro, ou DKN 001-015) et le dépôt directement dans la liste.",
   "Rapò PDF": "Rapports PDF",
   "Telechaje rapò Full oswa Vid an PDF, ak done jan yo ye nan Daily Report kounye a.": "Téléchargez le rapport Plein ou Vide en PDF, avec les données telles qu’elles sont dans le Daily Report.",
 

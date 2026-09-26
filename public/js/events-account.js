@@ -13,6 +13,7 @@ import {
   loadUsers,
   userAction
 } from "./views/users.js";
+import { switchDivision } from "./session.js";
 
 document.addEventListener("submit", function (event) {
   var id = event.target && event.target.id;
@@ -129,13 +130,15 @@ document.addEventListener("submit", function (event) {
     fm.name = document.getElementById("usr-name").value.trim();
     fm.email = document.getElementById("usr-email").value.trim();
     fm.role = document.getElementById("usr-role").value;
+    fm.divisions = Array.prototype.map.call(document.querySelectorAll(".usr-create-division:checked"), function (el) { return el.value; });
     fm.err = "";
     apiJson("/api/users", {
       action: "create",
       username: fm.username,
       name: fm.name,
       email: fm.email,
-      role: fm.role
+      role: fm.role,
+      divisions: fm.divisions
     }).then(function (d) {
       U.temp = {
         username: d.user.username,
@@ -146,6 +149,7 @@ document.addEventListener("submit", function (event) {
         name: "",
         email: "",
         role: fm.role,
+        divisions: [],
         err: ""
       };
       loadUsers();
@@ -284,11 +288,40 @@ document.addEventListener("click", function (event) {
       username: u,
       email: next.trim()
     });
+  } else if (a === "usr-edit-divisions") {
+    var target = (state.usr.users || []).find(function (x) { return x.username === u; });
+    state.usr.divEdit = u;
+    state.usr.divEditSel = (target && target.divisions || []).slice();
+    render();
+  } else if (a === "usr-cancel-divisions") {
+    state.usr.divEdit = null;
+    state.usr.divEditSel = null;
+    render();
+  } else if (a === "usr-save-divisions") {
+    userAction({
+      action: "set_divisions",
+      username: u,
+      divisions: state.usr.divEditSel || []
+    }, function () {
+      state.usr.divEdit = null;
+      state.usr.divEditSel = null;
+    });
   }
 });
 
 document.addEventListener("change", function (event) {
   var el = event.target;
+  if (el && el.classList && el.classList.contains("usr-edit-division")) {
+    var sel = state.usr.divEditSel = state.usr.divEditSel || [];
+    var i = sel.indexOf(el.value);
+    if (el.checked && i === -1) sel.push(el.value);
+    else if (!el.checked && i !== -1) sel.splice(i, 1);
+    return;
+  }
+  if (el && el.id === "division-switch") {
+    switchDivision(el.value);
+    return;
+  }
   if (el && el.classList && el.classList.contains("usr-role-select")) {
     var u = el.getAttribute("data-user");
     if (window.confirm(`Chanje wòl ${ u } an ${ roleLabel(el.value) }? Li ap dekonekte touswit.`)) {

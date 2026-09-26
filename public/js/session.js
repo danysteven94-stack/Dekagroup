@@ -11,6 +11,33 @@ import { state } from "./state.js";
 import { storageRemove } from "./utils.js";
 import { loadTwoFactor } from "./views/account.js";
 
+export function switchDivision(pool) {
+  if (!pool || pool === state.pool || state.divisionSwitching) return;
+  state.divisionSwitching = true;
+  render();
+  fetch("/api/auth/division", {
+    method: "POST",
+    credentials: "same-origin",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ pool: pool })
+  }).then(function (r) {
+    return r.json().catch(function () { return {}; }).then(function (d) { return { ok: r.ok, d: d }; });
+  }).then(function (x) {
+    state.divisionSwitching = false;
+    if (x.ok && x.d && x.d.ok) {
+      state.pool = x.d.pool;
+      state.sessionPool = x.d.pool;
+      state.rev = undefined;
+      loadData();
+    } else {
+      render();
+    }
+  }).catch(function () {
+    state.divisionSwitching = false;
+    render();
+  });
+}
+
 export function logout() {
   state.depotDivision = null;
   state.tab = "dashboard";
@@ -26,6 +53,12 @@ export function logout() {
   state.gateEmailMsg = "";
   state.sessionName = "";
   state.sessionNeeds = null;
+  state.sessionDivisions = [];
+  state.sessionPools = ["default"];
+  state.sessionPool = "default";
+  state.divisions = [];
+  state.pools = ["default"];
+  state.pool = "default";
   state.rev = undefined;
   state.saving = false;
   state.savePending = false;
@@ -57,7 +90,7 @@ export function logout() {
   render();
 }
 
-export function applyAuth(role, username, name, needs, personal) {
+export function applyAuth(role, username, name, needs, personal, divisions, pools, pool) {
   state.depotDivision = null;
   state.tab = "dashboard";
   state.lastSyncTime = null;
@@ -84,6 +117,12 @@ export function applyAuth(role, username, name, needs, personal) {
   state.name = name || "";
   state.needs = needs || null;
   state.personal = !!personal;
+  state.sessionDivisions = divisions || [];
+  state.sessionPools = pools && pools.length ? pools : ["default"];
+  state.sessionPool = pool || "default";
+  state.divisions = state.sessionDivisions;
+  state.pools = state.sessionPools;
+  state.pool = state.sessionPool;
   state.acct = false;
   state.help = false;
   state.tf = null;

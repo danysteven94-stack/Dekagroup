@@ -53,6 +53,20 @@ export const DIVISIONS_GROUP_2 = [
 
 export const ALL_DIVISIONS = DIVISIONS_GROUP_1.concat(DIVISIONS_GROUP_2);
 
+// Which database ("pool") each division lives in — must match api/_lib/divisions.js exactly.
+// Group 1 always shares one database; every Group 2 division has its own, separate database.
+export const POOL_OF_DIVISION = {
+  "CRISTO AL": "default", "CRISTO COMM": "default", "CONFIDEKA": "default", "DEKAV": "default",
+  "ACS": "acs", "MIKADO": "mikado", "LA COLLECTION": "lacollection", "DEKA TIRES": "dekatires"
+};
+
+// A short label for a pool, built from whichever of the account's own divisions live in it
+// (so "default" shows only the Group 1 divisions the account actually has, not always all four).
+export function poolLabel(pool, accountDivisions) {
+  var list = (accountDivisions || []).filter(function (d) { return POOL_OF_DIVISION[d] === pool; });
+  return list.length ? list.join(", ") : pool;
+}
+
 export const WEEKDAYS = [
   "Dimanch",
   "Lendi",
@@ -152,10 +166,10 @@ export const DAILY_TRUCKING_BASE = [
   "MAD"
 ];
 
-export const DAILY_DNK_OPTIONS = [];
+export const DAILY_DKN_OPTIONS = [];
 
-for (var dnkNumber = 1; dnkNumber <= 15; dnkNumber++) {
-  DAILY_DNK_OPTIONS.push("DNK " + ("00" + dnkNumber).slice(-3));
+for (var dknNumber = 1; dknNumber <= 15; dknNumber++) {
+  DAILY_DKN_OPTIONS.push("DKN " + ("00" + dknNumber).slice(-3));
 }
 
 export const AUDIT_LABELS = {

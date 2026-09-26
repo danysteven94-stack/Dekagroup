@@ -22,8 +22,8 @@ function newId() {
 }
 
 // A preview deployment without its own database must not read or change production data.
-function guard(write) {
-  if (DB.getDriver()) return "";
+function guard(write, poolKey) {
+  if (DB.getDriver(poolKey)) return "";
   if (process.env.VERCEL_ENV === "preview") {
     if (write) throw new ApiError(503, "no_preview_db", "Preview sa a pa gen baz done pa li.");
     return "skip";
@@ -47,12 +47,12 @@ function toRedisShape(row) {
   return row;
 }
 
-async function list(filter) {
+async function list(filter, poolKey) {
   filter = filter || {};
-  if (guard(false) === "skip") return [];
-  const d = DB.getDriver();
+  if (guard(false, poolKey) === "skip") return [];
+  const d = DB.getDriver(poolKey);
   if (d) {
-    await pg.driver();
+    await pg.driver(poolKey);
     const clauses = [];
     const params = [];
     if (filter.billId) { params.push(filter.billId); clauses.push("bill_id = $" + params.length); }
@@ -68,11 +68,11 @@ async function list(filter) {
   return rows.slice().sort(function (a, b) { return (b.createdAt || "").localeCompare(a.createdAt || ""); });
 }
 
-async function getById(id) {
-  if (guard(false) === "skip") return null;
-  const d = DB.getDriver();
+async function getById(id, poolKey) {
+  if (guard(false, poolKey) === "skip") return null;
+  const d = DB.getDriver(poolKey);
   if (d) {
-    await pg.driver();
+    await pg.driver(poolKey);
     const rows = await d.query("SELECT * FROM invoices WHERE id = $1", [id]);
     return rows.length ? fromSql(rows[0]) : null;
   }
@@ -81,12 +81,12 @@ async function getById(id) {
   return rows.find(function (e) { return e.id === id; }) || null;
 }
 
-async function create(fields) {
-  guard(true);
+async function create(fields, poolKey) {
+  guard(true, poolKey);
   const row = Object.assign({ id: newId(), status: "anrejistre", createdAt: new Date().toISOString(), finishedBy: null, finishedAt: null }, fields);
-  const d = DB.getDriver();
+  const d = DB.getDriver(poolKey);
   if (d) {
-    await pg.driver();
+    await pg.driver(poolKey);
     await d.query(
       "INSERT INTO invoices (id, bill_id, invoice_number, invoice_date, due_date, client_name, client_address, items, notes, status, created_by, created_at, finished_by, finished_at) " +
       "VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)",
@@ -102,12 +102,12 @@ async function create(fields) {
   return row;
 }
 
-async function finish(id, username) {
-  guard(true);
+async function finish(id, username, poolKey) {
+  guard(true, poolKey);
   const finishedAt = new Date().toISOString();
-  const d = DB.getDriver();
+  const d = DB.getDriver(poolKey);
   if (d) {
-    await pg.driver();
+    await pg.driver(poolKey);
     const existing = await d.query("SELECT * FROM invoices WHERE id = $1", [id]);
     if (!existing.length) return null;
     if (existing[0].status === "fini") return fromSql(existing[0]);

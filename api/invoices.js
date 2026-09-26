@@ -43,7 +43,7 @@ module.exports = async function handler(req, res) {
       const q = req.query || {};
       const billId = typeof q.billId === "string" && ID_RE.test(q.billId) ? q.billId : null;
       const status = STATUSES.indexOf(q.status) !== -1 ? q.status : null;
-      const invoices = await Invoices.list({ billId: billId, status: status });
+      const invoices = await Invoices.list({ billId: billId, status: status }, session.pool);
       res.status(200).json({ invoices: invoices });
       return;
     }
@@ -59,7 +59,7 @@ module.exports = async function handler(req, res) {
           res.status(400).json({ error: "ID fakti a pa valid.", code: "invalid" });
           return;
         }
-        const existing = await Invoices.getById(id);
+        const existing = await Invoices.getById(id, session.pool);
         if (!existing) {
           res.status(404).json({ error: "Pa jwenn fakti sa a.", code: "not_found" });
           return;
@@ -68,7 +68,7 @@ module.exports = async function handler(req, res) {
           res.status(200).json({ ok: true, invoice: existing });
           return;
         }
-        const invoice = await Invoices.finish(id, session.username);
+        const invoice = await Invoices.finish(id, session.username, session.pool);
         await A.audit(req, "invoice_finish", { billId: existing.billId, invoiceNumber: existing.invoiceNumber }, session);
         res.status(200).json({ ok: true, invoice: invoice });
         return;
@@ -95,7 +95,7 @@ module.exports = async function handler(req, res) {
         return;
       }
 
-      const r = await repo.readAll();
+      const r = await repo.readAll(session.pool);
       const data = r.view || r.blob;
       const bill = (data.bills || []).find(function (b) { return b.id === billId; });
       if (!bill) {
@@ -117,7 +117,7 @@ module.exports = async function handler(req, res) {
         items: items,
         notes: text(body.notes, 300) || null,
         createdBy: session.username,
-      });
+      }, session.pool);
 
       await A.audit(req, "invoice_create", { billId: billId, billNumewo: bill.numewo, invoiceNumber: invoiceNumber }, session);
       res.status(200).json({ ok: true, invoice: invoice });

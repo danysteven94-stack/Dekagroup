@@ -25,7 +25,7 @@ module.exports = async function handler(req, res) {
       const q = req.query || {};
       const billId = typeof q.billId === "string" && ID_RE.test(q.billId) ? q.billId : null;
       const kind = KINDS.indexOf(q.kind) !== -1 ? q.kind : null;
-      const incidents = await Goods.list({ billId: billId, kind: kind });
+      const incidents = await Goods.list({ billId: billId, kind: kind }, session.pool);
       res.status(200).json({ incidents: incidents });
       return;
     }
@@ -72,7 +72,7 @@ module.exports = async function handler(req, res) {
       const entryDate = DATE_RE.test(body.entryDate || "") ? body.entryDate : S.today();
       const remarks = text(body.remarks, 300) || null;
 
-      const r = await repo.readAll();
+      const r = await repo.readAll(session.pool);
       const data = r.view || r.blob;
       const bill = (data.bills || []).find(function (b) { return b.id === billId; });
       if (!bill) {
@@ -90,7 +90,7 @@ module.exports = async function handler(req, res) {
         reason: reason,
         remarks: remarks,
         registeredBy: session.username,
-      });
+      }, session.pool);
 
       await A.audit(req, "goods_incident_create", { kind: kind, billId: billId, billNumewo: bill.numewo, description: description }, session);
       res.status(200).json({ ok: true, incident: incident });

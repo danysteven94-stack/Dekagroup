@@ -16,7 +16,22 @@ Module._load = function (request, ...rest) {
   return orig.call(this, request, ...rest);
 };
 
-const api = (p) => require(path.join(__dirname, "..", "api", p));
+// api/auth.js, api/admin.js and api/daily.js are single router files that dispatch on ?action=... (kept
+// that way to stay under Vercel's Hobby-plan function limit) — tests call the old, pre-consolidation
+// path names, so route those through the real file with the right action already set.
+const ADMIN_ACTIONS = { audit: "audit", health: "health", backup: "backup" };
+const DAILY_ACTIONS = { verify: "verify" };
+function withAction(modulePath, action) {
+  const real = require(modulePath);
+  return (req, res) => real(Object.assign({}, req, { query: Object.assign({}, req.query, { action: action }) }), res);
+}
+const api = (p) => {
+  const authM = /^auth\/(.+)$/.exec(p);
+  if (authM) return require(path.join(__dirname, "..", "api", "_lib", "authHandlers", authM[1]));
+  if (ADMIN_ACTIONS[p]) return withAction(path.join(__dirname, "..", "api", "admin"), ADMIN_ACTIONS[p]);
+  if (DAILY_ACTIONS[p]) return withAction(path.join(__dirname, "..", "api", "daily"), DAILY_ACTIONS[p]);
+  return require(path.join(__dirname, "..", "api", p));
+};
 
 // TEST_BACKEND=pg runs every test on the relational (PostgreSQL) layer, backed by SQLite; default is the legacy Redis storage.
 const BACKEND = process.env.TEST_BACKEND === "pg" ? "pg" : "redis";

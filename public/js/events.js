@@ -22,6 +22,7 @@ import {
   markContainerLeft,
   openConfirmEnterModal,
   openCorrectDateModal,
+  openEditContainerModal,
   openTransferModal,
   openVerifyModal,
   submitModal,
@@ -35,7 +36,7 @@ import { exportContainersCsv } from "./csv.js";
 import {
   downloadDailyDelivery,
   downloadDeliveryReport,
-  downloadDnkReport,
+  downloadDknReport,
   downloadGoodsReport,
   downloadInvoice,
   downloadLandingSheet,
@@ -110,7 +111,7 @@ document.addEventListener("submit", function (event) {
         state.gateUser = "";
         state.gate2fa = false;
         state.pendingGatePassword = "";
-        applyAuth(x.d.role, x.d.username, x.d.name, x.d.needs, x.d.personal);
+        applyAuth(x.d.role, x.d.username, x.d.name, x.d.needs, x.d.personal, x.d.divisions, x.d.pools, x.d.pool);
       } else if (x.ok && x.d && x.d.needs2fa) {
         state.gate2fa = true;
         state.pendingGatePassword = i;
@@ -324,14 +325,16 @@ document.addEventListener("click", function (event) {
       openTransferModal(o);
     } else if (i === "correct-date") {
       openCorrectDateModal(o);
+    } else if (i === "edit-container") {
+      openEditContainerModal(o);
     } else if (i === "close-modal") {
       closeModal();
     } else if (i === "submit-modal") {
       submitModal();
     } else if (i === "print-report") {
       downloadReport(n.getAttribute("data-status"), n.getAttribute("data-group"));
-    } else if (i === "print-dnk") {
-      downloadDnkReport();
+    } else if (i === "print-dkn") {
+      downloadDknReport();
     } else if (i === "download-landing-sheet") {
       downloadLandingSheet(o);
     } else if (i === "invoice-add-item") {
@@ -361,7 +364,7 @@ document.addEventListener("click", function (event) {
       loadData();
     } else if (i === "resume-session") {
       if (state.sessionRole) {
-        applyAuth(state.sessionRole, state.sessionUser, state.sessionName, state.sessionNeeds, state.sessionPersonal);
+        applyAuth(state.sessionRole, state.sessionUser, state.sessionName, state.sessionNeeds, state.sessionPersonal, state.sessionDivisions, state.sessionPools, state.sessionPool);
       }
     } else if (i === "choose-role") {
       state.role = n.getAttribute("data-role");

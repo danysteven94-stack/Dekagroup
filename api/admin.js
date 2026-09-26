@@ -36,10 +36,10 @@ async function health(req, res, session) {
     return;
   }
   try {
-    res.status(200).json(await repo.health());
+    res.status(200).json(await repo.health(session.pool));
   } catch (e) {
     console.error("health error:", e && e.message);
-    res.status(200).json({ backend: repo.name(), ok: false, error: "Baz done a pa reponn." });
+    res.status(200).json({ backend: repo.name(session.pool), ok: false, error: "Baz done a pa reponn." });
   }
 }
 

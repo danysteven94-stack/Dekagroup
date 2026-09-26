@@ -133,13 +133,17 @@ module.exports = async function handler(req, res) {
       if (totpCounter) patch.totpLast = totpCounter;
       if (usedRecovery) patch.recovery = dbUser.recovery.filter(function (x) { return x !== usedRecovery; });
       await Users.update(dbUser.username, patch);
-      account = { username: dbUser.username, name: dbUser.name, role: dbUser.role, src: "db" };
+      account = { username: dbUser.username, name: dbUser.name, role: dbUser.role, src: "db", divisions: dbUser.divisions };
     } else {
       account = { username: legacyAcc.username, name: null, role: legacyAcc.role, src: "env" };
     }
     await A.createSession(req, res, account);
     await A.audit(req, usedRecovery ? "login_ok_recovery_code" : usedEmailCode ? "login_ok_email_code" : "login_ok", { username: account.username }, { username: account.username, name: account.name, role: account.role });
-    res.status(200).json({ ok: true, role: account.role, username: account.username, name: account.name, personal: account.src === "db", needs: A.limitedFor(dbUser), roleLabel: ROLE_LABEL[account.role] });
+    const pools = A.poolsForAccount(account.src, account.divisions);
+    res.status(200).json({
+      ok: true, role: account.role, username: account.username, name: account.name, personal: account.src === "db", needs: A.limitedFor(dbUser), roleLabel: ROLE_LABEL[account.role],
+      divisions: account.divisions || [], pools: pools, pool: pools[0],
+    });
   } catch (err) {
     if (err instanceof ApiError) { res.status(err.status).json({ error: err.message, code: err.code }); return; }
     console.error("login error:", err && err.message);

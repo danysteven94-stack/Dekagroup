@@ -4,7 +4,7 @@ import {
   apiJson,
   showToast
 } from "../api.js";
-import { COLORS } from "../constants.js";
+import { COLORS, DIVISIONS_GROUP_1, DIVISIONS_GROUP_2 } from "../constants.js";
 import { icon } from "../icons.js";
 import { render } from "../render.js";
 import { state } from "../state.js";
@@ -13,6 +13,14 @@ import {
   formatDateTimeShort,
   roleLabel
 } from "../utils.js";
+
+function divisionCheckboxes(prefix, checked) {
+  checked = checked || [];
+  var box = function (d) {
+    return `<label style="display:inline-flex;align-items:center;gap:5px;font-size:12.5px;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:5px 9px;cursor:pointer"><input type="checkbox" class="${ prefix }-division" value="${ escapeHtml(d) }"${ checked.indexOf(d) !== -1 ? " checked" : "" } />${ escapeHtml(d) }</label>`;
+  };
+  return `<div style="flex:1 1 100%"><span class="field-label">Divizyon (opsyonèl — vid = wè tout, jan sa te ye deja)</span><div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:4px">${ DIVISIONS_GROUP_1.map(box).join("") }</div><div style="font-size:11px;color:var(--muted);margin-bottom:6px">↑ Sa 4 yo pataje YON SÈL baz done — yo mache ansanm san pwoblèm.</div><div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:4px">${ DIVISIONS_GROUP_2.map(box).join("") }</div><div style="font-size:11px;color:var(--muted)">↑ Chak nan sa yo gen pwòp baz done pa yo, separe de tout lòt divizyon.</div></div>`;
+}
 
 export function loadUsers() {
   var U = state.usr = state.usr || {
@@ -30,6 +38,7 @@ export function loadUsers() {
       name: "",
       email: "",
       role: "depot",
+      divisions: [],
       err: ""
     }
   };
@@ -76,12 +85,16 @@ export function usersView() {
     "admin"
   ].map(function (r) {
     return `<option value="${ r }"${ f.role === r ? " selected" : "" }>${ escapeHtml(roleLabel(r)) }</option>`;
-  }).join("") }</select></div><button type="submit" class="btn navy">${ icon("plus", 14, "#fff") } Kreye kont</button>${ f.err ? `<div class="gate-err" style="width:100%">${ escapeHtml(f.err) }</div>` : "" }</form>`;
+  }).join("") }</select></div>${ divisionCheckboxes("usr-create", f.divisions) }<button type="submit" class="btn navy">${ icon("plus", 14, "#fff") } Kreye kont</button>${ f.err ? `<div class="gate-err" style="width:100%">${ escapeHtml(f.err) }</div>` : "" }</form>`;
   var rows = U.users.length === 0 ? `<div class="empty">${ icon("circle", 22) }<div>Poko gen kont pèsonèl. Kreye premye a anlè a.</div></div>` : U.users.map(function (u) {
     var self = u.username === U.me;
     var chip = function (x, col) {
       return `<span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 7px;border-radius:10px;background:${ col };color:#fff;margin-right:4px">${ x }</span>`;
     };
+    var editingDiv = U.divEdit === u.username;
+    var divBlock = editingDiv
+      ? `<div style="flex:1 1 100%;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:10px;margin-top:4px">${ divisionCheckboxes("usr-edit", U.divEditSel || u.divisions || []) }<div style="display:flex;gap:8px;margin-top:8px"><button type="button" class="btn navy" data-action="usr-save-divisions" data-user="${ escapeHtml(u.username) }" style="padding:6px 12px;font-size:12px">Sove</button><button type="button" class="linklike" data-action="usr-cancel-divisions" style="font-size:12px">Anile</button></div></div>`
+      : (u.divisions && u.divisions.length ? `<div style="flex:1 1 100%;font-size:11.5px;color:var(--muted)">Divizyon: ${ u.divisions.map(escapeHtml).join(", ") }</div>` : "");
     return `<div class="row" style="border-left:4px solid ${ u.active ? COLORS.green : COLORS.urgent }${ u.active ? "" : ";opacity:.65" };flex-wrap:wrap;gap:8px"><div class="row-min" style="min-width:200px"><div class="row-sub"><strong style="color:var(--navy)">${ escapeHtml(u.name) }</strong> <span style="color:var(--muted)">${ escapeHtml(u.username) }${ self ? " (ou)" : "" }</span></div><div class="row-sub light">${ u.principal ? chip("prensipal", COLORS.navy || "#1B2A4A") : "" }${ u.active ? chip("aktif", COLORS.green) : chip("dezaktive", COLORS.urgent) }${ u.mustChange ? chip("modpass tanporè", "#B7791F") : "" }${ u.totpEnabled ? chip("2FA \u2713", COLORS.green) : u.role === "admin" ? chip("2FA manke", "#B7791F") : "" }${ u.email ? escapeHtml(u.email) + " · " : "" }${ u.lastLoginAt ? `Dènye koneksyon: ${ escapeHtml(formatDateTimeShort(u.lastLoginAt)) }` : "Pa janm konekte" }</div></div><select class="input usr-role-select" data-user="${ escapeHtml(u.username) }" style="width:auto;padding:6px 8px;font-size:12.5px"${ self || u.principal ? " disabled" : "" }>${ [
       "depot",
       "chofe",
@@ -89,7 +102,7 @@ export function usersView() {
       "admin"
     ].map(function (r) {
       return `<option value="${ r }"${ u.role === r ? " selected" : "" }>${ escapeHtml(roleLabel(r)) }</option>`;
-    }).join("") }</select><button class="btn ghost" data-action="usr-edit-email" data-user="${ escapeHtml(u.username) }" data-email="${ escapeHtml(u.email || "") }" style="background:transparent;color:var(--ink);border:1px solid var(--border);font-size:12px">Imèl</button>${ self ? "" : `<button class="btn ghost" data-action="usr-reset-pw" data-user="${ escapeHtml(u.username) }" style="background:transparent;color:var(--ink);border:1px solid var(--border);font-size:12px">Reyinisyalize modpass</button><button class="btn ghost" data-action="usr-toggle" data-user="${ escapeHtml(u.username) }" data-active="${ u.active ? "0" : "1" }"${ u.principal && u.active ? " disabled" : "" } style="background:transparent;color:${ u.active ? COLORS.urgent : COLORS.green };border:1px solid var(--border);font-size:12px">${ u.active ? "Dezaktive" : "Aktive" }</button>` }${ u.totpEnabled ? `<button class="btn ghost" data-action="usr-reset-2fa" data-user="${ escapeHtml(u.username) }" style="background:transparent;color:var(--ink);border:1px solid var(--border);font-size:12px">Reyinisyalize 2FA</button>` : "" }</div>`;
+    }).join("") }</select><button class="btn ghost" data-action="usr-edit-email" data-user="${ escapeHtml(u.username) }" data-email="${ escapeHtml(u.email || "") }" style="background:transparent;color:var(--ink);border:1px solid var(--border);font-size:12px">Imèl</button><button class="btn ghost" data-action="usr-edit-divisions" data-user="${ escapeHtml(u.username) }" style="background:transparent;color:var(--ink);border:1px solid var(--border);font-size:12px">Divizyon</button>${ self ? "" : `<button class="btn ghost" data-action="usr-reset-pw" data-user="${ escapeHtml(u.username) }" style="background:transparent;color:var(--ink);border:1px solid var(--border);font-size:12px">Reyinisyalize modpass</button><button class="btn ghost" data-action="usr-toggle" data-user="${ escapeHtml(u.username) }" data-active="${ u.active ? "0" : "1" }"${ u.principal && u.active ? " disabled" : "" } style="background:transparent;color:${ u.active ? COLORS.urgent : COLORS.green };border:1px solid var(--border);font-size:12px">${ u.active ? "Dezaktive" : "Aktive" }</button>` }${ u.totpEnabled ? `<button class="btn ghost" data-action="usr-reset-2fa" data-user="${ escapeHtml(u.username) }" style="background:transparent;color:var(--ink);border:1px solid var(--border);font-size:12px">Reyinisyalize 2FA</button>` : "" }${ divBlock }</div>`;
   }).join("");
   return `${ head + legacy + warn2 + temp + form }<div style="display:flex;flex-direction:column;gap:8px">${ rows }</div>`;
 }

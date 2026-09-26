@@ -38,6 +38,9 @@ fetch("/api/auth/me", { credentials: "same-origin" }).then(function (r) {
     state.sessionName = d.name || "";
     state.sessionNeeds = d.needs || null;
     state.sessionPersonal = !!d.personal;
+    state.sessionDivisions = d.divisions || [];
+    state.sessionPools = d.pools && d.pools.length ? d.pools : ["default"];
+    state.sessionPool = d.pool || "default";
   }
   render();
 }).catch(function () {

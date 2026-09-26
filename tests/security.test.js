@@ -70,7 +70,7 @@ async function run() {
       for (const f of ["HttpOnly", "Secure", "SameSite=Strict", "Path=/", "__Host-"]) assert.ok(r.cookieAttrs.includes(f), role + " cookie missing " + f);
       assert.ok(!("password" in r.body));
       const m = await b.call(me);
-      assert.deepStrictEqual(m.body, { authenticated: true, role, username: USERS[role], name: null, personal: false, needs: null });
+      assert.deepStrictEqual(m.body, { authenticated: true, role, username: USERS[role], name: null, personal: false, needs: null, divisions: [], pools: ["default"], pool: "default" });
     }
   });
 
@@ -208,13 +208,13 @@ async function run() {
     const dr = await login("logisticdepot", "daily"), depot = await login("depotnord", "depot"), chofe = await login("chofe", "chofe");
     assert.strictEqual((await depot.call(daily)).statusCode, 403);
     assert.strictEqual((await chofe.call(verify, { method: "POST", body: { id: "c3", depo: "X" } })).statusCode, 403);
-    assert.strictEqual((await dr.call(daily, { method: "POST", body: { checks: { c1: today() }, overrides: { c1: { trucking: "DNK 007" } } } })).statusCode, 200);
-    assert.deepStrictEqual((await dr.call(daily)).body.overrides.c1, { trucking: "DNK 007" });
+    assert.strictEqual((await dr.call(daily, { method: "POST", body: { checks: { c1: today() }, overrides: { c1: { trucking: "DKN 007" } } } })).statusCode, 200);
+    assert.deepStrictEqual((await dr.call(daily)).body.overrides.c1, { trucking: "DKN 007" });
     assert.strictEqual((await dr.call(verify, { method: "POST", body: { id: "c3" } })).statusCode, 400, "depo required");
-    const v = await dr.call(verify, { method: "POST", body: { id: "c3", depo: "Depo Q", trucking: "DNK 003", date: today() } });
+    const v = await dr.call(verify, { method: "POST", body: { id: "c3", depo: "Depo Q", trucking: "DKN 003", date: today() } });
     assert.strictEqual(v.statusCode, 200);
     const d = await H.getData();
-    assert.deepStrictEqual([d.containers[2].dateVerified, d.containers[2].depo, d.containers[2].trucking], [today(), "Depo Q", "DNK 003"]);
+    assert.deepStrictEqual([d.containers[2].dateVerified, d.containers[2].depo, d.containers[2].trucking], [today(), "Depo Q", "DKN 003"]);
     assert.deepStrictEqual([d.containers[0].depo, d.containers[0].trucking, d.containers[0].dateVerified, d.containers[0].dateEmpty], ["Depo A", "CFC", "2026-09-10", null]);
     assert.deepStrictEqual(d.inventoryChecks, { c1: today() });
     assert.strictEqual((await dr.call(verify, { method: "POST", body: { id: "c4", depo: "X" } })).body.already, true, "already verified stays untouched");

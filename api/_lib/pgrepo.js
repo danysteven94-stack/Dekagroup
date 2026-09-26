@@ -369,14 +369,14 @@ class NoChange extends Error {
   constructor(payload) { super("no change"); this.payload = payload; }
 }
 
-async function driver() {
-  const d = DB.getDriver();
+async function driver(poolKey) {
+  const d = DB.getDriver(poolKey);
   await ensure(d);
   return d;
 }
 
-async function readAll() {
-  const d = await driver();
+async function readAll(poolKey) {
+  const d = await driver(poolKey);
   const cur = await d.tx(function (q) { return loadRows(q); }, { readOnly: true });
   const blob = toBlob(cur);
   return { blob: blob, rev: cur.rev, view: withHashes(blob) };
@@ -391,7 +391,7 @@ async function writeClient(clean, opts) {
   if (!Number.isInteger(opts.baseRev) || opts.baseRev < 0) {
     throw new ApiError(409, "stale_client", "Vèsyon aplikasyon an vye. Rafrechi paj la (fèmen epi louvri l ankò).");
   }
-  const d = await driver();
+  const d = await driver(opts.pool);
   try {
     return await d.tx(async function (q) {
       const rev = await bump(q);
@@ -414,7 +414,7 @@ async function writeClient(clean, opts) {
 }
 
 async function mutate(fn, opts) {
-  const d = await driver();
+  const d = await driver(opts && opts.pool);
   const writer = (opts && opts.cid) || "server";
   try {
     return await d.tx(async function (q) {
@@ -435,8 +435,8 @@ async function mutate(fn, opts) {
   }
 }
 
-async function health() {
-  const d = await driver();
+async function health(poolKey) {
+  const d = await driver(poolKey);
   const cur = await d.tx(function (q) { return loadRows(q); }, { readOnly: true });
   const mig = await d.query("SELECT value FROM meta WHERE name = 'migrated'");
   return {
@@ -449,8 +449,8 @@ async function health() {
 }
 
 // Tests only: replace everything with the given data set.
-async function _testLoad(blob) {
-  const d = await driver();
+async function _testLoad(blob, poolKey) {
+  const d = await driver(poolKey);
   await d.tx(async function (q) {
     const rev = await bump(q);
     for (const t of ["containers", "bills", "notifications", "inventory_checks"]) await q("DELETE FROM " + t);

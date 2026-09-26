@@ -7,7 +7,7 @@ import {
 import { state } from "./state.js";
 import {
   daysBetween,
-  dnkContainers,
+  dknContainers,
   formatDateShort,
   statusOf,
   today
@@ -279,9 +279,9 @@ export function downloadReport(status, group) {
   }, 4000);
 }
 
-// DNK trucking report: every container on a DNK trucking that has not left, with driver name and truck plate.
-export function dnkReportRows(containers) {
-  return dnkContainers(containers).map(function (c) {
+// DKN trucking report: every container on a DKN trucking that has not left, with driver name and truck plate.
+export function dknReportRows(containers) {
+  return dknContainers(containers).map(function (c) {
     return {
       cells: [
         c.numewo,
@@ -295,8 +295,8 @@ export function dnkReportRows(containers) {
   });
 }
 
-export function downloadDnkReport() {
-  var bytes = buildTablePdf(dnkReportRows(state.containers), "RAPPORT TRUCKING DNK", [
+export function downloadDknReport() {
+  var bytes = buildTablePdf(dknReportRows(state.containers), "RAPPORT TRUCKING DKN", [
     "#",
     "Conteneur",
     "Trucking",
@@ -308,7 +308,7 @@ export function downloadDnkReport() {
   var url = URL.createObjectURL(new Blob([bytes], { type: "application/pdf" }));
   var a = document.createElement("a");
   a.href = url;
-  a.download = "deka-log-rapo-dnk-" + today() + ".pdf";
+  a.download = "deka-log-rapo-dkn-" + today() + ".pdf";
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);

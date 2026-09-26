@@ -5,7 +5,8 @@ import {
 } from "../api.js";
 import {
   COLORS,
-  LOGO_URL
+  LOGO_URL,
+  poolLabel
 } from "../constants.js";
 import { render } from "../render.js";
 import { state } from "../state.js";
@@ -125,6 +126,13 @@ export function accountView() {
   var h = card + hd + banner;
   if (!pw) {
     return `${ h + note("Ou konekte ak yon kont pataje. Kont sa yo pa gen modpass pèsonèl ni 2FA. Mande administratè a kreye yon kont pèsonèl pou ou.") }<button type="button" class="btn navy" data-action="close-account" style="width:100%;justify-content:center;margin-top:10px">← Retounen</button></div></div>`;
+  }
+  if (!forced && state.pools && state.pools.length > 1) {
+    h += sh("Divizyon w ap travay ladan kounye a");
+    h += `<select class="input" id="division-switch"${ state.divisionSwitching ? " disabled" : "" } style="margin-bottom:4px">${ state.pools.map(function (p) {
+      return `<option value="${ escapeHtml(p) }"${ p === state.pool ? " selected" : "" }>${ escapeHtml(poolLabel(p, state.divisions)) }</option>`;
+    }).join("") }</select>`;
+    h += note("Kont ou gen aksè plizyè divizyon ki gen baz done separe. Chwazi youn pou wè done l yo; sa pa efase done lòt divizyon yo.");
   }
   if (forced !== "2fa") {
     h += `${ sh("Chanje modpass") }<form id="pw-form"><span class="field-label">Modpass aktyèl${ forced === "password" ? " (modpass tanporè a)" : "" }</span><input class="input" type="password" id="pw-cur" autocomplete="current-password" style="margin-bottom:10px" /><span class="field-label">Nouvo modpass</span><input class="input" type="password" id="pw-new" autocomplete="new-password" style="margin-bottom:10px" /><span class="field-label">Konfime nouvo modpass</span><input class="input" type="password" id="pw-new2" autocomplete="new-password" />${ note("Omwen 10 karaktè. Evite mo ki twò komen oswa non itilizatè a. Chanje l dekonekte lòt aparèy ou yo.") }${ msg(f) }<button type="submit" class="gate-btn"${ f.busy ? " disabled" : "" }>${ f.busy ? "K ap sove..." : "Chanje modpass" }</button></form>`;

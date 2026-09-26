@@ -21,7 +21,7 @@ module.exports = async function handler(req, res) {
       if (!session) return;
       const qBillId = req.query && req.query.billId;
       const billId = typeof qBillId === "string" && ID_RE.test(qBillId) ? qBillId : null;
-      const entries = await StockEntries.list(billId);
+      const entries = await StockEntries.list(billId, session.pool);
       res.status(200).json({ entries: entries });
       return;
     }
@@ -61,7 +61,7 @@ module.exports = async function handler(req, res) {
       const remarks = text(body.remarks, 300) || null;
 
       // The Bill must exist in the shared data set.
-      const r = await repo.readAll();
+      const r = await repo.readAll(session.pool);
       const data = r.view || r.blob;
       const bill = (data.bills || []).find(function (b) { return b.id === billId; });
       if (!bill) {
@@ -78,7 +78,7 @@ module.exports = async function handler(req, res) {
         containerNumewo: containerNumewo,
         remarks: remarks,
         registeredBy: session.username,
-      });
+      }, session.pool);
 
       await A.audit(req, "stock_entry_create", { billId: billId, billNumewo: bill.numewo, description: description }, session);
       res.status(200).json({ ok: true, entry: entry });

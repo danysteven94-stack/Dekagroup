@@ -22,8 +22,8 @@ function newId() {
 }
 
 // A preview deployment without its own database must not read or change production data.
-function guard(write) {
-  if (DB.getDriver()) return "";
+function guard(write, poolKey) {
+  if (DB.getDriver(poolKey)) return "";
   if (process.env.VERCEL_ENV === "preview") {
     if (write) throw new ApiError(503, "no_preview_db", "Preview sa a pa gen baz done pa li.");
     return "skip";
@@ -37,12 +37,12 @@ function fromSql(r) {
   return o;
 }
 
-async function list(filter) {
+async function list(filter, poolKey) {
   filter = filter || {};
-  if (guard(false) === "skip") return [];
-  const d = DB.getDriver();
+  if (guard(false, poolKey) === "skip") return [];
+  const d = DB.getDriver(poolKey);
   if (d) {
-    await pg.driver();
+    await pg.driver(poolKey);
     const clauses = [];
     const params = [];
     if (filter.billId) { params.push(filter.billId); clauses.push("bill_id = $" + params.length); }
@@ -58,12 +58,12 @@ async function list(filter) {
   return rows.slice().sort(function (a, b) { return (b.createdAt || "").localeCompare(a.createdAt || ""); });
 }
 
-async function create(fields) {
-  guard(true);
+async function create(fields, poolKey) {
+  guard(true, poolKey);
   const row = Object.assign({ id: newId(), createdAt: new Date().toISOString() }, fields);
-  const d = DB.getDriver();
+  const d = DB.getDriver(poolKey);
   if (d) {
-    await pg.driver();
+    await pg.driver(poolKey);
     await d.query(
       "INSERT INTO goods_incidents (id, kind, bill_id, entry_date, description, quantity, unit, reason, remarks, registered_by, created_at) " +
       "VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)",

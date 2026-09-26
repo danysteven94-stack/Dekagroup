@@ -1,6 +1,6 @@
 // Small pure helpers: dates, escaping, container/bill status rules, localStorage wrappers.
 import {
-  DAILY_DNK_OPTIONS,
+  DAILY_DKN_OPTIONS,
   DAILY_TRUCKING_BASE,
   MONTHS,
   URGENT_AFTER_DAYS,
@@ -41,18 +41,19 @@ export function escapeHtml(text) {
   });
 }
 
-// Shared <option> list for every trucking dropdown in the app: the base carriers plus a "DNK"
-// group (DNK 001-015). Keeps an unknown/legacy value visible instead of silently dropping it.
+// Shared <option> list for every trucking dropdown in the app: the base carriers plus a "DKN"
+// group (DKN 001-015). Keeps an unknown/legacy value visible instead of silently dropping it
+// (this also keeps old records still saved under the earlier "DNK" spelling selectable).
 export function truckingOptionsHtml(current) {
-  var known = DAILY_TRUCKING_BASE.indexOf(current) !== -1 || DAILY_DNK_OPTIONS.indexOf(current) !== -1;
+  var known = DAILY_TRUCKING_BASE.indexOf(current) !== -1 || DAILY_DKN_OPTIONS.indexOf(current) !== -1;
   var customOpt = current && !known ? `<option value="${ escapeHtml(current) }" selected>${ escapeHtml(current) }</option>` : "";
   var baseOpts = DAILY_TRUCKING_BASE.map(function (o) {
     return `<option value="${ o }"${ current === o ? " selected" : "" }>${ o }</option>`;
   }).join("");
-  var dnkOpts = DAILY_DNK_OPTIONS.map(function (o) {
+  var dknOpts = DAILY_DKN_OPTIONS.map(function (o) {
     return `<option value="${ o }"${ current === o ? " selected" : "" }>${ o }</option>`;
   }).join("");
-  return `<option value=""${ current ? "" : " selected" }>\u2014 Chwazi \u2014</option>${ customOpt }${ baseOpts }<optgroup label="DNK">${ dnkOpts }</optgroup>`;
+  return `<option value=""${ current ? "" : " selected" }>\u2014 Chwazi \u2014</option>${ customOpt }${ baseOpts }<optgroup label="DKN">${ dknOpts }</optgroup>`;
 }
 
 export function formatDateShort(isoDate) {
@@ -88,10 +89,11 @@ export function billStatus(bill, containers) {
   }) ? "fini" : "aktif";
 }
 
-// Containers assigned to a DNK trucking (DNK 001...) that have not left yet, grouped by trucking then number.
-export function dnkContainers(containers) {
+// Containers assigned to a DKN trucking (DKN 001...) that have not left yet, grouped by trucking then number.
+// Also matches the earlier "DNK" spelling so older records already saved that way still show up.
+export function dknContainers(containers) {
   return containers.filter(function (container) {
-    return /^DNK\s?\d+/i.test(container.trucking || "") && statusOf(container) !== "kite";
+    return /^(DKN|DNK)\s?\d+/i.test(container.trucking || "") && statusOf(container) !== "kite";
   }).sort(function (a, b) {
     return (a.trucking || "").localeCompare(b.trucking || "") || (a.numewo < b.numewo ? -1 : 1);
   });

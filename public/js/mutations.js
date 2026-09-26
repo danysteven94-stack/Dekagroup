@@ -5,6 +5,10 @@ import {
   showToast
 } from "./api.js";
 import { ALL_DIVISIONS } from "./constants.js";
+import {
+  normalizeBill,
+  normalizeContainer
+} from "./iso6346.js";
 import { render } from "./render.js";
 import { state } from "./state.js";
 import {
@@ -195,6 +199,62 @@ export function openCorrectDateModal(id) {
   }
 }
 
+// Full edit: lets an admin fix a mistake on any field of a container, including
+// setting/clearing/backdating the empty date when marking it empty was forgotten.
+export function openEditContainerModal(id) {
+  var n = state.containers.find(function (container) {
+    return container.id === id;
+  });
+  if (n) {
+    var b = state.bills.find(function (bill) {
+      return bill.id === n.billId;
+    });
+    state.modal = {
+      mode: "edit-container",
+      id: id,
+      numewo: n.numewo || "",
+      billNumewo: b ? b.numewo : "",
+      product: b && b.product ? b.product : "",
+      dateEntered: n.dateEntered || "",
+      dateEmpty: n.dateEmpty || "",
+      dateLeft: n.dateLeft || "",
+      depo: n.depo || "",
+      trucking: n.trucking || "",
+      plak: n.plak || ""
+    };
+    render();
+  }
+}
+
+// Finds the bill matching this number (case/format-insensitive), or creates one.
+// Reused by the edit-container modal so correcting a bill number or product
+// re-links the container to the right bill instead of duplicating it.
+function billIdForEdit(billNumewo, product, keepBillId) {
+  var wanted = normalizeBill(billNumewo);
+  if (!wanted) {
+    return keepBillId;
+  }
+  var existing = state.bills.find(function (bill) {
+    return normalizeBill(bill.numewo) === wanted;
+  });
+  if (existing) {
+    if (product && product !== existing.product) {
+      state.bills = state.bills.map(function (bill) {
+        return bill.id === existing.id ? Object.assign({}, bill, { product: product }) : bill;
+      });
+    }
+    return existing.id;
+  }
+  var created = {
+    id: newId(),
+    numewo: wanted,
+    product: product || null,
+    completedAt: null
+  };
+  state.bills.push(created);
+  return created.id;
+}
+
 export function closeModal() {
   state.modal = null;
   render();
@@ -215,6 +275,47 @@ export function submitModal() {
         saveData();
         render();
       }
+      return;
+    }
+    if (state.modal.mode === "edit-container") {
+      var editId = state.modal.id;
+      var target = state.containers.find(function (container) {
+        return container.id === editId;
+      });
+      if (!target) {
+        state.modal = null;
+        render();
+        return;
+      }
+      var fNumewo = document.getElementById("modal-edit-numewo");
+      var fBill = document.getElementById("modal-edit-bill");
+      var fProduct = document.getElementById("modal-edit-product");
+      var fEntered = document.getElementById("modal-edit-date-entered");
+      var fEmpty = document.getElementById("modal-edit-date-empty");
+      var fLeft = document.getElementById("modal-edit-date-left");
+      var fDepo = document.getElementById("modal-edit-depo");
+      var fTrucking = document.getElementById("modal-edit-trucking");
+      var fPlak = document.getElementById("modal-edit-plak");
+      var newNumewo = fNumewo && fNumewo.value.trim() ? normalizeContainer(fNumewo.value) || fNumewo.value.trim().toUpperCase() : target.numewo;
+      var newProduct = fProduct && fProduct.value.trim() ? fProduct.value.trim().slice(0, 120) : "";
+      var newBillId = billIdForEdit(fBill ? fBill.value : "", newProduct, target.billId);
+      var patch = {
+        numewo: newNumewo,
+        billId: newBillId,
+        dateEntered: fEntered && fEntered.value ? fEntered.value : null,
+        dateEmpty: fEmpty && fEmpty.value ? fEmpty.value : null,
+        dateLeft: fLeft && fLeft.value ? fLeft.value : null,
+        depo: fDepo && fDepo.value.trim() ? fDepo.value.trim() : null,
+        trucking: fTrucking && fTrucking.value ? fTrucking.value : null,
+        plak: fPlak && fPlak.value.trim() ? fPlak.value.trim() : null
+      };
+      state.containers = state.containers.map(function (container) {
+        return container.id === editId ? Object.assign({}, container, patch) : container;
+      });
+      state.modal = null;
+      syncBillCompletion();
+      saveData();
+      render();
       return;
     }
     if (state.modal.mode === "confirm-enter") {

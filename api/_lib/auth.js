@@ -6,9 +6,21 @@
 const crypto = require("crypto");
 const { promisify } = require("util");
 const { redis } = require("./redis");
+const Div = require("./divisions");
 
 // users.js is loaded lazily: it depends (indirectly) on this file.
 const Users = function () { return require("./users"); };
+
+// Which databases ("pools") an account can reach. A personal account with no division assigned yet
+// keeps seeing the "default" pool (today's behaviour) so existing accounts are unaffected by this
+// feature until an administrator actually assigns them a division. Shared (legacy) accounts always
+// stay on "default", exactly as before.
+function poolsForAccount(src, divisions) {
+  if (src !== "db") return ["default"];
+  const list = Array.isArray(divisions) ? divisions : [];
+  const pools = list.length ? Div.poolsOf(list) : [];
+  return pools.length ? pools : ["default"];
+}
 
 const scrypt = promisify(crypto.scrypt);
 
@@ -122,9 +134,10 @@ async function createSession(req, res, account) {
   const token = crypto.randomBytes(32).toString("base64url");
   const now = Date.now();
   const key = sessKey(token);
+  const pools = poolsForAccount(account.src, account.divisions);
   await redis.set(
     key,
-    { u: account.username, n: account.name || null, src: account.src || "env", role: account.role, ct: now, ls: now, e: epoch(), ip: clientIp(req), ua: String((req.headers || {})["user-agent"] || "").slice(0, 160) },
+    { u: account.username, n: account.name || null, src: account.src || "env", role: account.role, ct: now, ls: now, e: epoch(), ip: clientIp(req), ua: String((req.headers || {})["user-agent"] || "").slice(0, 160), pool: pools[0] },
     { ex: IDLE_SEC }
   );
   // index of the sessions of each person, so they can all be closed at once (password change, disabled account...)
@@ -182,7 +195,33 @@ async function getSession(req) {
     s.ls = now;
     await redis.set(key, s, { ex: IDLE_SEC });
   }
-  return { key: key, username: s.u, name: user ? user.name : s.n || null, role: s.role, src: s.src || "env", limited: limitedFor(user) };
+
+  // Divisions can change at any time (an administrator edits them) — always recompute from the live
+  // account rather than trusting what was true when the session was created.
+  const pools = poolsForAccount(s.src, user && user.divisions);
+  const pool = pools.indexOf(s.pool) !== -1 ? s.pool : pools[0];
+  if (pool !== s.pool) {
+    s.pool = pool;
+    await redis.set(key, s, { ex: IDLE_SEC });
+  }
+
+  return {
+    key: key, username: s.u, name: user ? user.name : s.n || null, role: s.role, src: s.src || "env", limited: limitedFor(user),
+    divisions: (user && user.divisions) || [], pools: pools, pool: pool,
+  };
+}
+
+// Switches which database ("pool") a session currently works in. Only allowed among the pools the
+// account can already reach (see poolsForAccount / getSession). Returns the updated session, or null
+// if the requested pool is not one the account may use.
+async function setSessionPool(session, pool) {
+  if (!session || session.pools.indexOf(pool) === -1) return null;
+  const s = await redis.get(session.key);
+  if (!s || typeof s !== "object") return null;
+  s.pool = pool;
+  await redis.set(session.key, s, { ex: IDLE_SEC });
+  session.pool = pool;
+  return session;
 }
 
 async function destroySession(req, res) {
@@ -298,5 +337,5 @@ module.exports = {
   COOKIE, ROLE_DEFS, LOGIN_WINDOW_SEC, LIMIT_USER_IP, LIMIT_IP, LIMIT_USER, DUMMY_HASH,
   accounts, hashPassword, verifyPassword, clientIp, createSession, getSession, destroySession,
   sameOrigin, isJson, bump, count, audit, requireAuth, requireSession, parseBody, sleep, killUserSessions, limitedFor,
-  principalUsername, isPrincipal,
+  principalUsername, isPrincipal, poolsForAccount, setSessionPool,
 };

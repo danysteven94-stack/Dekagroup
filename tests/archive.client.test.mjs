@@ -112,21 +112,21 @@ await test("search filters by plate and bill", () => {
   assert.ok(V.archiveView().includes("2 rezilta"));
 });
 
-await test("DNK report: only DNK trucking not yet left, with driver + plate, valid PDF bytes", async () => {
+await test("DKN report: only DKN trucking not yet left, with driver + plate, valid PDF bytes", async () => {
   const P = await import("../public/js/pdf.js");
   reset();
   const mk = (id, numewo, trucking, extra) => Object.assign({ id, numewo, billId: null, size: "40", division: "ACS", dateEntered: "2026-09-01", dateVerified: "2026-09-02", depo: "Depo A", trucking, dateEmpty: null, dateLeft: null }, extra || {});
   state.containers = [
-    mk("a", "AAAA0000001", "DNK 002", { chofer: "Jean Pierre", plak: "AA 1234" }),
-    mk("b", "BBBB0000002", "DNK 001", { chofer: null, plak: null }),
+    mk("a", "AAAA0000001", "DKN 002", { chofer: "Jean Pierre", plak: "AA 1234" }),
+    mk("b", "BBBB0000002", "DKN 001", { chofer: null, plak: null }),
     mk("c", "CCCC0000003", "CFC"),
-    mk("d", "DDDD0000004", "DNK 003", { dateLeft: "2026-09-10", dateEmpty: "2026-09-05" }),
+    mk("d", "DDDD0000004", "DKN 003", { dateLeft: "2026-09-10", dateEmpty: "2026-09-05" }),
   ];
-  const rows = P.dnkReportRows(state.containers);
-  assert.deepStrictEqual(rows.map((r) => r.cells[0]), ["BBBB0000002", "AAAA0000001"], "sorted by trucking, kite + non-DNK excluded");
+  const rows = P.dknReportRows(state.containers);
+  assert.deepStrictEqual(rows.map((r) => r.cells[0]), ["BBBB0000002", "AAAA0000001"], "sorted by trucking, kite + non-DKN excluded");
   assert.deepStrictEqual(rows[1].cells.slice(4), ["Jean Pierre", "AA 1234"]);
   assert.deepStrictEqual(rows[0].cells.slice(4), ["\u2014", "\u2014"]);
-  const bytes = P.buildTablePdf(rows, "RAPO TRUCKING DNK", ["#", "Container", "Trucking", "Status", "Depot", "Chof\u00e8", "Plak"]);
+  const bytes = P.buildTablePdf(rows, "RAPO TRUCKING DKN", ["#", "Container", "Trucking", "Status", "Depot", "Chof\u00e8", "Plak"]);
   const txt = Buffer.from(bytes).toString("latin1");
   assert.ok(txt.startsWith("%PDF-1.4") && txt.trim().endsWith("%%EOF"));
   assert.ok(txt.includes("(AA 1234)") && txt.includes("(Jean Pierre)") && txt.includes("(Plak)"));

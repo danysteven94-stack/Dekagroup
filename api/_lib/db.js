@@ -2,12 +2,32 @@
 // PostgreSQL access (Neon / Vercel Postgres). Active only when DATABASE_URL (or POSTGRES_URL) is set.
 // Without it the app keeps using the legacy Redis storage, so deploying before the database exists breaks nothing.
 //
+// Multi-division support: some divisions must never share a database with the others (see _lib/divisions.js).
+// Each "pool" is a separate physical database, chosen with a named environment variable. "default" is the
+// original DATABASE_URL / POSTGRES_URL, kept for full backward compatibility with existing deployments.
+//
 // A "driver" is { dialect, query(sql, params) -> rows, tx(fn, opts) } where fn receives a query function bound to one transaction.
-// Tests plug an SQLite driver through setDriver().
+// Tests plug an SQLite driver through setDriver() (one driver stands in for every pool).
+
+const POOL_ENV = {
+  default: ["DATABASE_URL", "POSTGRES_URL"],
+  acs: ["DATABASE_URL_ACS"],
+  mikado: ["DATABASE_URL_MIKADO"],
+  lacollection: ["DATABASE_URL_LACOLLECTION"],
+  dekatires: ["DATABASE_URL_DEKATIRES"],
+};
 
 let injected;
-let pgDriver = null;
-let pgUrl = "";
+const pools = {}; // poolKey -> { url, driver }
+
+function envUrlFor(poolKey) {
+  const names = POOL_ENV[poolKey] || POOL_ENV.default;
+  for (const n of names) {
+    const v = process.env[n];
+    if (v) return v;
+  }
+  return "";
+}
 
 function makePgDriver(url) {
   const { Pool } = require("pg");
@@ -44,19 +64,27 @@ function setDriver(d) {
   injected = d;
 }
 
-function getDriver() {
+// poolKey defaults to "default" (the original single-database behaviour). Pass a division's pool
+// key (see _lib/divisions.js) to reach its own separate database.
+function getDriver(poolKey) {
+  const key = poolKey || "default";
   if (injected !== undefined) return injected;
-  const url = process.env.DATABASE_URL || process.env.POSTGRES_URL || "";
+  const url = envUrlFor(key);
   if (!url) return null;
-  if (!pgDriver || pgUrl !== url) {
-    pgDriver = makePgDriver(url);
-    pgUrl = url;
+  const cur = pools[key];
+  if (!cur || cur.url !== url) {
+    pools[key] = { url: url, driver: makePgDriver(url) };
   }
-  return pgDriver;
+  return pools[key].driver;
+}
+
+// Which pools currently have a database configured (used by health checks / diagnostics only).
+function configuredPools() {
+  return Object.keys(POOL_ENV).filter(function (k) { return !!envUrlFor(k); });
 }
 
 // Portable DDL (same statements run on PostgreSQL in production and on SQLite in the tests).
-const SCHEMA_VERSION = 8;
+const SCHEMA_VERSION = 9;
 const DDL = [
   "CREATE TABLE IF NOT EXISTS meta (name TEXT PRIMARY KEY, value BIGINT NOT NULL)",
   "CREATE TABLE IF NOT EXISTS bills (" +
@@ -86,6 +114,9 @@ const DDL = [
     "created_by TEXT, created_at TEXT NOT NULL, last_login_at TEXT, pass_changed_at TEXT, updated_at TEXT NOT NULL)",
   // Existing deployments already had a "users" table before "email" existed; add it if missing (no-op otherwise).
   "ALTER TABLE users ADD COLUMN IF NOT EXISTS email TEXT",
+  // Which divisions (see _lib/divisions.js) a personal account may work in. Accounts always live in the
+  // "default" database only, even though the divisions they list may point at other pools.
+  "ALTER TABLE users ADD COLUMN IF NOT EXISTS divisions TEXT NOT NULL DEFAULT '[]'",
   // Stock entries ("Antre Estòk"): goods registered into the depot, always tied to a Bill.
   "CREATE TABLE IF NOT EXISTS stock_entries (" +
     "id TEXT PRIMARY KEY, bill_id TEXT NOT NULL, entry_date TEXT NOT NULL, description TEXT NOT NULL, " +
@@ -112,4 +143,4 @@ const DDL = [
   "INSERT INTO meta (name, value) VALUES ('migrated', 0) ON CONFLICT (name) DO NOTHING",
 ];
 
-module.exports = { setDriver, getDriver, DDL, SCHEMA_VERSION };
+module.exports = { setDriver, getDriver, configuredPools, DDL, SCHEMA_VERSION };

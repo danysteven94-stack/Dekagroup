@@ -46,7 +46,7 @@ async function handleVerify(req, res, session) {
       c.depo = depo;
       c.trucking = trucking;
       return { container: Object.assign({}, c), verified: c.numewo };
-    }, { cid: session.username });
+    }, { cid: session.username, pool: session.pool });
 
     if (out.changed) {
       await S2.afterCommit(out.prev, out.blob, req);

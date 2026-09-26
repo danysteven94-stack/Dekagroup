@@ -20,7 +20,7 @@ import {
   billStatus,
   daysBetween,
   daysLabel,
-  dnkContainers,
+  dknContainers,
   escapeHtml,
   formatDateShort,
   formatLongDate,
@@ -353,6 +353,7 @@ function containersView() {
     } else {
       d += `<button class="btn small ghost" data-action="undo-left" data-id="${ a.id }">${ icon("undo", 12) } Anile Kite</button>`;
     }
+    d += `<button class="btn small ghost" data-action="edit-container" data-id="${ a.id }">Modifye</button>`;
     d += `<button class="btn small danger" data-action="delete-container" data-id="${ a.id }">${ icon("trash", 12) }</button>`;
     var u = a.dateExpected ? `<div class="mini">Dat Prevwa<strong style="color:${ COLORS.disponib }">${ formatDateShort(a.dateExpected) }</strong></div>` : "";
     var E = a.depo ? `<div class="row-sub light">Depo: <strong style="color:${ COLORS.full }">${ escapeHtml(a.depo) }</strong></div>` : "";
@@ -415,13 +416,13 @@ function billsView() {
 }
 
 function dknReportSection() {
-  var items = dnkContainers(state.containers);
+  var items = dknContainers(state.containers);
   var rows = items.map(function (cc) {
     var st = statusOf(cc);
     var col = st === "full" ? COLORS.rust : st === "vid" ? COLORS.vid : COLORS.pokoverifye;
     return `<div class="row" style="border-left:4px solid ${ col }"><div class="row-min"><span class="plate" style="border-color:${ col }">${ escapeHtml(cc.numewo) }</span><div class="row-sub">${ STATUS_LABELS[st] } · ${ escapeHtml(cc.trucking || "") } · ${ cc.division ? escapeHtml(cc.division) : "\u2014" }</div></div><div style="width:200px;flex-shrink:0"><span class="field-label" style="font-size:9.5px">Non Chofè</span><input class="input dkn-chofer-input" data-id="${ cc.id }" value="${ escapeHtml(cc.chofer || "") }" placeholder="Non chofè a" style="padding:6px 8px;font-size:12.5px" /></div><div style="width:150px;flex-shrink:0"><span class="field-label" style="font-size:9.5px">Plak</span><input class="input dkn-plak-input" data-id="${ cc.id }" value="${ escapeHtml(cc.plak || "") }" placeholder="Egz. AA 1234" autocapitalize="characters" autocomplete="off" style="padding:6px 8px;font-size:12.5px" /></div></div>`;
   }).join("");
-  return `<div class="section-head" style="margin-top:28px"><div><div class="eyebrow">${ items.length } kontenè</div><h2 class="h2">Rapò Trucking DNK</h2></div>${ items.length ? `<button class="btn teal" data-action="print-dnk">${ icon("download", 15, "#fff") } Telechaje PDF</button>` : "" }</div><p style="font-size:12.5px;color:var(--muted-light);margin-top:-10px;margin-bottom:16px">Tout kontenè ki asiyen a yon trucking DNK. Ekri non chofè ak plak kamyon ki vini ak chak kontenè a, epi telechaje rapò a an PDF.</p><div style="display:flex;flex-direction:column;gap:8px">${ items.length === 0 ? `<div class="empty">${ icon("circle", 22) }<div>Pa gen kontenè sou trucking DNK kounye a.</div></div>` : rows }</div>`;
+  return `<div class="section-head" style="margin-top:28px"><div><div class="eyebrow">${ items.length } kontenè</div><h2 class="h2">Rapò Trucking DKN</h2></div>${ items.length ? `<button class="btn teal" data-action="print-dkn">${ icon("download", 15, "#fff") } Telechaje PDF</button>` : "" }</div><p style="font-size:12.5px;color:var(--muted-light);margin-top:-10px;margin-bottom:16px">Tout kontenè ki asiyen a yon trucking DKN. Ekri non chofè ak plak kamyon ki vini ak chak kontenè a, epi telechaje rapò a an PDF.</p><div style="display:flex;flex-direction:column;gap:8px">${ items.length === 0 ? `<div class="empty">${ icon("circle", 22) }<div>Pa gen kontenè sou trucking DKN kounye a.</div></div>` : rows }</div>`;
 }
 
 function reportsView() {

@@ -88,7 +88,7 @@ module.exports = async function handler(req, res) {
 
     const out = await repo.mutate(async function (data) {
       return def.run(data, body);
-    }, { cid: session.username });
+    }, { cid: session.username, pool: session.pool });
     if (out.changed) await S.afterCommit(out.prev, out.blob, req);
 
     await A.audit(req, "act_" + body.action, out.info, session);

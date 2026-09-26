@@ -41,7 +41,7 @@ const GUIDES = {
   daily: [
     ["Envantè Jounalye", "Menm lis konteneur ak Lojistik (Full, Poko Verifye, Vid), men chanjman ou fè isit yo rete apa — yo pa modifye Lojistik."],
     ["Verifye", "Si w wè yon kontenè ki verifye deja sou teren an men ki poko make «Verifye» nan sistèm nan, klike bouton Verifye a. Se sèl aksyon isit la ki ekri nan Lojistik."],
-    ["Trucking ak Depo", "Chanje trucking (CFC ak yon nimewo, oswa DNK 001-015) ak depo a dirèkteman nan lis la."],
+    ["Trucking ak Depo", "Chanje trucking (CFC ak yon nimewo, oswa DKN 001-015) ak depo a dirèkteman nan lis la."],
     ["Rapò PDF", "Telechaje rapò Full oswa Vid an PDF, ak done jan yo ye nan Daily Report kounye a."]
   ]
 };

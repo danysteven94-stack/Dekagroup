@@ -2,7 +2,7 @@
 import { apiFetch } from "../api.js";
 import {
   COLORS,
-  DAILY_DNK_OPTIONS,
+  DAILY_DKN_OPTIONS,
   DAILY_TRUCKING_BASE,
   LOGO_URL,
   STATUS_LABELS,
@@ -113,10 +113,10 @@ function dailyTruckingCell(cc, ef) {
   var isCfc = /^CFC(\s|$)/.test(tr);
   var base = isCfc ? "CFC" : tr;
   var num = isCfc ? tr.replace(/^CFC\s*/, "") : "";
-  var known = DAILY_TRUCKING_BASE.indexOf(base) !== -1 || DAILY_DNK_OPTIONS.indexOf(base) !== -1;
+  var known = DAILY_TRUCKING_BASE.indexOf(base) !== -1 || DAILY_DKN_OPTIONS.indexOf(base) !== -1;
   var opts = `<option value=""${ tr ? "" : " selected" }>— Chwazi —</option>${ tr && !known ? `<option value="${ escapeHtml(tr) }" selected>${ escapeHtml(tr) }</option>` : "" }${ DAILY_TRUCKING_BASE.map(function (o) {
     return `<option value="${ o }"${ base === o ? " selected" : "" }>${ o }</option>`;
-  }).join("") }<optgroup label="DNK">${ DAILY_DNK_OPTIONS.map(function (o) {
+  }).join("") }<optgroup label="DKN">${ DAILY_DKN_OPTIONS.map(function (o) {
     return `<option value="${ o }"${ base === o ? " selected" : "" }>${ o }</option>`;
   }).join("") }</optgroup>`;
   return `<div style="width:190px;flex-shrink:0"><span class="field-label" style="font-size:9.5px">Trucking</span><div style="display:flex;gap:6px"><select class="input dr-trucking-select" data-id="${ cc.id }" style="padding:6px 8px;font-size:12.5px;flex:1;min-width:0">${ opts }</select>${ isCfc ? `<input class="input dr-cfc-num" data-id="${ cc.id }" inputmode="numeric" maxlength="6" placeholder="No." value="${ escapeHtml(num) }" style="padding:6px 8px;font-size:12.5px;width:62px;flex:none" />` : "" }</div></div>`;
