@@ -56,7 +56,7 @@ function getDriver() {
 }
 
 // Portable DDL (same statements run on PostgreSQL in production and on SQLite in the tests).
-const SCHEMA_VERSION = 6;
+const SCHEMA_VERSION = 9;
 const DDL = [
   "CREATE TABLE IF NOT EXISTS meta (name TEXT PRIMARY KEY, value BIGINT NOT NULL)",
   "CREATE TABLE IF NOT EXISTS bills (" +
@@ -92,6 +92,28 @@ const DDL = [
     "quantity TEXT, unit TEXT, container_numewo TEXT, remarks TEXT, registered_by TEXT, " +
     "created_at TEXT NOT NULL)",
   "CREATE INDEX IF NOT EXISTS stock_entries_bill_idx ON stock_entries (bill_id)",
+  // Invoices ("Fakti"): registered as a draft ("anrejistre") against a Bill, then locked ("fini").
+  "CREATE TABLE IF NOT EXISTS invoices (" +
+    "id TEXT PRIMARY KEY, bill_id TEXT NOT NULL, invoice_number TEXT NOT NULL, invoice_date TEXT NOT NULL, " +
+    "due_date TEXT, client_name TEXT, client_address TEXT, items TEXT NOT NULL, notes TEXT, " +
+    "status TEXT NOT NULL DEFAULT 'anrejistre', created_by TEXT, created_at TEXT NOT NULL, " +
+    "finished_by TEXT, finished_at TEXT)",
+  "CREATE INDEX IF NOT EXISTS invoices_bill_idx ON invoices (bill_id)",
+  "CREATE INDEX IF NOT EXISTS invoices_status_idx ON invoices (status)",
+  // Goods incidents ("Machandiz Retounen" / "Machandiz Avarye"): returned or damaged goods, tied to a Bill.
+  "CREATE TABLE IF NOT EXISTS goods_incidents (" +
+    "id TEXT PRIMARY KEY, kind TEXT NOT NULL, bill_id TEXT NOT NULL, entry_date TEXT NOT NULL, " +
+    "description TEXT NOT NULL, quantity TEXT, unit TEXT, container_numewo TEXT, reason TEXT, remarks TEXT, " +
+    "registered_by TEXT, created_at TEXT NOT NULL)",
+  "CREATE INDEX IF NOT EXISTS goods_incidents_bill_idx ON goods_incidents (bill_id)",
+  "CREATE INDEX IF NOT EXISTS goods_incidents_kind_idx ON goods_incidents (kind)",
+  // Deliveries ("Livrezon Jounalye" / "Rapò Livrezon"): goods delivered out of the depot to a client, tied to a Bill.
+  "CREATE TABLE IF NOT EXISTS deliveries (" +
+    "id TEXT PRIMARY KEY, bill_id TEXT NOT NULL, entry_date TEXT NOT NULL, client_name TEXT, " +
+    "description TEXT NOT NULL, quantity TEXT, unit TEXT, container_numewo TEXT, trucking TEXT, chofer TEXT, " +
+    "remarks TEXT, registered_by TEXT, created_at TEXT NOT NULL)",
+  "CREATE INDEX IF NOT EXISTS deliveries_bill_idx ON deliveries (bill_id)",
+  "CREATE INDEX IF NOT EXISTS deliveries_date_idx ON deliveries (entry_date)",
   "INSERT INTO meta (name, value) VALUES ('rev', 0) ON CONFLICT (name) DO NOTHING",
   "INSERT INTO meta (name, value) VALUES ('migrated', 0) ON CONFLICT (name) DO NOTHING",
 ];

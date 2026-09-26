@@ -308,6 +308,89 @@ export function downloadDnkReport() {
   }, 4000);
 }
 
+// Simple landscape table report of returned or damaged goods ("Machandiz Retounen" / "Avarye").
+export function downloadGoodsReport(kind) {
+  var list = state.goodsIncidents.filter(function (e) { return e.kind === kind; });
+  var isDamaged = kind === "avarye";
+  var rows = list.map(function (item, i) {
+    var bill = state.bills.find(function (b) { return b.id === item.billId; });
+    return {
+      cells: [
+        String(i + 1),
+        bill ? bill.numewo : "\u2014",
+        item.description,
+        String(item.quantity) + " " + (item.unit || ""),
+        item.reason || "\u2014",
+        item.containerNumewo || "\u2014",
+        formatDateShort(item.entryDate)
+      ]
+    };
+  });
+  var title = isDamaged ? "RAPO MACHANDIZ AVARYE" : "RAPO MACHANDIZ RETOUNEN";
+  var bytes = buildTablePdf(rows, title, [
+    "#",
+    "Bill",
+    "Deskripsyon",
+    "Kantite",
+    isDamaged ? "K\u00F2z" : "Rezon",
+    "Konten\u00E8",
+    "Dat"
+  ]);
+  var url = URL.createObjectURL(new Blob([bytes], { type: "application/pdf" }));
+  var a = document.createElement("a");
+  a.href = url;
+  a.download = "deka-log-rapo-" + kind + "-" + today() + ".pdf";
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(function () {
+    URL.revokeObjectURL(url);
+  }, 4000);
+}
+
+// "Rapò Livrezon": deliveries made out of the depot within a date range.
+export function downloadDeliveryReport(from, to) {
+  var list = state.deliveries.slice();
+  if (from) list = list.filter(function (e) { return (e.entryDate || "") >= from; });
+  if (to) list = list.filter(function (e) { return (e.entryDate || "") <= to; });
+  list = list.slice().sort(function (a, b) { return (a.entryDate || "").localeCompare(b.entryDate || ""); });
+  var rows = list.map(function (item, i) {
+    var bill = state.bills.find(function (b) { return b.id === item.billId; });
+    return {
+      cells: [
+        String(i + 1),
+        formatDateShort(item.entryDate),
+        bill ? bill.numewo : "\u2014",
+        item.clientName || "\u2014",
+        item.description,
+        String(item.quantity) + " " + (item.unit || ""),
+        item.containerNumewo || "\u2014",
+        [item.trucking, item.chofer].filter(Boolean).join(" \u2014 ") || "\u2014"
+      ]
+    };
+  });
+  var bytes = buildTablePdf(rows, "RAPO LIVREZON", [
+    "#",
+    "Dat",
+    "Bill",
+    "Kliyan",
+    "Deskripsyon",
+    "Kantite",
+    "Konten\u00E8",
+    "Trucking/Chof\u00E8"
+  ]);
+  var url = URL.createObjectURL(new Blob([bytes], { type: "application/pdf" }));
+  var a = document.createElement("a");
+  a.href = url;
+  a.download = "deka-log-rapo-livrezon-" + today() + ".pdf";
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(function () {
+    URL.revokeObjectURL(url);
+  }, 4000);
+}
+
 // ============================================================================
 // Fich Debakman (landing sheet): a formal per-Bill document combining the
 // containers and the stock entries ("Antre Estòk") registered against a Bill.
@@ -555,6 +638,252 @@ export function downloadLandingSheet(billId) {
   var a = document.createElement("a");
   a.href = url;
   a.download = "deka-log-fich-debakman-" + (bill.numewo || billId) + "-" + today() + ".pdf";
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(function () {
+    URL.revokeObjectURL(url);
+  }, 4000);
+}
+
+// ============================================================================
+// Fakti (invoice): a professional, portrait, itemized invoice PDF for one
+// Bill, generated once an invoice has been registered ("anrejistre") and is
+// downloaded once it is marked "fini". Reuses the low-level PDF helpers
+// above (LS_PAGE_W/H, lsText, lsRect, lsLine, lsClip) but with its own
+// column layout and a bold TOTAL row instead of a signature block.
+// ============================================================================
+
+var IV_COLS = [
+  { label: "#", w: 25 },
+  { label: "Deskripsyon", w: 255 },
+  { label: "Kantite", w: 70 },
+  { label: "Pri Inite (HTG)", w: 80 },
+  { label: "Total (HTG)", w: 85 }
+];
+
+function pdfMoney(n) {
+  var v = Math.round((Number(n) || 0) * 100) / 100;
+  var parts = v.toFixed(2).split(".");
+  var intPart = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  return intPart + "." + parts[1];
+}
+
+function ivColX() {
+  var x = LS_MARGIN;
+  var out = [x];
+  for (var i = 0; i < IV_COLS.length - 1; i++) {
+    x += IV_COLS[i].w;
+    out.push(x);
+  }
+  return out;
+}
+
+function ivHeaderRow(y, colX) {
+  var w = lsRect(LS_MARGIN, y - LS_HEAD_H + 4, LS_PAGE_W - 2 * LS_MARGIN, LS_HEAD_H, LS_NAVY);
+  IV_COLS.forEach(function (c, i) {
+    var align = i >= 2 ? colX[i] + IV_COLS[i].w - 8 - c.label.length * 8.5 * 0.62 : colX[i] + 4;
+    w += lsText("F2", 8.5, i >= 2 ? align : colX[i] + 4, y - LS_HEAD_H + 10, c.label, [1, 1, 1]);
+  });
+  return w;
+}
+
+function ivDataRow(y, colX, cells, shaded) {
+  var w = "";
+  if (shaded) w += lsRect(LS_MARGIN, y - LS_ROW_H + 4, LS_PAGE_W - 2 * LS_MARGIN, LS_ROW_H, LS_GRAY);
+  cells.forEach(function (cell, i) {
+    var str = lsClip(String(cell == null ? "" : cell), IV_COLS[i].w, 8);
+    var x = colX[i] + 4;
+    if (i >= 2) {
+      x = colX[i] + IV_COLS[i].w - 8 - str.length * 8 * 0.52;
+    }
+    w += lsText("F1", 8, x, y - LS_ROW_H + 9, str, [0.1, 0.13, 0.18]);
+  });
+  return w;
+}
+
+function ivTotalRow(y, colX, totalLabel, totalValue) {
+  var w = lsRect(LS_MARGIN, y - LS_HEAD_H + 4, LS_PAGE_W - 2 * LS_MARGIN, LS_HEAD_H, LS_NAVY);
+  var labelStr = totalLabel;
+  var labelX = colX[3] + IV_COLS[3].w - 8 - labelStr.length * 9 * 0.62;
+  w += lsText("F2", 9, labelX, y - LS_HEAD_H + 10, labelStr, [1, 1, 1]);
+  var valX = colX[4] + IV_COLS[4].w - 8 - totalValue.length * 9 * 0.62;
+  w += lsText("F2", 9, valX, y - LS_HEAD_H + 10, totalValue, [1, 1, 1]);
+  return w;
+}
+
+export function buildInvoicePdf(opts) {
+  var title = opts.title || "FAKTI";
+  var docNumber = opts.docNumber || "";
+  var meta = opts.meta || [];
+  var rows = opts.rows || [];
+  var totalValue = opts.totalValue || "0.00";
+
+  var colX = ivColX();
+  var metaRows = Math.max(1, Math.ceil(meta.length / 2));
+  var metaBoxH = 18 + metaRows * 15;
+
+  // ---- page 1: company band, title, info box ----
+  var p1 = lsRect(0, LS_PAGE_H - 56, LS_PAGE_W, 56, LS_NAVY);
+  p1 += lsText("F2", 17, LS_MARGIN, LS_PAGE_H - 30, "DEKA GROUP", [1, 1, 1]);
+  p1 += lsText("F1", 9, LS_MARGIN, LS_PAGE_H - 45, "Jesyon Depo ak Lojistik", [0.85, 0.88, 0.92]);
+  var titleW = title.length * 13 * 0.62;
+  p1 += lsText("F2", 13, LS_PAGE_W - LS_MARGIN - titleW, LS_PAGE_H - 30, title, [1, 1, 1]);
+  if (docNumber) {
+    var docW = docNumber.length * 8 * 0.52;
+    p1 += lsText("F1", 8, LS_PAGE_W - LS_MARGIN - docW, LS_PAGE_H - 45, docNumber, [0.85, 0.88, 0.92]);
+  }
+  var metaTop = LS_PAGE_H - 56 - 22;
+  p1 += lsRect(LS_MARGIN, metaTop - metaBoxH, LS_PAGE_W - 2 * LS_MARGIN, metaBoxH, [0.95, 0.96, 0.97]);
+  var halfW = (LS_PAGE_W - 2 * LS_MARGIN) / 2;
+  var my = metaTop - 14;
+  for (var mi = 0; mi < meta.length; mi++) {
+    var mx = LS_MARGIN + 10 + (mi % 2) * halfW;
+    var lineY = my - Math.floor(mi / 2) * 15;
+    p1 += lsText("F2", 8, mx, lineY, meta[mi][0] + ":", [0.25, 0.3, 0.35]);
+    p1 += lsText("F1", 8, mx + 80, lineY, String(meta[mi][1] === null || meta[mi][1] === undefined || meta[mi][1] === "" ? "\u2014" : meta[mi][1]), [0.1, 0.13, 0.18]);
+  }
+  var tableTop1 = metaTop - metaBoxH - 16;
+
+  function capacityFor(topY) {
+    return Math.max(1, Math.floor((topY - LS_HEAD_H - LS_MARGIN) / LS_ROW_H));
+  }
+  var cap1 = capacityFor(tableTop1);
+  var capN = capacityFor(LS_PAGE_H - LS_MARGIN - 24);
+
+  var chunks = [];
+  if (rows.length === 0) {
+    chunks.push([]);
+  } else {
+    var idx = 0;
+    var first = true;
+    while (idx < rows.length) {
+      var cap = first ? cap1 : capN;
+      chunks.push(rows.slice(idx, idx + cap));
+      idx += cap;
+      first = false;
+    }
+  }
+
+  var pages = [];
+  var rowNumber = 0;
+  chunks.forEach(function (chunk, pageIdx) {
+    var content = "";
+    var top;
+    if (pageIdx === 0) {
+      content += p1;
+      top = tableTop1;
+    } else {
+      content += lsRect(0, LS_PAGE_H - 30, LS_PAGE_W, 30, LS_NAVY);
+      content += lsText("F2", 10, LS_MARGIN, LS_PAGE_H - 20, title + " (swit)", [1, 1, 1]);
+      top = LS_PAGE_H - LS_MARGIN - 24;
+    }
+    content += ivHeaderRow(top, colX);
+    var y = top - LS_HEAD_H;
+    chunk.forEach(function (cells, i) {
+      rowNumber++;
+      content += ivDataRow(y, colX, [String(rowNumber)].concat(cells), i % 2 === 1);
+      y -= LS_ROW_H;
+    });
+    if (chunk.length === 0) {
+      content += lsText("F1", 9, LS_MARGIN, y - 6, "Pa gen liy sou fakti sa a.", [0.4, 0.4, 0.4]);
+      y -= LS_ROW_H;
+    }
+    pages.push({ content: content, lastY: y });
+  });
+
+  // ---- TOTAL row + notes + footer: on the last page if there's room, else its own page ----
+  var lastPage = pages[pages.length - 1];
+  var closingH = 90;
+  function closingBlock(y) {
+    var w = ivTotalRow(y, colX, "TOTAL", totalValue);
+    var noteY = y - LS_HEAD_H - 16;
+    if (opts.notes) {
+      w += lsText("F1", 8, LS_MARGIN, noteY, "Remak: " + opts.notes, [0.3, 0.35, 0.4]);
+      noteY -= 16;
+    }
+    w += lsLine(LS_MARGIN, noteY, LS_PAGE_W - LS_MARGIN, noteY);
+    w += lsText("F1", 7.5, LS_MARGIN, noteY - 14, opts.footerNote || "", [0.5, 0.55, 0.6]);
+    return w;
+  }
+  if (lastPage.lastY - LS_MARGIN >= closingH) {
+    lastPage.content += closingBlock(lastPage.lastY - 6);
+  } else {
+    var closingContent = lsRect(0, LS_PAGE_H - 30, LS_PAGE_W, 30, LS_NAVY) + lsText("F2", 10, LS_MARGIN, LS_PAGE_H - 20, title + " \u2014 Total", [1, 1, 1]);
+    closingContent += closingBlock(LS_PAGE_H - 60);
+    pages.push({ content: closingContent, lastY: LS_PAGE_H - 60 });
+  }
+
+  // ---- serialize (same PDF object / xref scheme as buildTablePdf / buildLandingSheetPdf above) ----
+  var V = [];
+  V.push({ dict: true, body: "<< /Type /Catalog /Pages 2 0 R >>" });
+  V.push({ dict: true, body: `<< /Type /Pages /Kids [${ pages.map(function (_p, i) { return (5 + i * 2) + " 0 R"; }).join(" ") }] /Count ${ pages.length } >>` });
+  V.push({ dict: true, body: "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>" });
+  V.push({ dict: true, body: "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>" });
+  pages.forEach(function (pg) {
+    V.push({ dict: true, body: `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${ LS_PAGE_W } ${ LS_PAGE_H }] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents ${ V.length + 2 } 0 R >>` });
+    V.push({ stream: true, body: pg.content });
+  });
+
+  var out = "%PDF-1.4\n%\xE2\xE3\xCF\xD3\n";
+  var offsets = [];
+  for (var oi = 0; oi < V.length; oi++) {
+    offsets.push(out.length);
+    var objNum = oi + 1;
+    var obj = V[oi];
+    out += obj.dict ? `${ objNum } 0 obj\n${ obj.body }\nendobj\n` : `${ objNum } 0 obj\n<< /Length ${ obj.body.length } >>\nstream\n${ obj.body }\nendstream\nendobj\n`;
+  }
+  var xrefStart = out.length;
+  var total = V.length + 1;
+  out += `xref\n0 ${ total }\n0000000000 65535 f \n`;
+  for (var h = 0; h < offsets.length; h++) {
+    var p = String(offsets[h]);
+    while (p.length < 10) p = "0" + p;
+    out += `${ p } 00000 n \n`;
+  }
+  out += `trailer\n<< /Size ${ total } /Root 1 0 R >>\nstartxref\n${ xrefStart }\n%%EOF`;
+
+  var bytes = new Uint8Array(out.length);
+  for (var c = 0; c < out.length; c++) bytes[c] = out.charCodeAt(c) & 255;
+  return bytes;
+}
+
+// Builds and downloads the invoice PDF for one invoice id.
+export function downloadInvoice(invoiceId) {
+  var inv = state.invoices.find(function (i) { return i.id === invoiceId; });
+  if (!inv) return;
+  var bill = state.bills.find(function (b) { return b.id === inv.billId; });
+
+  var total = 0;
+  var rows = (inv.items || []).map(function (it) {
+    var qty = Number(it.qty) || 0;
+    var price = Number(it.unitPrice) || 0;
+    var lineTotal = qty * price;
+    total += lineTotal;
+    return [it.description, String(qty), pdfMoney(price), pdfMoney(lineTotal)];
+  });
+
+  var bytes = buildInvoicePdf({
+    title: "FAKTI",
+    docNumber: inv.invoiceNumber,
+    meta: [
+      ["Nimewo Fakti", inv.invoiceNumber],
+      ["Bill", bill ? bill.numewo : "\u2014"],
+      ["Kliyan", inv.clientName || "\u2014"],
+      ["Adrès", inv.clientAddress || "\u2014"],
+      ["Dat Fakti", formatDateShort(inv.invoiceDate)],
+      ["Dat Delè", inv.dueDate ? formatDateShort(inv.dueDate) : "\u2014"]
+    ],
+    rows: rows,
+    totalValue: pdfMoney(total),
+    notes: inv.notes || "",
+    footerNote: "Deka Group \u00B7 Fakti sa a jenere otomatikman \u00B7 " + formatDateShort(today())
+  });
+
+  var url = URL.createObjectURL(new Blob([bytes], { type: "application/pdf" }));
+  var a = document.createElement("a");
+  a.href = url;
+  a.download = "deka-log-fakti-" + (inv.invoiceNumber || invoiceId) + ".pdf";
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);

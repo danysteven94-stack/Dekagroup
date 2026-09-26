@@ -329,6 +329,137 @@ export function createStockEntry(payload) {
   });
 }
 
+export function loadInvoices() {
+  state.invoicesLoading = true;
+  state.invoicesErr = "";
+  render();
+  apiGet("/api/invoices").then(function (d) {
+    state.invoices = d.invoices || [];
+    state.invoicesLoaded = true;
+    state.invoicesLoading = false;
+    render();
+  }).catch(function (e) {
+    state.invoicesLoading = false;
+    state.invoicesErr = e && e.message ? e.message : String(e);
+    render();
+  });
+}
+
+export function createInvoice(payload) {
+  state.invoiceBusy = true;
+  state.invoicesErr = "";
+  render();
+  apiJson("/api/invoices", Object.assign({ action: "create" }, payload)).then(function (d) {
+    state.invoiceBusy = false;
+    if (d.invoice) {
+      state.invoices = [d.invoice].concat(state.invoices);
+      state.invoiceDraft = {
+        billId: "",
+        invoiceNumber: "",
+        invoiceDate: "",
+        dueDate: "",
+        clientName: "",
+        clientAddress: "",
+        notes: "",
+        items: [{ description: "", qty: "", unitPrice: "" }]
+      };
+    }
+    showToast("Fakti a anrejistre.");
+    render();
+  }).catch(function (e) {
+    state.invoiceBusy = false;
+    state.invoicesErr = e && e.message ? e.message : String(e);
+    render();
+  });
+}
+
+export function finishInvoice(id) {
+  state.invoiceBusy = true;
+  render();
+  apiJson("/api/invoices", { action: "finish", id: id }).then(function (d) {
+    state.invoiceBusy = false;
+    if (d.invoice) {
+      state.invoices = state.invoices.map(function (inv) {
+        return inv.id === d.invoice.id ? d.invoice : inv;
+      });
+    }
+    showToast("Fakti a make Fini.");
+    render();
+  }).catch(function (e) {
+    state.invoiceBusy = false;
+    showToast("Erè: " + (e && e.message ? e.message : String(e)));
+    render();
+  });
+}
+
+export function loadGoodsIncidents() {
+  state.goodsLoading = true;
+  state.goodsErr = "";
+  render();
+  apiGet("/api/goods").then(function (d) {
+    state.goodsIncidents = d.incidents || [];
+    state.goodsLoaded = true;
+    state.goodsLoading = false;
+    render();
+  }).catch(function (e) {
+    state.goodsLoading = false;
+    state.goodsErr = e && e.message ? e.message : String(e);
+    render();
+  });
+}
+
+export function createGoodsIncident(payload) {
+  state.goodsBusy = true;
+  state.goodsErr = "";
+  render();
+  apiJson("/api/goods", Object.assign({ action: "create" }, payload)).then(function (d) {
+    state.goodsBusy = false;
+    if (d.incident) {
+      state.goodsIncidents = [d.incident].concat(state.goodsIncidents);
+    }
+    showToast(payload.kind === "avarye" ? "Machandiz avarye a anrejistre." : "Retou a anrejistre.");
+    render();
+  }).catch(function (e) {
+    state.goodsBusy = false;
+    state.goodsErr = e && e.message ? e.message : String(e);
+    render();
+  });
+}
+
+export function loadDeliveries() {
+  state.deliveriesLoading = true;
+  state.deliveriesErr = "";
+  render();
+  apiGet("/api/deliveries").then(function (d) {
+    state.deliveries = d.deliveries || [];
+    state.deliveriesLoaded = true;
+    state.deliveriesLoading = false;
+    render();
+  }).catch(function (e) {
+    state.deliveriesLoading = false;
+    state.deliveriesErr = e && e.message ? e.message : String(e);
+    render();
+  });
+}
+
+export function createDelivery(payload) {
+  state.deliveryBusy = true;
+  state.deliveriesErr = "";
+  render();
+  apiJson("/api/deliveries", Object.assign({ action: "create" }, payload)).then(function (d) {
+    state.deliveryBusy = false;
+    if (d.delivery) {
+      state.deliveries = [d.delivery].concat(state.deliveries);
+    }
+    showToast("Livrezon an anrejistre.");
+    render();
+  }).catch(function (e) {
+    state.deliveryBusy = false;
+    state.deliveriesErr = e && e.message ? e.message : String(e);
+    render();
+  });
+}
+
 export function apiGet(url) {
   return apiFetch(url).then(function (r) {
     return r.json().catch(function () {

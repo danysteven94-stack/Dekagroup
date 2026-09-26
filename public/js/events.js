@@ -1,7 +1,14 @@
 // The global event listeners (clicks, submits, changes, input) that route data-action attributes to functions.
 import {
+  createDelivery,
+  createGoodsIncident,
+  createInvoice,
   createStockEntry,
+  finishInvoice,
   loadData,
+  loadDeliveries,
+  loadGoodsIncidents,
+  loadInvoices,
   loadStockEntries,
   saveData,
   showToast
@@ -28,7 +35,10 @@ import {
 } from "./mutations.js";
 import { exportContainersCsv } from "./csv.js";
 import {
+  downloadDeliveryReport,
   downloadDnkReport,
+  downloadGoodsReport,
+  downloadInvoice,
   downloadLandingSheet,
   downloadReport
 } from "./pdf.js";
@@ -52,6 +62,16 @@ import {
   loadSecurityTab
 } from "./views/security.js";
 import { loadUsers } from "./views/users.js";
+
+function readInvoiceItemsFromDom() {
+  return Array.prototype.map.call(document.querySelectorAll(".inv-item-row"), function (row) {
+    return {
+      description: row.querySelector(".inv-item-desc").value.trim(),
+      qty: row.querySelector(".inv-item-qty").value,
+      unitPrice: row.querySelector(".inv-item-price").value
+    };
+  });
+}
 
 document.addEventListener("submit", function (event) {
   if (event.target && event.target.id === "gate-form") {
@@ -154,6 +174,57 @@ document.addEventListener("submit", function (event) {
       remarks: document.getElementById("stock-f-remarks").value.trim()
     });
   }
+  if (event.target && event.target.id === "goods-form") {
+    event.preventDefault();
+    if (state.goodsBusy) {
+      return;
+    }
+    createGoodsIncident({
+      kind: event.target.getAttribute("data-kind"),
+      billId: document.getElementById("goods-f-bill").value,
+      entryDate: document.getElementById("goods-f-date").value,
+      quantity: document.getElementById("goods-f-qty").value,
+      unit: document.getElementById("goods-f-unit").value.trim(),
+      containerNumewo: document.getElementById("goods-f-container").value.trim(),
+      description: document.getElementById("goods-f-desc").value.trim(),
+      reason: document.getElementById("goods-f-reason").value.trim(),
+      remarks: document.getElementById("goods-f-remarks").value.trim()
+    });
+  }
+  if (event.target && event.target.id === "delivery-form") {
+    event.preventDefault();
+    if (state.deliveryBusy) {
+      return;
+    }
+    createDelivery({
+      billId: document.getElementById("delivery-f-bill").value,
+      entryDate: document.getElementById("delivery-f-date").value,
+      clientName: document.getElementById("delivery-f-client").value.trim(),
+      quantity: document.getElementById("delivery-f-qty").value,
+      unit: document.getElementById("delivery-f-unit").value.trim(),
+      containerNumewo: document.getElementById("delivery-f-container").value.trim(),
+      trucking: document.getElementById("delivery-f-trucking").value,
+      chofer: document.getElementById("delivery-f-chofer").value.trim(),
+      description: document.getElementById("delivery-f-desc").value.trim(),
+      remarks: document.getElementById("delivery-f-remarks").value.trim()
+    });
+  }
+  if (event.target && event.target.id === "invoice-form") {
+    event.preventDefault();
+    if (state.invoiceBusy) {
+      return;
+    }
+    createInvoice({
+      billId: document.getElementById("inv-f-bill").value,
+      clientName: document.getElementById("inv-f-client").value.trim(),
+      clientAddress: document.getElementById("inv-f-address").value.trim(),
+      invoiceNumber: document.getElementById("inv-f-number").value.trim(),
+      invoiceDate: document.getElementById("inv-f-date").value,
+      dueDate: document.getElementById("inv-f-due").value,
+      notes: document.getElementById("inv-f-notes").value.trim(),
+      items: readInvoiceItemsFromDom()
+    });
+  }
   if (event.target && event.target.id === "sec-email-add-form") {
     event.preventDefault();
     var S = state.sec;
@@ -182,6 +253,15 @@ document.addEventListener("click", function (event) {
       state.depotDivision = null;
       if ((state.depotTab === "stock" || state.depotTab === "landing") && !state.stockLoaded && !state.stockLoading) {
         loadStockEntries();
+      }
+      if ((state.depotTab === "invreg" || state.depotTab === "invfin") && !state.invoicesLoaded && !state.invoicesLoading) {
+        loadInvoices();
+      }
+      if ((state.depotTab === "returned" || state.depotTab === "damaged") && !state.goodsLoaded && !state.goodsLoading) {
+        loadGoodsIncidents();
+      }
+      if ((state.depotTab === "livrezon" || state.depotTab === "livrezonrapo") && !state.deliveriesLoaded && !state.deliveriesLoading) {
+        loadDeliveries();
       }
       render();
     } else if (i === "clear-bill-filter") {
@@ -261,6 +341,25 @@ document.addEventListener("click", function (event) {
       downloadDnkReport();
     } else if (i === "download-landing-sheet") {
       downloadLandingSheet(o);
+    } else if (i === "invoice-add-item") {
+      state.invoiceDraft.items = readInvoiceItemsFromDom();
+      state.invoiceDraft.items.push({ description: "", qty: "", unitPrice: "" });
+      render();
+    } else if (i === "invoice-remove-item") {
+      var removeIdx = parseInt(n.getAttribute("data-index"), 10);
+      state.invoiceDraft.items = readInvoiceItemsFromDom();
+      if (state.invoiceDraft.items.length > 1) {
+        state.invoiceDraft.items.splice(removeIdx, 1);
+      }
+      render();
+    } else if (i === "finish-invoice") {
+      finishInvoice(o);
+    } else if (i === "download-invoice") {
+      downloadInvoice(o);
+    } else if (i === "download-goods-report") {
+      downloadGoodsReport(n.getAttribute("data-kind"));
+    } else if (i === "download-delivery-report") {
+      downloadDeliveryReport(state.deliveryReportFrom, state.deliveryReportTo);
     } else if (i === "export-containers-csv") {
       exportContainersCsv();
     } else if (i === "retry-load") {
@@ -334,6 +433,31 @@ document.addEventListener("change", function (event) {
   }
   if (event.target && event.target.id === "stock-landing-bill") {
     state.landingBillId = event.target.value;
+    render();
+    return;
+  }
+  if (event.target && event.target.id === "invoice-filter-bill") {
+    state.invoiceFilterBill = event.target.value;
+    render();
+    return;
+  }
+  if (event.target && event.target.id === "goods-filter-bill") {
+    state.goodsFilterBill = event.target.value;
+    render();
+    return;
+  }
+  if (event.target && event.target.id === "delivery-filter-bill") {
+    state.deliveryFilterBill = event.target.value;
+    render();
+    return;
+  }
+  if (event.target && event.target.id === "delivery-report-from") {
+    state.deliveryReportFrom = event.target.value;
+    render();
+    return;
+  }
+  if (event.target && event.target.id === "delivery-report-to") {
+    state.deliveryReportTo = event.target.value;
     render();
     return;
   }

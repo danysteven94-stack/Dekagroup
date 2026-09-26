@@ -21,12 +21,30 @@ import {
   landingSheetTabView,
   stockEntryTabView
 } from "./stock.js";
+import {
+  invoiceFinishedTabView,
+  invoiceRegistrationTabView
+} from "./invoices.js";
+import {
+  damagedGoodsTabView,
+  returnedGoodsTabView
+} from "./goods.js";
+import {
+  dailyDeliveryTabView,
+  deliveryReportTabView
+} from "./livrezon.js";
 
 var DEPOT_TABS = [
   { id: "list", label: "Kontenè Full", icon: "boxes" },
   { id: "dashboard", label: "Tablo Kontwôl", icon: "grid" },
   { id: "stock", label: "Antre Estòk", icon: "boxes" },
-  { id: "landing", label: "Fich Debakman", icon: "grid" }
+  { id: "landing", label: "Fich Debakman", icon: "grid" },
+  { id: "invreg", label: "Anrejistreman Fakti", icon: "boxes" },
+  { id: "invfin", label: "Fakti Fini", icon: "check" },
+  { id: "returned", label: "Machandiz Retounen", icon: "undo" },
+  { id: "damaged", label: "Machandiz Avarye", icon: "alert" },
+  { id: "livrezon", label: "Livrezon Jounalye", icon: "boxes" },
+  { id: "livrezonrapo", label: "Rapò Livrezon", icon: "download" }
 ];
 
 function depotDivisionView() {
@@ -95,6 +113,18 @@ export function depotView() {
     body = stockEntryTabView();
   } else if (curTab === "landing") {
     body = landingSheetTabView();
+  } else if (curTab === "invreg") {
+    body = invoiceRegistrationTabView();
+  } else if (curTab === "invfin") {
+    body = invoiceFinishedTabView();
+  } else if (curTab === "returned") {
+    body = returnedGoodsTabView();
+  } else if (curTab === "damaged") {
+    body = damagedGoodsTabView();
+  } else if (curTab === "livrezon") {
+    body = dailyDeliveryTabView();
+  } else if (curTab === "livrezonrapo") {
+    body = deliveryReportTabView();
   } else {
     body = `<div class="section-head"><div><div class="eyebrow">${ e.length } kontenè full</div><h2 class="h2">Kontenè nan Depo yo</h2></div></div><div style="display:flex;flex-direction:column;gap:8px">${ n }</div>`;
   }

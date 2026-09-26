@@ -69,7 +69,38 @@ export const state = {
   stockErr: "",
   stockBusy: false,
   stockFilterBill: "",
-  landingBillId: ""
+  landingBillId: "",
+  invoices: [],
+  invoicesLoaded: false,
+  invoicesLoading: false,
+  invoicesErr: "",
+  invoiceBusy: false,
+  invoiceFilterBill: "",
+  invoiceFilterStatus: "",
+  invoiceDraft: {
+    billId: "",
+    invoiceNumber: "",
+    invoiceDate: "",
+    dueDate: "",
+    clientName: "",
+    clientAddress: "",
+    notes: "",
+    items: [{ description: "", qty: "", unitPrice: "" }]
+  },
+  goodsIncidents: [],
+  goodsLoaded: false,
+  goodsLoading: false,
+  goodsErr: "",
+  goodsBusy: false,
+  goodsFilterBill: "",
+  deliveries: [],
+  deliveriesLoaded: false,
+  deliveriesLoading: false,
+  deliveriesErr: "",
+  deliveryBusy: false,
+  deliveryFilterBill: "",
+  deliveryReportFrom: "",
+  deliveryReportTo: ""
 };
 
 export const TAB_ID = Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
