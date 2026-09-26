@@ -3,6 +3,7 @@
 const crypto = require("crypto");
 const { redis } = require("./redis");
 const { audit } = require("./auth");
+const Div = require("./divisions");
 
 const BACKUP_KEY = "dl:backups";
 const BACKUP_EVERY_MS = 30 * 60 * 1000;
@@ -218,16 +219,29 @@ async function afterCommit(prev, next, req) {
   }
 }
 
-// What each role is allowed to read.
-function viewFor(role, d) {
+// What each session is allowed to read: first narrowed by role (as before), then, for a personal
+// account, narrowed again to the divisions it was actually assigned (see _lib/divisions.js).
+function viewFor(session, d) {
+  const role = session.role;
   if (role === "admin") return d;
   const out = { containers: d.containers, bills: d.bills, notifications: d.notifications, inventoryChecks: {} };
+  let narrowed = false;
   if (role === "chofe") {
-    out.containers = d.containers.filter(function (c) { return statusOf(c) === "vid"; });
+    out.containers = out.containers.filter(function (c) { return statusOf(c) === "vid"; });
+    out.notifications = [];
+    narrowed = true;
+  }
+  const visible = Div.visibleDivisions(session.src, session.divisions);
+  if (visible) {
+    const allowed = {};
+    visible.forEach(function (dv) { allowed[dv] = true; });
+    out.containers = out.containers.filter(function (c) { return !!c.division && allowed[c.division]; });
+    narrowed = true;
+  }
+  if (narrowed) {
     const ids = {};
     out.containers.forEach(function (c) { ids[c.billId] = true; });
     out.bills = d.bills.filter(function (b) { return ids[b.id]; });
-    out.notifications = [];
   }
   return out;
 }

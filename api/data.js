@@ -10,7 +10,7 @@ module.exports = async function handler(req, res) {
       const session = await A.requireAuth(req, res, ["admin", "depot", "daily", "chofe"]);
       if (!session) return;
       const r = await repo.readAll(session.pool);
-      res.status(200).json(Object.assign({}, S.viewFor(session.role, r.view || r.blob), { rev: r.rev }));
+      res.status(200).json(Object.assign({}, S.viewFor(session, r.view || r.blob), { rev: r.rev }));
       return;
     }
 

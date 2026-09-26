@@ -92,7 +92,7 @@ module.exports = async function handler(req, res) {
     if (out.changed) await S.afterCommit(out.prev, out.blob, req);
 
     await A.audit(req, "act_" + body.action, out.info, session);
-    res.status(200).json({ ok: true, result: out.info, data: Object.assign({}, S.viewFor(session.role, out.view || out.blob), { rev: out.rev }) });
+    res.status(200).json({ ok: true, result: out.info, data: Object.assign({}, S.viewFor(session, out.view || out.blob), { rev: out.rev }) });
   } catch (err) {
     if (err instanceof ActionError) {
       res.status(err.status).json({ error: err.message, code: err.code });
