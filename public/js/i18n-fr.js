@@ -485,6 +485,19 @@ export const EXACT = {
   "Kòz:": "Cause :",
   "Rezon:": "Motif :",
 
+  // ---- depot: Rapò Livrezon / Livrezon Jounalye
+  "Rapò Livrezon": "Rapport de livraison",
+  "Livrezon Jounalye": "Livraison journalière",
+  "Pa gen livrezon pou filt sa a.": "Aucune livraison pour ce filtre.",
+  "Pa gen livrezon pou dat sa a.": "Aucune livraison pour cette date.",
+  "Telechaje (PDF)": "Télécharger (PDF)",
+  "Tout Bill": "Tous les Bills",
+  "— Tout Bill —": "— Tous les Bills —",
+  "Depi": "Depuis",
+  "Rive": "Jusqu'à",
+  "Dat": "Date",
+  "Chofè:": "Chauffeur :",
+
   "verifye epi sove nan Lojistik.": "vérifié et enregistré dans la Logistique.",
   "Pa t kapab verifye": "Impossible de vérifier",
 

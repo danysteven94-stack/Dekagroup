@@ -1,6 +1,9 @@
 "use strict";
 const A = require("./_lib/auth");
 const { redis } = require("./_lib/redis");
+const S2 = require("./_lib/store");
+const repo = require("./_lib/repo");
+const { ApiError } = require("./_lib/errors");
 
 // Separate key on purpose: the Daily Report interface keeps its own checks and edits.
 const KEY = "deka-daily-report";
@@ -15,10 +18,62 @@ function has(o, k) {
   return Object.prototype.hasOwnProperty.call(o, k);
 }
 
+// Vercel Hobby plan limite a 12 Serverless Functions pou chak Deployment: /api/verify
+// gwoupe la a anba /api/daily?action=verify gras a "rewrites" nan vercel.json.
+// Marye yon konteneur "Poko Verifye" kòm verifye — sèl chanjman sa a ki retounen nan done Logistic.
+async function handleVerify(req, res, session) {
+  if (req.method !== "POST") {
+    res.setHeader("Allow", "POST");
+    res.status(405).json({ error: "Method not allowed" });
+    return;
+  }
+  try {
+    const body = A.parseBody(req);
+    const id = typeof body.id === "string" ? body.id : "";
+    const depo = typeof body.depo === "string" ? body.depo.trim().slice(0, 80) : "";
+    const trucking = typeof body.trucking === "string" && body.trucking.trim() ? body.trucking.trim().slice(0, 40) : null;
+    const date = typeof body.date === "string" && DATE_RE.test(body.date) ? body.date : S2.today();
+
+    if (!id) { res.status(400).json({ error: "Konteneur pa idantifye." }); return; }
+    if (!depo) { res.status(400).json({ error: "Depo a obligatwa pou verifye." }); return; }
+
+    const out = await repo.mutate(async function (data) {
+      const c = data.containers.find(function (x) { return x.id === id; });
+      if (!c) throw new ApiError(404, "not_found", "Pa jwenn konteneur la.");
+      if (c.dateVerified) return { already: true, container: Object.assign({}, c) }; // already verified: untouched
+      if (!c.dateEntered || c.dateEmpty || c.dateLeft) throw new ApiError(409, "wrong_status", "Konteneur sa a pa nan estati Poko Verifye ank\u00F2.");
+      c.dateVerified = date;
+      c.depo = depo;
+      c.trucking = trucking;
+      return { container: Object.assign({}, c), verified: c.numewo };
+    }, { cid: session.username });
+
+    if (out.changed) {
+      await S2.afterCommit(out.prev, out.blob, req);
+      await A.audit(req, "verify", { numewo: out.info.verified }, session);
+    }
+    const body2 = { ok: true, container: out.info.container };
+    if (out.info.already) body2.already = true;
+    res.status(200).json(body2);
+  } catch (err) {
+    if (err instanceof ApiError && err.status !== 503) {
+      res.status(err.status).json({ error: err.message, code: err.code });
+      return;
+    }
+    console.error("verify error:", err && err.message);
+    const busy = err instanceof ApiError && err.status === 503;
+    res.status(busy ? 503 : 500).json({ error: busy ? err.message : "Erè sèvè. Eseye ankò.", code: "server_error" });
+  }
+}
+
 module.exports = async function handler(req, res) {
   try {
     const session = await A.requireAuth(req, res, ["daily", "admin"]);
     if (!session) return;
+
+    if (req.query && req.query.action === "verify") {
+      return handleVerify(req, res, session);
+    }
 
     if (req.method === "GET") {
       const data = await redis.get(KEY);

@@ -93,14 +93,10 @@ export const state = {
   goodsErr: "",
   goodsBusy: false,
   goodsFilterBill: "",
-  deliveries: [],
-  deliveriesLoaded: false,
-  deliveriesLoading: false,
-  deliveriesErr: "",
-  deliveryBusy: false,
   deliveryFilterBill: "",
-  deliveryReportFrom: "",
-  deliveryReportTo: ""
+  deliveryFrom: "",
+  deliveryTo: "",
+  dailyDeliveryDate: ""
 };
 
 export const TAB_ID = Math.random().toString(36).slice(2, 10) + Date.now().toString(36);

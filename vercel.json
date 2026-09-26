@@ -5,16 +5,22 @@
       "source": "/api/auth/:action",
       "destination": "/api/auth?action=:action"
     },
-    { "source": "/api/verify", "destination": "/api/act?__verify=1" },
-    { "source": "/api/audit", "destination": "/api/diag?view=audit" },
-    { "source": "/api/health", "destination": "/api/diag?view=health" },
-    { "source": "/api/backup", "destination": "/api/diag?view=backup" },
-    { "source": "/api/email", "destination": "/api/notify?channel=email" },
-    { "source": "/api/push", "destination": "/api/notify?channel=push" },
-    { "source": "/api/stock", "destination": "/api/records?type=stock" },
-    { "source": "/api/goods", "destination": "/api/records?type=goods" },
-    { "source": "/api/invoices", "destination": "/api/records?type=invoices" },
-    { "source": "/api/deliveries", "destination": "/api/records?type=deliveries" }
+    {
+      "source": "/api/audit",
+      "destination": "/api/admin?action=audit"
+    },
+    {
+      "source": "/api/health",
+      "destination": "/api/admin?action=health"
+    },
+    {
+      "source": "/api/backup",
+      "destination": "/api/admin?action=backup"
+    },
+    {
+      "source": "/api/verify",
+      "destination": "/api/daily?action=verify"
+    }
   ],
   "headers": [
     {

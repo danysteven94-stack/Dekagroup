@@ -1,20 +1,26 @@
 "use strict";
-// Vercel Hobby plan limits a Deployment to 12 Serverless Functions, so the three small
-// admin-only diagnostic endpoints (audit log, health check, backups) share one file here.
-// /api/audit, /api/health and /api/backup are routed to this file via rewrites in vercel.json,
-// so the browser paths and behavior are unchanged.
-const A = require("./_lib/auth");
-const repo = require("./_lib/repo");
-const S = require("./_lib/store");
-const { redis } = require("./_lib/redis");
+// Sèl pwen antre pou 3 wout admin ki senp (audit, health, backup).
+// Vercel Hobby plan limite a 12 Serverless Functions pou chak Deployment, se poutèt sa
+// nou gwoupe 3 fonksyon (audit, health, backup) an yon sèl, menm jan ak /api/auth.
+// Wout la (/api/audit, /api/health, /api/backup) rekonèt gras a "rewrites" nan vercel.json,
+// ki ajoute ?action=... nan demann lan (backup gade ?i= tou, li rive san pwoblèm).
 
-function parseSnap(r) {
+const A = require("./_lib/auth");
+const { redis } = require("./_lib/redis");
+const S = require("./_lib/store");
+const repo = require("./_lib/repo");
+
+function parseJson(r) {
   if (typeof r !== "string") return r;
   try { return JSON.parse(r); } catch (e) { return null; }
 }
 
-// Admin only: latest security/activity events (logins, failures, writes...).
-async function handleAudit(req, res) {
+async function audit(req, res, session) {
+  if (req.method !== "GET") {
+    res.setHeader("Allow", "GET");
+    res.status(405).json({ error: "Method not allowed" });
+    return;
+  }
   const rows = await redis.lrange("dl:audit", 0, 299);
   const events = (rows || []).map(function (r) {
     if (typeof r !== "string") return r;
@@ -23,8 +29,12 @@ async function handleAudit(req, res) {
   res.status(200).json({ count: events.length, events: events });
 }
 
-// Admin only: which storage is active and whether it answers (shown in the Sekirite tab).
-async function handleHealth(req, res) {
+async function health(req, res, session) {
+  if (req.method !== "GET") {
+    res.setHeader("Allow", "GET");
+    res.status(405).json({ error: "Method not allowed" });
+    return;
+  }
   try {
     res.status(200).json(await repo.health());
   } catch (e) {
@@ -33,12 +43,14 @@ async function handleHealth(req, res) {
   }
 }
 
-// Admin only: list the automatic snapshots of the logistic data, or download one.
-//   /api/backup            -> list (index, date, counts)
-//   /api/backup?i=0        -> download snapshot 0 (0 = most recent) as a JSON file
-async function handleBackup(req, res, session) {
+async function backup(req, res, session) {
+  if (req.method !== "GET") {
+    res.setHeader("Allow", "GET");
+    res.status(405).json({ error: "Method not allowed" });
+    return;
+  }
   const rows = (await redis.lrange(S.BACKUP_KEY, 0, 11)) || [];
-  const snaps = rows.map(parseSnap);
+  const snaps = rows.map(parseJson);
   const q = req.query && req.query.i;
 
   if (q !== undefined) {
@@ -59,23 +71,21 @@ async function handleBackup(req, res, session) {
   });
 }
 
-const VIEWS = { audit: handleAudit, health: handleHealth, backup: handleBackup };
+const handlers = { audit: audit, health: health, backup: backup };
 
 module.exports = async function handler(req, res) {
   try {
-    if (req.method !== "GET") {
-      res.setHeader("Allow", "GET");
-      res.status(405).json({ error: "Method not allowed" });
+    const action = req.query && req.query.action;
+    const fn = handlers[action];
+    if (!fn) {
+      res.status(404).json({ error: "Wout la pa egziste.", code: "not_found" });
       return;
     }
-    const view = req.query && req.query.view;
-    const fn = VIEWS[view];
-    if (!fn) { res.status(404).json({ error: "Not found" }); return; }
     const session = await A.requireAuth(req, res, ["admin"]);
     if (!session) return;
     await fn(req, res, session);
   } catch (err) {
-    console.error("diag error:", err && err.message);
+    console.error("admin error:", err && err.message);
     res.status(500).json({ error: "Erè sèvè.", code: "server_error" });
   }
 };

@@ -17,6 +17,10 @@ import {
   isFr,
   t
 } from "./i18n.js";
+import {
+  downloadDailyDeliveryRows,
+  downloadDeliveryReportRows
+} from "./views/delivery.js";
 
 function toWinAnsiCode(char) {
   var n = char.charCodeAt(0);
@@ -348,41 +352,45 @@ export function downloadGoodsReport(kind) {
   }, 4000);
 }
 
-// "Rapò Livrezon": deliveries made out of the depot within a date range.
-export function downloadDeliveryReport(from, to) {
-  var list = state.deliveries.slice();
-  if (from) list = list.filter(function (e) { return (e.entryDate || "") >= from; });
-  if (to) list = list.filter(function (e) { return (e.entryDate || "") <= to; });
-  list = list.slice().sort(function (a, b) { return (a.entryDate || "").localeCompare(b.entryDate || ""); });
-  var rows = list.map(function (item, i) {
-    var bill = state.bills.find(function (b) { return b.id === item.billId; });
-    return {
-      cells: [
-        String(i + 1),
-        formatDateShort(item.entryDate),
-        bill ? bill.numewo : "\u2014",
-        item.clientName || "\u2014",
-        item.description,
-        String(item.quantity) + " " + (item.unit || ""),
-        item.containerNumewo || "\u2014",
-        [item.trucking, item.chofer].filter(Boolean).join(" \u2014 ") || "\u2014"
-      ]
-    };
-  });
-  var bytes = buildTablePdf(rows, "RAPO LIVREZON", [
+// Rapò Livrezon: containers whose product has been handed to a client (dateEmpty set), matching the tab's filters.
+export function downloadDeliveryReport() {
+  var bytes = buildTablePdf(downloadDeliveryReportRows(), "RAPO LIVREZON", [
     "#",
-    "Dat",
-    "Bill",
-    "Kliyan",
-    "Deskripsyon",
-    "Kantite",
     "Konten\u00E8",
-    "Trucking/Chof\u00E8"
+    "Bill",
+    "Depo",
+    "Chof\u00E8",
+    "Plak",
+    "Dat Livrezon"
   ]);
   var url = URL.createObjectURL(new Blob([bytes], { type: "application/pdf" }));
   var a = document.createElement("a");
   a.href = url;
   a.download = "deka-log-rapo-livrezon-" + today() + ".pdf";
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(function () {
+    URL.revokeObjectURL(url);
+  }, 4000);
+}
+
+// Livrezon Jounalye: deliveries (product handed to a client) for one chosen day only.
+export function downloadDailyDelivery() {
+  var date = state.dailyDeliveryDate || today();
+  var bytes = buildTablePdf(downloadDailyDeliveryRows(), "LIVREZON JOUNALYE \u2014 " + formatDateShort(date), [
+    "#",
+    "Konten\u00E8",
+    "Bill",
+    "Depo",
+    "Chof\u00E8",
+    "Plak",
+    "Dat Livrezon"
+  ]);
+  var url = URL.createObjectURL(new Blob([bytes], { type: "application/pdf" }));
+  var a = document.createElement("a");
+  a.href = url;
+  a.download = "deka-log-livrezon-jounalye-" + date + ".pdf";
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);

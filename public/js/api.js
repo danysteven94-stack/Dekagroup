@@ -426,40 +426,6 @@ export function createGoodsIncident(payload) {
   });
 }
 
-export function loadDeliveries() {
-  state.deliveriesLoading = true;
-  state.deliveriesErr = "";
-  render();
-  apiGet("/api/deliveries").then(function (d) {
-    state.deliveries = d.deliveries || [];
-    state.deliveriesLoaded = true;
-    state.deliveriesLoading = false;
-    render();
-  }).catch(function (e) {
-    state.deliveriesLoading = false;
-    state.deliveriesErr = e && e.message ? e.message : String(e);
-    render();
-  });
-}
-
-export function createDelivery(payload) {
-  state.deliveryBusy = true;
-  state.deliveriesErr = "";
-  render();
-  apiJson("/api/deliveries", Object.assign({ action: "create" }, payload)).then(function (d) {
-    state.deliveryBusy = false;
-    if (d.delivery) {
-      state.deliveries = [d.delivery].concat(state.deliveries);
-    }
-    showToast("Livrezon an anrejistre.");
-    render();
-  }).catch(function (e) {
-    state.deliveryBusy = false;
-    state.deliveriesErr = e && e.message ? e.message : String(e);
-    render();
-  });
-}
-
 export function apiGet(url) {
   return apiFetch(url).then(function (r) {
     return r.json().catch(function () {
