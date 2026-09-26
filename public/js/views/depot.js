@@ -34,6 +34,8 @@ import {
   deliveryReportTabView
 } from "./delivery.js";
 
+// Grouped into visual clusters (Kontenè · Estòk & Dokiman · Fakti · Machandiz · Livrezon) — a separator
+// is drawn between clusters so the ten tabs read as related sets instead of one long row of buttons.
 var DEPOT_TABS = [
   { id: "list", label: "Kontenè Full", icon: "boxes" },
   { id: "dashboard", label: "Tablo Kontwôl", icon: "grid" },
@@ -46,6 +48,7 @@ var DEPOT_TABS = [
   { id: "delivery", label: "Rapò Livrezon", icon: "grid" },
   { id: "dailydelivery", label: "Livrezon Jounalye", icon: "boxes" }
 ];
+var DEPOT_TAB_GROUP_BREAKS = ["stock", "invreg", "returned", "delivery"];
 
 function depotDivisionView() {
   var e = state.containers.filter(function (container) {
@@ -79,7 +82,7 @@ function depotDivisionView() {
   var cards = divs.map(function (d) {
     return `<div class="kpi" data-action="view-depot-division" data-division="${ escapeHtml(d.name) }" style="cursor:pointer"><div class="kpi-top"><span class="kpi-label">${ escapeHtml(d.name) }</span><div class="kpi-icon" style="background:${ COLORS.full }1A;color:${ COLORS.full }">${ icon("boxes", 14, COLORS.full) }</div></div><div class="kpi-value">${ d.count }</div></div>`;
   }).join("");
-  return `<div class="section-head"><div><div class="eyebrow">Estatistik</div><h2 class="h2">Tablo Kontwôl</h2></div></div><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:22px"><div class="kpi"><div class="kpi-top"><span class="kpi-label">Total Kontenè Full</span><div class="kpi-icon" style="background:${ COLORS.navy }1A;color:${ COLORS.navy }">${ icon("boxes", 14, COLORS.navy) }</div></div><div class="kpi-value">${ tot }</div></div></div><div style="font-size:12.5px;color:var(--muted-light);margin-bottom:10px;font-weight:600">Pa Divizyon (klike pou wè detay)</div><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px">${ cards }</div>`;
+  return `<div class="section-head"><div><div class="eyebrow">Estatistik</div><h2 class="h2">Tablo Kontwôl</h2></div></div><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:22px"><div class="kpi"><div class="kpi-top"><span class="kpi-label">Total Kontenè Full</span><div class="kpi-icon" style="background:${ COLORS.teal }1A;color:${ COLORS.teal }">${ icon("boxes", 14, COLORS.teal) }</div></div><div class="kpi-value">${ tot }</div></div></div><div style="font-size:12.5px;color:var(--muted-light);margin-bottom:10px;font-weight:600">Pa Divizyon (klike pou wè detay)</div><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px">${ cards }</div>`;
 }
 
 export function depotView() {
@@ -103,9 +106,10 @@ export function depotView() {
     }).join("");
   }
   var curTab = state.depotTab || "dashboard";
-  tabs = `<div style="display:flex;gap:8px;margin-bottom:18px;flex-wrap:wrap">${ DEPOT_TABS.map(function (tb) {
+  tabs = `<div class="depot-tabs">${ DEPOT_TABS.map(function (tb) {
     var on = curTab === tb.id;
-    return `<button class="btn${ on ? "" : " ghost" }" data-action="set-depot-tab" data-tab="${ tb.id }" style="background:${ on ? COLORS.full : "transparent" };color:${ on ? "#fff" : "var(--ink)" };border:1px solid ${ on ? COLORS.full : "var(--border)" }">${ icon(tb.icon, 15, on ? "#fff" : "var(--ink)") } ${ tb.label }</button>`;
+    var sep = DEPOT_TAB_GROUP_BREAKS.indexOf(tb.id) !== -1 ? `<span class="dtab-sep"></span>` : "";
+    return `${ sep }<button class="dtab${ on ? " active" : "" }" data-action="set-depot-tab" data-tab="${ tb.id }">${ icon(tb.icon, 15, on ? "#fff" : "var(--muted)") } ${ tb.label }</button>`;
   }).join("") }</div>`;
   if (curTab === "dashboard") {
     body = depotDivisionView();
@@ -128,5 +132,5 @@ export function depotView() {
   } else {
     body = `<div class="section-head"><div><div class="eyebrow">${ e.length } kontenè full</div><h2 class="h2">Kontenè nan Depo yo</h2></div></div><div style="display:flex;flex-direction:column;gap:8px">${ n }</div>`;
   }
-  return `<div style="min-height:100vh;background:var(--bg)"><header style="background:var(--navy);padding:18px 20px;display:flex;align-items:center;gap:12px"><div class="sidebar-logo"><img src="${ LOGO_URL }" alt="Deka Group" /></div><div style="flex:1"><div style="color:#fff;font-weight:800;font-size:16px">DEKA LOG — Depo</div><div style="color:var(--steel-light);font-size:11.5px">Jesyon kontenè Full ak depo yo · ${ formatLongDate() }</div></div>${ state.lastSyncTime ? `<div style="color:var(--steel-light);font-size:10.5px;text-align:right">Dènye sinkwonizasyon<br/>${ formatTime(state.lastSyncTime) }</div>` : "" }${ helpButton("#fff") + accountButton("#fff") }<button class="linklike" data-action="logout" style="color:#fff">${ icon("undo", 12) } Dekonekte</button></header><main class="content" style="max-width:820px;margin:0 auto">${ tabs }${ body }</main><div style="text-align:center;font-size:10px;color:var(--muted-light);padding:20px">© ${ new Date().getFullYear() } Deka Group · v1.0</div></div>`;
+  return `<div style="min-height:100vh;background:var(--bg)"><header class="depot-header"><div class="sidebar-logo"><img src="${ LOGO_URL }" alt="Deka Group" /></div><div style="flex:1;min-width:180px"><div style="color:#fff;font-weight:800;font-size:16px">DEKA LOG<span class="depot-badge">Depo</span></div><div style="color:rgba(255,255,255,.8);font-size:11.5px;margin-top:2px">Jesyon kontenè Full ak depo yo · ${ formatLongDate() }</div></div>${ state.lastSyncTime ? `<div style="color:rgba(255,255,255,.75);font-size:10.5px;text-align:right">Dènye sinkwonizasyon<br/>${ formatTime(state.lastSyncTime) }</div>` : "" }${ helpButton("#fff") + accountButton("#fff") }<button class="linklike" data-action="logout" style="color:#fff">${ icon("undo", 12) } Dekonekte</button></header><main class="content" style="max-width:860px;margin:0 auto">${ tabs }${ body }</main><div style="text-align:center;font-size:10px;color:var(--muted-light);padding:20px">© ${ new Date().getFullYear() } Deka Group · v1.0</div></div>`;
 }

@@ -488,6 +488,13 @@ export const EXACT = {
   // ---- depot: Rapò Livrezon / Livrezon Jounalye
   "Rapò Livrezon": "Rapport de livraison",
   "Livrezon Jounalye": "Livraison journalière",
+  "Anrejistre yon Livrezon": "Enregistrer une livraison",
+  "Deskripsyon Pwodwi *": "Description du produit *",
+  "Kliyan *": "Client *",
+  "Non kliyan an": "Nom du client",
+  "Anrejistre Livrezon an": "Enregistrer la livraison",
+  "Pa gen livrezon anrejistre.": "Aucune livraison enregistrée.",
+  "Pa gen livrezon pou jou sa a.": "Aucune livraison pour ce jour.",
   "Pa gen livrezon pou filt sa a.": "Aucune livraison pour ce filtre.",
   "Pa gen livrezon pou dat sa a.": "Aucune livraison pour cette date.",
   "Telechaje (PDF)": "Télécharger (PDF)",

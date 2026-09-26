@@ -417,7 +417,7 @@ export function createGoodsIncident(payload) {
     if (d.incident) {
       state.goodsIncidents = [d.incident].concat(state.goodsIncidents);
     }
-    showToast(payload.kind === "avarye" ? "Machandiz avarye a anrejistre." : "Retou a anrejistre.");
+    showToast(payload.kind === "avarye" ? "Machandiz avarye a anrejistre." : payload.kind === "livrezon" ? "Livrezon an anrejistre." : "Retou a anrejistre.");
     render();
   }).catch(function (e) {
     state.goodsBusy = false;

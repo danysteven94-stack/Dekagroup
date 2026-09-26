@@ -184,10 +184,25 @@ document.addEventListener("submit", function (event) {
       entryDate: document.getElementById("goods-f-date").value,
       quantity: document.getElementById("goods-f-qty").value,
       unit: document.getElementById("goods-f-unit").value.trim(),
-      containerNumewo: document.getElementById("goods-f-container").value.trim(),
       description: document.getElementById("goods-f-desc").value.trim(),
       reason: document.getElementById("goods-f-reason").value.trim(),
       remarks: document.getElementById("goods-f-remarks").value.trim()
+    });
+  }
+  if (event.target && event.target.id === "delivery-form") {
+    event.preventDefault();
+    if (state.goodsBusy) {
+      return;
+    }
+    createGoodsIncident({
+      kind: "livrezon",
+      billId: document.getElementById("delivery-f-bill").value,
+      entryDate: document.getElementById("delivery-f-date").value,
+      quantity: document.getElementById("delivery-f-qty").value,
+      unit: document.getElementById("delivery-f-unit").value.trim(),
+      description: document.getElementById("delivery-f-desc").value.trim(),
+      reason: document.getElementById("delivery-f-client").value.trim(),
+      remarks: document.getElementById("delivery-f-remarks").value.trim()
     });
   }
   if (event.target && event.target.id === "invoice-form") {
@@ -238,7 +253,7 @@ document.addEventListener("click", function (event) {
       if ((state.depotTab === "invreg" || state.depotTab === "invfin") && !state.invoicesLoaded && !state.invoicesLoading) {
         loadInvoices();
       }
-      if ((state.depotTab === "returned" || state.depotTab === "damaged") && !state.goodsLoaded && !state.goodsLoading) {
+      if ((state.depotTab === "returned" || state.depotTab === "damaged" || state.depotTab === "delivery" || state.depotTab === "dailydelivery") && !state.goodsLoaded && !state.goodsLoading) {
         loadGoodsIncidents();
       }
       render();

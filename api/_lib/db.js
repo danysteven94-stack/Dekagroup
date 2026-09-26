@@ -100,7 +100,8 @@ const DDL = [
     "finished_by TEXT, finished_at TEXT)",
   "CREATE INDEX IF NOT EXISTS invoices_bill_idx ON invoices (bill_id)",
   "CREATE INDEX IF NOT EXISTS invoices_status_idx ON invoices (status)",
-  // Goods incidents ("Machandiz Retounen" / "Machandiz Avarye"): returned or damaged goods, tied to a Bill.
+  // Goods incidents ("Machandiz Retounen" / "Machandiz Avarye" / "Livrezon"): returned goods, damaged goods,
+  // or a delivery, tied to a Bill only. container_numewo is a legacy column, no longer written to.
   "CREATE TABLE IF NOT EXISTS goods_incidents (" +
     "id TEXT PRIMARY KEY, kind TEXT NOT NULL, bill_id TEXT NOT NULL, entry_date TEXT NOT NULL, " +
     "description TEXT NOT NULL, quantity TEXT, unit TEXT, container_numewo TEXT, reason TEXT, remarks TEXT, " +

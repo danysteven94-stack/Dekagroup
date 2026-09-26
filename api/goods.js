@@ -1,5 +1,6 @@
 "use strict";
-// Goods incidents ("Machandiz Retounen" / "Machandiz Avarye"): returned or damaged goods, tied to a Bill.
+// Goods incidents ("Machandiz Retounen" / "Machandiz Avarye" / "Livrezon"): returned goods, damaged goods,
+// or a delivery, tied only to a Bill — no container link (see goods.js in _lib for why).
 // Read: admin, depot, daily. Write: admin, depot only.
 const A = require("./_lib/auth");
 const S = require("./_lib/store");
@@ -9,7 +10,8 @@ const { ApiError } = require("./_lib/errors");
 
 const ID_RE = /^[A-Za-z0-9_-]{1,64}$/;
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
-const KINDS = ["retounen", "avarye"];
+const KINDS = ["retounen", "avarye", "livrezon"];
+const REASON_LABEL = { avarye: "Kòz avari a", livrezon: "Non kliyan an" };
 
 function text(v, max) {
   return typeof v === "string" ? v.trim().slice(0, max) : "";
@@ -64,11 +66,10 @@ module.exports = async function handler(req, res) {
       }
       const reason = text(body.reason, 200);
       if (!reason) {
-        res.status(400).json({ error: kind === "avarye" ? "Kòz avari a obligatwa." : "Rezon retou a obligatwa.", code: "invalid" });
+        res.status(400).json({ error: (REASON_LABEL[kind] || "Rezon retou a") + " obligatwa.", code: "invalid" });
         return;
       }
       const entryDate = DATE_RE.test(body.entryDate || "") ? body.entryDate : S.today();
-      const containerNumewo = text(body.containerNumewo, 40) || null;
       const remarks = text(body.remarks, 300) || null;
 
       const r = await repo.readAll();
@@ -86,7 +87,6 @@ module.exports = async function handler(req, res) {
         description: description,
         quantity: quantityRaw,
         unit: unit,
-        containerNumewo: containerNumewo,
         reason: reason,
         remarks: remarks,
         registeredBy: session.username,

@@ -12,15 +12,20 @@ import {
   statusOf,
   today
 } from "./utils.js";
-import { STATUS_LABELS } from "./constants.js";
-import {
-  isFr,
-  t
-} from "./i18n.js";
 import {
   downloadDailyDeliveryRows,
   downloadDeliveryReportRows
 } from "./views/delivery.js";
+
+// PDFs are formal documents (sent to clients, accountants, customs) and are always produced in
+// French, regardless of the app's own Kreyòl/Français display setting.
+var PDF_STATUS_LABELS = {
+  disponib: "Disponible",
+  pokoverifye: "\u00C0 v\u00E9rifier",
+  full: "Plein",
+  vid: "Vide",
+  kite: "Sorti"
+};
 
 function toWinAnsiCode(char) {
   var n = char.charCodeAt(0);
@@ -54,7 +59,7 @@ export function buildTablePdf(rows, title, headers) {
     return `${ h } ${ F } ${ G } rg ${ k } ${ O } ${ z } ${ w } re f\n`;
   }
   var A = today();
-  var r = isFr() ? `Généré le ${ formatDateShort(A) } — Total : ${ rows.length } conteneur${ rows.length > 1 ? "s" : "" }` : `Jenere ${ formatDateShort(A) } — Total: ${ rows.length } kontenè`;
+  var r = `Généré le ${ formatDateShort(A) } — Total : ${ rows.length } ligne${ rows.length > 1 ? "s" : "" }`;
   var d = headers;
   var _nc = d.length;
   var _tw = 812 - l;
@@ -115,7 +120,7 @@ export function buildTablePdf(rows, title, headers) {
       h -= s;
     }
     if (k.length === 0) {
-      w += f("F1", 10, l, h - 10, t("Pa gen kontenè."));
+      w += f("F1", 10, l, h - 10, "Aucune donnée à afficher.");
     }
     return w;
   }
@@ -213,7 +218,7 @@ export function downloadReport(status, group) {
         return bill.id === u.billId;
       });
       var pr = bl && bl.product ? bl.product : "\u2014";
-      var dstr = u.dateEntered ? o(u.dateEntered) + (y ? " (IJAN)" : "") : "\u2014";
+      var dstr = u.dateEntered ? o(u.dateEntered) + (y ? " (URGENT)" : "") : "\u2014";
       return {
         cells: [
           u.numewo,
@@ -221,18 +226,18 @@ export function downloadReport(status, group) {
           pr,
           dstr,
           u.division || "\u2014",
-          String(E) + (y ? " (IJAN)" : "")
+          String(E) + (y ? " (URGENT)" : "")
         ]
       };
     });
-    s = buildTablePdf(g, "DAILY REPORT - FULL - LOGISTIC", [
+    s = buildTablePdf(g, "DAILY REPORT - PLEIN - LOGISTIQUE", [
       "#",
-      "Container",
-      "Depot",
-      "Produce",
-      "DATE IN",
+      "Conteneur",
+      "D\u00E9p\u00F4t",
+      "Produit",
+      "DATE D'ENTR\u00C9E",
       "DIVISION",
-      "DAYS IN"
+      "JOURS"
     ]);
     f = `deka-log-rapo-full-gwoup${ group }-${ today() }.pdf`;
   } else {
@@ -245,19 +250,19 @@ export function downloadReport(status, group) {
           String(daysBetween(u.dateEntered)),
           String(daysBetween(u.dateEmpty)),
           u.size ? u.size + "'" : "\u2014",
-          "EMPTY"
+          "VIDE"
         ]
       };
     });
-    s = buildTablePdf(v, "DAILY REPORT - LOGISTIC", [
+    s = buildTablePdf(v, "DAILY REPORT - LOGISTIQUE", [
       "#",
-      "Container",
-      "Depot",
+      "Conteneur",
+      "D\u00E9p\u00F4t",
       "Trucking",
-      "DAYS IN",
-      "DAYS EMPTY",
-      "Size",
-      "Status"
+      "JOURS",
+      "JOURS VIDE",
+      "Taille",
+      "Statut"
     ]);
     f = `deka-log-rapo-vid-${ today() }.pdf`;
   }
@@ -281,7 +286,7 @@ export function dnkReportRows(containers) {
       cells: [
         c.numewo,
         c.trucking || "\u2014",
-        t(STATUS_LABELS[statusOf(c)] || ""),
+        PDF_STATUS_LABELS[statusOf(c)] || "",
         c.depo || "\u2014",
         c.chofer || "\u2014",
         c.plak || "\u2014"
@@ -291,14 +296,14 @@ export function dnkReportRows(containers) {
 }
 
 export function downloadDnkReport() {
-  var bytes = buildTablePdf(dnkReportRows(state.containers), isFr() ? "RAPPORT TRUCKING DNK" : "RAPO TRUCKING DNK", [
+  var bytes = buildTablePdf(dnkReportRows(state.containers), "RAPPORT TRUCKING DNK", [
     "#",
-    "Container",
+    "Conteneur",
     "Trucking",
-    "Status",
-    "Depot",
-    isFr() ? "Chauffeur" : "Chofè",
-    isFr() ? "Plaque" : "Plak"
+    "Statut",
+    "D\u00E9p\u00F4t",
+    "Chauffeur",
+    "Plaque"
   ]);
   var url = URL.createObjectURL(new Blob([bytes], { type: "application/pdf" }));
   var a = document.createElement("a");
@@ -313,6 +318,7 @@ export function downloadDnkReport() {
 }
 
 // Simple landscape table report of returned or damaged goods ("Machandiz Retounen" / "Avarye").
+// Tied only to a Bill (and its product) — no container column.
 export function downloadGoodsReport(kind) {
   var list = state.goodsIncidents.filter(function (e) { return e.kind === kind; });
   var isDamaged = kind === "avarye";
@@ -325,20 +331,18 @@ export function downloadGoodsReport(kind) {
         item.description,
         String(item.quantity) + " " + (item.unit || ""),
         item.reason || "\u2014",
-        item.containerNumewo || "\u2014",
         formatDateShort(item.entryDate)
       ]
     };
   });
-  var title = isDamaged ? "RAPO MACHANDIZ AVARYE" : "RAPO MACHANDIZ RETOUNEN";
+  var title = isDamaged ? "RAPPORT MARCHANDISE AVARI\u00C9E" : "RAPPORT MARCHANDISE RETOURN\u00C9E";
   var bytes = buildTablePdf(rows, title, [
     "#",
     "Bill",
-    "Deskripsyon",
-    "Kantite",
-    isDamaged ? "K\u00F2z" : "Rezon",
-    "Konten\u00E8",
-    "Dat"
+    "Description",
+    "Quantit\u00E9",
+    isDamaged ? "Cause" : "Raison",
+    "Date"
   ]);
   var url = URL.createObjectURL(new Blob([bytes], { type: "application/pdf" }));
   var a = document.createElement("a");
@@ -352,21 +356,20 @@ export function downloadGoodsReport(kind) {
   }, 4000);
 }
 
-// Rapò Livrezon: containers whose product has been handed to a client (dateEmpty set), matching the tab's filters.
+// Rapò Livrezon: deliveries registered by hand (Bill + product + quantity + client) — no container link.
 export function downloadDeliveryReport() {
-  var bytes = buildTablePdf(downloadDeliveryReportRows(), "RAPO LIVREZON", [
+  var bytes = buildTablePdf(downloadDeliveryReportRows(), "RAPPORT DE LIVRAISON", [
     "#",
-    "Konten\u00E8",
     "Bill",
-    "Depo",
-    "Chof\u00E8",
-    "Plak",
-    "Dat Livrezon"
+    "Produit",
+    "Quantit\u00E9",
+    "Client",
+    "Date"
   ]);
   var url = URL.createObjectURL(new Blob([bytes], { type: "application/pdf" }));
   var a = document.createElement("a");
   a.href = url;
-  a.download = "deka-log-rapo-livrezon-" + today() + ".pdf";
+  a.download = "deka-log-rapport-livraison-" + today() + ".pdf";
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
@@ -375,17 +378,16 @@ export function downloadDeliveryReport() {
   }, 4000);
 }
 
-// Livrezon Jounalye: deliveries (product handed to a client) for one chosen day only.
+// Livrezon Jounalye: deliveries registered for one chosen day only.
 export function downloadDailyDelivery() {
   var date = state.dailyDeliveryDate || today();
-  var bytes = buildTablePdf(downloadDailyDeliveryRows(), "LIVREZON JOUNALYE \u2014 " + formatDateShort(date), [
+  var bytes = buildTablePdf(downloadDailyDeliveryRows(), "LIVRAISON JOURNALI\u00C8RE \u2014 " + formatDateShort(date), [
     "#",
-    "Konten\u00E8",
     "Bill",
-    "Depo",
-    "Chof\u00E8",
-    "Plak",
-    "Dat Livrezon"
+    "Produit",
+    "Quantit\u00E9",
+    "Client",
+    "Date"
   ]);
   var url = URL.createObjectURL(new Blob([bytes], { type: "application/pdf" }));
   var a = document.createElement("a");
@@ -416,11 +418,11 @@ var LS_NAVY = [0.043, 0.129, 0.22];
 var LS_GRAY = [0.93, 0.94, 0.96];
 var LS_COLS = [
   { label: "#", w: 25 },
-  { label: "Tip", w: 55 },
-  { label: "Detay", w: 175 },
-  { label: "Kantite / Gwosè", w: 90 },
-  { label: "Dat", w: 65 },
-  { label: "Depo / N\u00F2t", w: 105 }
+  { label: "Type", w: 55 },
+  { label: "D\u00E9tail", w: 175 },
+  { label: "Quantit\u00E9 / Taille", w: 90 },
+  { label: "Date", w: 65 },
+  { label: "D\u00E9p\u00F4t / Note", w: 105 }
 ];
 
 function lsText(font, size, x, y, str, rgb) {
@@ -471,7 +473,7 @@ function lsDataRow(y, colX, cells, shaded) {
 
 function lsSignatureBlock(y, note) {
   var w = "";
-  var labels = ["Anrejistre pa (Depo)", "Siyati responsab Depo", "Dat ak L\u00E8"];
+  var labels = ["Enregistr\u00E9 par (D\u00E9p\u00F4t)", "Signature responsable D\u00E9p\u00F4t", "Date et heure"];
   var colW = (LS_PAGE_W - 2 * LS_MARGIN) / 3;
   labels.forEach(function (label, i) {
     var x = LS_MARGIN + i * colW;
@@ -483,7 +485,7 @@ function lsSignatureBlock(y, note) {
 }
 
 export function buildLandingSheetPdf(opts) {
-  var title = opts.title || "FICH DEBAKMAN";
+  var title = opts.title || "FICHE DE D\u00C9BARQUEMENT";
   var docNumber = opts.docNumber || "";
   var meta = opts.meta || [];
   var rows = opts.rows || [];
@@ -495,7 +497,7 @@ export function buildLandingSheetPdf(opts) {
   // ---- page 1: company band, title, info box ----
   var p1 = lsRect(0, LS_PAGE_H - 56, LS_PAGE_W, 56, LS_NAVY);
   p1 += lsText("F2", 17, LS_MARGIN, LS_PAGE_H - 30, "DEKA GROUP", [1, 1, 1]);
-  p1 += lsText("F1", 9, LS_MARGIN, LS_PAGE_H - 45, "Jesyon Depo ak Lojistik", [0.85, 0.88, 0.92]);
+  p1 += lsText("F1", 9, LS_MARGIN, LS_PAGE_H - 45, "Gestion de d\u00E9p\u00F4t et logistique", [0.85, 0.88, 0.92]);
   var titleW = title.length * 13 * 0.62;
   p1 += lsText("F2", 13, LS_PAGE_W - LS_MARGIN - titleW, LS_PAGE_H - 30, title, [1, 1, 1]);
   if (docNumber) {
@@ -509,7 +511,7 @@ export function buildLandingSheetPdf(opts) {
   for (var mi = 0; mi < meta.length; mi++) {
     var mx = LS_MARGIN + 10 + (mi % 2) * halfW;
     var lineY = my - Math.floor(mi / 2) * 15;
-    p1 += lsText("F2", 8, mx, lineY, meta[mi][0] + ":", [0.25, 0.3, 0.35]);
+    p1 += lsText("F2", 8, mx, lineY, meta[mi][0] + " :", [0.25, 0.3, 0.35]);
     p1 += lsText("F1", 8, mx + 80, lineY, String(meta[mi][1] === null || meta[mi][1] === undefined || meta[mi][1] === "" ? "\u2014" : meta[mi][1]), [0.1, 0.13, 0.18]);
   }
   var tableTop1 = metaTop - metaBoxH - 16;
@@ -544,7 +546,7 @@ export function buildLandingSheetPdf(opts) {
       top = tableTop1;
     } else {
       content += lsRect(0, LS_PAGE_H - 30, LS_PAGE_W, 30, LS_NAVY);
-      content += lsText("F2", 10, LS_MARGIN, LS_PAGE_H - 20, title + " (swit)", [1, 1, 1]);
+      content += lsText("F2", 10, LS_MARGIN, LS_PAGE_H - 20, title + " (suite)", [1, 1, 1]);
       top = LS_PAGE_H - LS_MARGIN - 24;
     }
     content += lsHeaderRow(top, colX);
@@ -555,7 +557,7 @@ export function buildLandingSheetPdf(opts) {
       y -= LS_ROW_H;
     });
     if (chunk.length === 0) {
-      content += lsText("F1", 9, LS_MARGIN, y - 6, "Pa gen liy pou dokiman sa a.", [0.4, 0.4, 0.4]);
+      content += lsText("F1", 9, LS_MARGIN, y - 6, "Aucune ligne pour ce document.", [0.4, 0.4, 0.4]);
       y -= LS_ROW_H;
     }
     pages.push({ content: content, lastY: y });
@@ -566,7 +568,7 @@ export function buildLandingSheetPdf(opts) {
   if (lastPage.lastY - LS_MARGIN >= 110) {
     lastPage.content += lsSignatureBlock(lastPage.lastY - 14, opts.generatedNote || "");
   } else {
-    var sigContent = lsRect(0, LS_PAGE_H - 30, LS_PAGE_W, 30, LS_NAVY) + lsText("F2", 10, LS_MARGIN, LS_PAGE_H - 20, title + " \u2014 Siyati", [1, 1, 1]);
+    var sigContent = lsRect(0, LS_PAGE_H - 30, LS_PAGE_W, 30, LS_NAVY) + lsText("F2", 10, LS_MARGIN, LS_PAGE_H - 20, title + " \u2014 Signature", [1, 1, 1]);
     sigContent += lsSignatureBlock(LS_PAGE_H - 70, opts.generatedNote || "");
     pages.push({ content: sigContent, lastY: LS_PAGE_H - 70 });
   }
@@ -614,11 +616,11 @@ export function downloadLandingSheet(billId) {
 
   var rows = [];
   containers.forEach(function (c) {
-    rows.push(["Konten\u00E8", c.numewo, c.size ? c.size + "'" : "\u2014", formatDateShort(c.dateEntered), c.depo || "\u2014"]);
+    rows.push(["Conteneur", c.numewo, c.size ? c.size + "'" : "\u2014", formatDateShort(c.dateEntered), c.depo || "\u2014"]);
   });
   entries.forEach(function (e) {
     rows.push([
-      "Est\u00F2k",
+      "Stock",
       e.description,
       e.quantity !== null && e.quantity !== undefined ? e.quantity + " " + (e.unit || "") : "\u2014",
       formatDateShort(e.entryDate),
@@ -628,18 +630,18 @@ export function downloadLandingSheet(billId) {
 
   var docNumber = "FD-" + (bill.numewo || "").replace(/[^A-Za-z0-9]/g, "") + "-" + today().replace(/-/g, "");
   var bytes = buildLandingSheetPdf({
-    title: "FICH DEBAKMAN",
+    title: "FICHE DE D\u00C9BARQUEMENT",
     docNumber: docNumber,
     meta: [
       ["Bill", bill.numewo || "\u2014"],
-      ["Pwodwi", bill.product || "\u2014"],
-      ["Kantite Konten\u00E8", String(containers.length)],
-      ["Kantite Atik Est\u00F2k", String(entries.length)],
-      ["Dat Fich", formatDateShort(today())],
-      ["Nimewo Dokiman", docNumber]
+      ["Produit", bill.product || "\u2014"],
+      ["Nombre de conteneurs", String(containers.length)],
+      ["Nombre d'articles en stock", String(entries.length)],
+      ["Date de la fiche", formatDateShort(today())],
+      ["Num\u00E9ro de document", docNumber]
     ],
     rows: rows,
-    generatedNote: "Deka Group \u00B7 Dokiman jenere otomatikman \u00B7 " + formatDateShort(today())
+    generatedNote: "Deka Group \u00B7 Document g\u00E9n\u00E9r\u00E9 automatiquement \u00B7 " + formatDateShort(today())
   });
 
   var url = URL.createObjectURL(new Blob([bytes], { type: "application/pdf" }));
@@ -664,9 +666,9 @@ export function downloadLandingSheet(billId) {
 
 var IV_COLS = [
   { label: "#", w: 25 },
-  { label: "Deskripsyon", w: 255 },
-  { label: "Kantite", w: 70 },
-  { label: "Pri Inite (HTG)", w: 80 },
+  { label: "Description", w: 255 },
+  { label: "Quantit\u00E9", w: 70 },
+  { label: "Prix unitaire (HTG)", w: 80 },
   { label: "Total (HTG)", w: 85 }
 ];
 
@@ -721,7 +723,7 @@ function ivTotalRow(y, colX, totalLabel, totalValue) {
 }
 
 export function buildInvoicePdf(opts) {
-  var title = opts.title || "FAKTI";
+  var title = opts.title || "FACTURE";
   var docNumber = opts.docNumber || "";
   var meta = opts.meta || [];
   var rows = opts.rows || [];
@@ -734,7 +736,7 @@ export function buildInvoicePdf(opts) {
   // ---- page 1: company band, title, info box ----
   var p1 = lsRect(0, LS_PAGE_H - 56, LS_PAGE_W, 56, LS_NAVY);
   p1 += lsText("F2", 17, LS_MARGIN, LS_PAGE_H - 30, "DEKA GROUP", [1, 1, 1]);
-  p1 += lsText("F1", 9, LS_MARGIN, LS_PAGE_H - 45, "Jesyon Depo ak Lojistik", [0.85, 0.88, 0.92]);
+  p1 += lsText("F1", 9, LS_MARGIN, LS_PAGE_H - 45, "Gestion de d\u00E9p\u00F4t et logistique", [0.85, 0.88, 0.92]);
   var titleW = title.length * 13 * 0.62;
   p1 += lsText("F2", 13, LS_PAGE_W - LS_MARGIN - titleW, LS_PAGE_H - 30, title, [1, 1, 1]);
   if (docNumber) {
@@ -748,7 +750,7 @@ export function buildInvoicePdf(opts) {
   for (var mi = 0; mi < meta.length; mi++) {
     var mx = LS_MARGIN + 10 + (mi % 2) * halfW;
     var lineY = my - Math.floor(mi / 2) * 15;
-    p1 += lsText("F2", 8, mx, lineY, meta[mi][0] + ":", [0.25, 0.3, 0.35]);
+    p1 += lsText("F2", 8, mx, lineY, meta[mi][0] + " :", [0.25, 0.3, 0.35]);
     p1 += lsText("F1", 8, mx + 80, lineY, String(meta[mi][1] === null || meta[mi][1] === undefined || meta[mi][1] === "" ? "\u2014" : meta[mi][1]), [0.1, 0.13, 0.18]);
   }
   var tableTop1 = metaTop - metaBoxH - 16;
@@ -783,7 +785,7 @@ export function buildInvoicePdf(opts) {
       top = tableTop1;
     } else {
       content += lsRect(0, LS_PAGE_H - 30, LS_PAGE_W, 30, LS_NAVY);
-      content += lsText("F2", 10, LS_MARGIN, LS_PAGE_H - 20, title + " (swit)", [1, 1, 1]);
+      content += lsText("F2", 10, LS_MARGIN, LS_PAGE_H - 20, title + " (suite)", [1, 1, 1]);
       top = LS_PAGE_H - LS_MARGIN - 24;
     }
     content += ivHeaderRow(top, colX);
@@ -794,7 +796,7 @@ export function buildInvoicePdf(opts) {
       y -= LS_ROW_H;
     });
     if (chunk.length === 0) {
-      content += lsText("F1", 9, LS_MARGIN, y - 6, "Pa gen liy sou fakti sa a.", [0.4, 0.4, 0.4]);
+      content += lsText("F1", 9, LS_MARGIN, y - 6, "Aucune ligne sur cette facture.", [0.4, 0.4, 0.4]);
       y -= LS_ROW_H;
     }
     pages.push({ content: content, lastY: y });
@@ -807,7 +809,7 @@ export function buildInvoicePdf(opts) {
     var w = ivTotalRow(y, colX, "TOTAL", totalValue);
     var noteY = y - LS_HEAD_H - 16;
     if (opts.notes) {
-      w += lsText("F1", 8, LS_MARGIN, noteY, "Remak: " + opts.notes, [0.3, 0.35, 0.4]);
+      w += lsText("F1", 8, LS_MARGIN, noteY, "Remarque : " + opts.notes, [0.3, 0.35, 0.4]);
       noteY -= 16;
     }
     w += lsLine(LS_MARGIN, noteY, LS_PAGE_W - LS_MARGIN, noteY);
@@ -872,20 +874,20 @@ export function downloadInvoice(invoiceId) {
   });
 
   var bytes = buildInvoicePdf({
-    title: "FAKTI",
+    title: "FACTURE",
     docNumber: inv.invoiceNumber,
     meta: [
-      ["Nimewo Fakti", inv.invoiceNumber],
+      ["Num\u00E9ro de facture", inv.invoiceNumber],
       ["Bill", bill ? bill.numewo : "\u2014"],
-      ["Kliyan", inv.clientName || "\u2014"],
-      ["Adrès", inv.clientAddress || "\u2014"],
-      ["Dat Fakti", formatDateShort(inv.invoiceDate)],
-      ["Dat Delè", inv.dueDate ? formatDateShort(inv.dueDate) : "\u2014"]
+      ["Client", inv.clientName || "\u2014"],
+      ["Adresse", inv.clientAddress || "\u2014"],
+      ["Date de facture", formatDateShort(inv.invoiceDate)],
+      ["Date d'\u00E9ch\u00E9ance", inv.dueDate ? formatDateShort(inv.dueDate) : "\u2014"]
     ],
     rows: rows,
     totalValue: pdfMoney(total),
     notes: inv.notes || "",
-    footerNote: "Deka Group \u00B7 Fakti sa a jenere otomatikman \u00B7 " + formatDateShort(today())
+    footerNote: "Deka Group \u00B7 Cette facture est g\u00E9n\u00E9r\u00E9e automatiquement \u00B7 " + formatDateShort(today())
   });
 
   var url = URL.createObjectURL(new Blob([bytes], { type: "application/pdf" }));

@@ -57,7 +57,6 @@ function goodsFormHtml(kind) {
       <div><span class="field-label">Dat *</span><input class="input" type="date" id="goods-f-date" value="${ today() }" required /></div>
       <div><span class="field-label">Kantite *</span><input class="input" type="number" min="0.01" step="0.01" id="goods-f-qty" placeholder="Egz. 12" required /></div>
       <div><span class="field-label">Inite *</span><input class="input" list="goods-units" id="goods-f-unit" placeholder="Egz. sak, kolo, bwat" required /><datalist id="goods-units"><option value="sak"/><option value="kolo"/><option value="bwat"/><option value="palèt"/><option value="lb"/><option value="pyès"/></datalist></div>
-      <div><span class="field-label">Kontenè (opsyonèl)</span><input class="input" id="goods-f-container" placeholder="Egz. MSCU1234567" /></div>
     </div>
     <div><span class="field-label">Deskripsyon Machandiz *</span><input class="input" id="goods-f-desc" placeholder="Egz. Rís Miami — sak 50lb" required /></div>
     <div><span class="field-label">${ meta.reasonLabel }</span><input class="input" id="goods-f-reason" placeholder="${ meta.reasonPlaceholder }" required /></div>
@@ -70,7 +69,7 @@ function goodsFormHtml(kind) {
 function goodsRowHtml(item) {
   var bill = billById(item.billId);
   var meta = KIND_META[item.kind];
-  return `<div class="row"><div class="row-min"><span class="plate" style="border-color:${ meta ? meta.color : COLORS.full }">${ escapeHtml(item.description) }</span><div class="row-sub">Bill: <strong style="color:var(--navy)">${ bill ? escapeHtml(bill.numewo) : "\u2014" }</strong></div><div class="row-sub light">Kantite: <strong style="color:var(--muted)">${ escapeHtml(String(item.quantity)) } ${ escapeHtml(item.unit || "") }</strong></div><div class="row-sub light">${ item.kind === "avarye" ? "Kòz" : "Rezon" }: <strong style="color:var(--muted)">${ escapeHtml(item.reason || "\u2014") }</strong></div>${ item.containerNumewo ? `<div class="row-sub light">Kontenè: <strong style="color:var(--muted)">${ escapeHtml(item.containerNumewo) }</strong></div>` : "" }${ item.remarks ? `<div class="row-sub light">Nòt: ${ escapeHtml(item.remarks) }</div>` : "" }</div><div class="mini">Dat<strong style="color:var(--rust)">${ formatDateShort(item.entryDate) }</strong></div></div>`;
+  return `<div class="row"><div class="row-min"><span class="plate" style="border-color:${ meta ? meta.color : COLORS.full }">${ escapeHtml(item.description) }</span><div class="row-sub">Bill: <strong style="color:var(--navy)">${ bill ? escapeHtml(bill.numewo) : "\u2014" }</strong></div><div class="row-sub light">Kantite: <strong style="color:var(--muted)">${ escapeHtml(String(item.quantity)) } ${ escapeHtml(item.unit || "") }</strong></div><div class="row-sub light">${ item.kind === "avarye" ? "Kòz" : "Rezon" }: <strong style="color:var(--muted)">${ escapeHtml(item.reason || "\u2014") }</strong></div>${ item.remarks ? `<div class="row-sub light">Nòt: ${ escapeHtml(item.remarks) }</div>` : "" }</div><div class="mini">Dat<strong style="color:var(--rust)">${ formatDateShort(item.entryDate) }</strong></div></div>`;
 }
 
 function goodsKindTabView(kind) {
