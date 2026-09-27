@@ -1,9 +1,9 @@
 // Depot interface.
 import {
-  ALL_DIVISIONS,
   COLORS,
   LOGO_URL,
-  URGENT_AFTER_DAYS
+  URGENT_AFTER_DAYS,
+  visibleDivisionsForAccount
 } from "../constants.js";
 import { icon } from "../icons.js";
 import { state } from "../state.js";
@@ -71,7 +71,7 @@ function depotDivisionView() {
     return `<button class="linklike" data-action="back-depot-division" style="margin-bottom:14px">← Tounen nan Tablo Kontwôl</button><div class="section-head"><div><div class="eyebrow">${ list.length } kontenè full</div><h2 class="h2">${ escapeHtml(dv) }</h2></div></div><div style="display:flex;flex-direction:column;gap:8px">${ rows }</div>`;
   }
   var tot = e.length;
-  var divs = ALL_DIVISIONS.map(function (dv) {
+  var divs = visibleDivisionsForAccount(state.personal, state.divisions).map(function (dv) {
     return {
       name: dv,
       count: e.filter(function (i) {

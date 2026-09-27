@@ -53,6 +53,24 @@ export const DIVISIONS_GROUP_2 = [
 
 export const ALL_DIVISIONS = DIVISIONS_GROUP_1.concat(DIVISIONS_GROUP_2);
 
+// Which divisions to show an account in dividion-by-division screens (the Tablo Kontwôl cards, etc.):
+// mirrors the server-side filtering in api/_lib/divisions.js so an account never even sees the card
+// for a division it has no access to. A legacy/shared account (not "personal") is unrestricted, same
+// as before. A personal account assigned any Group 1 division sees every Group 1 division (they share
+// one database); a Group 2 division only ever shows that one division, never a sibling one.
+export function visibleDivisionsForAccount(personal, divisions) {
+  if (!personal) return ALL_DIVISIONS.slice();
+  var list = Array.isArray(divisions) ? divisions : [];
+  var seen = {};
+  var out = [];
+  function add(d) { if (!seen[d]) { seen[d] = true; out.push(d); } }
+  list.forEach(function (d) {
+    if (DIVISIONS_GROUP_1.indexOf(d) !== -1) DIVISIONS_GROUP_1.forEach(add);
+    else if (ALL_DIVISIONS.indexOf(d) !== -1) add(d);
+  });
+  return out;
+}
+
 // Which database ("pool") each division lives in — must match api/_lib/divisions.js exactly.
 // Group 1 always shares one database; every Group 2 division has its own, separate database.
 export const POOL_OF_DIVISION = {
