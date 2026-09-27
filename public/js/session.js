@@ -40,7 +40,7 @@ export function switchDivision(pool) {
 
 export function logout() {
   state.depotDivision = null;
-  state.depotDrawerOpen = false;
+  state.navDrawerOpen = false;
   state.tab = "dashboard";
   state.lastSyncTime = null;
   state.name = "";
@@ -93,7 +93,7 @@ export function logout() {
 
 export function applyAuth(role, username, name, needs, personal, divisions, pools, pool) {
   state.depotDivision = null;
-  state.depotDrawerOpen = false;
+  state.navDrawerOpen = false;
   state.tab = "dashboard";
   state.lastSyncTime = null;
   state.rev = undefined;

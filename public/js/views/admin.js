@@ -47,9 +47,9 @@ function adminSidebar() {
 
 function adminTopbar() {
   var e = computeStats();
-  return `<header class="topbar"><div><div class="topbar-eyebrow">${ ADMIN_TABS.find(function (n) {
+  return `<header class="topbar"><button class="hamburger-btn" data-action="toggle-nav-drawer" aria-label="Meni" style="background:rgba(11,33,56,.08);color:var(--navy);margin-right:2px">${ icon("menu", 18, "var(--navy)") }</button><div><div class="topbar-eyebrow">${ ADMIN_TABS.find(function (n) {
     return n.id === state.tab;
-  }).label }</div><div class="topbar-title">${ TAB_TITLES[state.tab] }</div></div><div style="display:flex;align-items:center;gap:18px"><div style="text-align:right"><div style="font-size:11px;color:var(--muted-light)">Konekte kòm <strong style="color:var(--navy)">Administratè Lojistik</strong></div><div style="font-size:10.5px;color:var(--muted-light)">${ formatLongDate() }</div></div><div class="topbar-stats"><div class="topbar-stat"><span class="mini-dot" style="background:${ COLORS.full }"></span>Full <strong>${ e.full }</strong></div><div class="topbar-stat"><span class="mini-dot" style="background:${ COLORS.vid }"></span>Vid <strong>${ e.vid }</strong></div><div class="topbar-stat"><span class="mini-dot" style="background:${ COLORS.kite }"></span>Kite <strong>${ e.kite }</strong></div></div></div></header>`;
+  }).label }</div><div class="topbar-title">${ TAB_TITLES[state.tab] }</div></div><div style="display:flex;align-items:center;gap:18px"><div style="text-align:right" class="simple-header-actions"><div style="font-size:11px;color:var(--muted-light)">Konekte kòm <strong style="color:var(--navy)">Administratè Lojistik</strong></div><div style="font-size:10.5px;color:var(--muted-light)">${ formatLongDate() }</div></div><div class="topbar-stats"><div class="topbar-stat"><span class="mini-dot" style="background:${ COLORS.full }"></span>Full <strong>${ e.full }</strong></div><div class="topbar-stat"><span class="mini-dot" style="background:${ COLORS.vid }"></span>Vid <strong>${ e.vid }</strong></div><div class="topbar-stat"><span class="mini-dot" style="background:${ COLORS.kite }"></span>Kite <strong>${ e.kite }</strong></div></div></div></header>`;
 }
 
 function computeStats() {
@@ -477,5 +477,12 @@ export function adminContent() {
   if (state.tab === "itilizate") {
     e = usersView();
   }
-  return `<div class="shell">${ adminSidebar() }<div class="main">${ adminTopbar() }<main class="content">${ state.saveErr ? `<div class="alert">${ icon("alert", 14) }Pa t kapab sove chanjman an. Verifye epi eseye ankò.</div>` : "" }${ e }</main></div></div>`;
+  var drawerOpen = !!state.navDrawerOpen;
+  var drawerNav = ADMIN_TABS.map(function (n) {
+    var on = state.tab === n.id;
+    var cnt = n.id === "notifs" ? Math.max(0, state.notifications.length - state.lastSeenNotifCount) : 0;
+    return `<button class="drawer-item${ on ? " active" : "" }" data-action="set-tab" data-tab="${ n.id }"><span class="drawer-ico">${ icon(n.icon, 15, on ? "#fff" : "var(--steel-light)") }</span><span style="flex:1">${ n.label }</span>${ cnt ? `<span class="count">${ cnt }</span>` : "" }</button>`;
+  }).join("");
+  var drawer = `<div class="nav-drawer-overlay${ drawerOpen ? " open" : "" }" data-action="close-nav-drawer"></div><nav class="nav-drawer${ drawerOpen ? " open" : "" }"><div class="nav-drawer-head"><div class="sidebar-logo"><img src="${ LOGO_URL }" alt="Deka Group" /></div><div style="flex:1;min-width:0"><div class="drawer-brand">DEKA LOG</div><div class="drawer-user">Administratè Lojistik</div></div><button class="drawer-close" data-action="close-nav-drawer" aria-label="Fèmen">${ icon("x", 16, "#fff") }</button></div><div class="nav-drawer-nav">${ drawerNav }</div><div class="nav-drawer-foot">${ state.lastSyncTime ? `<div class="drawer-sync">Dènye sinkwonizasyon · ${ formatTime(state.lastSyncTime) }</div>` : "" }<div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:10px">${ helpButton("#C9D6DE") + accountButton("#C9D6DE") }</div><button class="drawer-logout" data-action="logout">${ icon("logout", 15) } Dekonekte</button></div></nav>`;
+  return `${ drawer }<div class="shell">${ adminSidebar() }<div class="main">${ adminTopbar() }<main class="content">${ state.saveErr ? `<div class="alert">${ icon("alert", 14) }Pa t kapab sove chanjman an. Verifye epi eseye ankò.</div>` : "" }${ e }</main></div></div>`;
 }

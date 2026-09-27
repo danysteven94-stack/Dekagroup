@@ -248,7 +248,7 @@ document.addEventListener("click", function (event) {
     } else if (i === "set-depot-tab") {
       state.depotTab = n.getAttribute("data-tab");
       state.depotDivision = null;
-      state.depotDrawerOpen = false;
+      state.navDrawerOpen = false;
       if ((state.depotTab === "stock" || state.depotTab === "landing") && !state.stockLoaded && !state.stockLoading) {
         loadStockEntries();
       }
@@ -259,11 +259,11 @@ document.addEventListener("click", function (event) {
         loadGoodsIncidents();
       }
       render();
-    } else if (i === "toggle-depot-drawer") {
-      state.depotDrawerOpen = !state.depotDrawerOpen;
+    } else if (i === "toggle-nav-drawer") {
+      state.navDrawerOpen = !state.navDrawerOpen;
       render();
-    } else if (i === "close-depot-drawer") {
-      state.depotDrawerOpen = false;
+    } else if (i === "close-nav-drawer") {
+      state.navDrawerOpen = false;
       render();
     } else if (i === "clear-bill-filter") {
       state.filterBillStatus = "";
@@ -308,6 +308,7 @@ document.addEventListener("click", function (event) {
       state.search = "";
       state.filterStatus = "tout";
       state.filterBillStatus = "";
+      state.navDrawerOpen = false;
       if (state.tab === "notifs" && state.lastSeenNotifCount < state.notifications.length) {
         state.lastSeenNotifCount = state.notifications.length;
         storageSet(LS_LAST_SEEN_NOTIFS, String(state.lastSeenNotifCount));

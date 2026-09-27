@@ -29,7 +29,7 @@ export const state = {
   pools: ["default"],
   pool: "default",
   divisionSwitching: false,
-  depotDrawerOpen: false,
+  navDrawerOpen: false,
   lastSeenNotifCount: parseInt(storageGet(LS_LAST_SEEN_NOTIFS), 10) || 0,
   gateError: false,
   role: null,
