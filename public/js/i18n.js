@@ -7,11 +7,13 @@ import {
 } from "./i18n-fr.js";
 
 var LS_LANG = "deka-log-lang";
-var lang = "ht";
+// Official/default language is French; a user who has explicitly chosen Kreyòl on this
+// device (via the language toggle) keeps that choice, remembered in localStorage.
+var lang = "fr";
 try {
-  lang = localStorage.getItem(LS_LANG) === "fr" ? "fr" : "ht";
+  lang = localStorage.getItem(LS_LANG) === "ht" ? "ht" : "fr";
 } catch (e) {
-  lang = "ht";
+  lang = "fr";
 }
 
 var cache = {};
