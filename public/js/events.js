@@ -248,6 +248,7 @@ document.addEventListener("click", function (event) {
     } else if (i === "set-depot-tab") {
       state.depotTab = n.getAttribute("data-tab");
       state.depotDivision = null;
+      state.depotDrawerOpen = false;
       if ((state.depotTab === "stock" || state.depotTab === "landing") && !state.stockLoaded && !state.stockLoading) {
         loadStockEntries();
       }
@@ -257,6 +258,12 @@ document.addEventListener("click", function (event) {
       if ((state.depotTab === "returned" || state.depotTab === "damaged" || state.depotTab === "delivery" || state.depotTab === "dailydelivery") && !state.goodsLoaded && !state.goodsLoading) {
         loadGoodsIncidents();
       }
+      render();
+    } else if (i === "toggle-depot-drawer") {
+      state.depotDrawerOpen = !state.depotDrawerOpen;
+      render();
+    } else if (i === "close-depot-drawer") {
+      state.depotDrawerOpen = false;
       render();
     } else if (i === "clear-bill-filter") {
       state.filterBillStatus = "";

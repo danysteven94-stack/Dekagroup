@@ -19,7 +19,10 @@ export function icon(name, size, color) {
     alert: `<path d="M12 3l10 18H2L12 3z"/><path d="M12 10v4M12 17.5v.1"/>`,
     arrow: `<path d="M5 12h14M13 6l6 6-6 6"/>`,
     download: `<path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M4 19h16"/>`,
-    filetext: `<path d="M6 2h9l5 5v15H6z"/><path d="M15 2v5h5"/><path d="M9 13h6M9 17h6M9 9h2"/>`
+    filetext: `<path d="M6 2h9l5 5v15H6z"/><path d="M15 2v5h5"/><path d="M9 13h6M9 17h6M9 9h2"/>`,
+    menu: `<path d="M3 6h18M3 12h18M3 18h18"/>`,
+    x: `<path d="M18 6L6 18M6 6l12 12"/>`,
+    logout: `<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/>`
   };
   return `<svg ${ o }>${ a[name] || "" }</svg>`;
 }
