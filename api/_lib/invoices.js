@@ -81,12 +81,16 @@ async function getById(id, poolKey) {
   return rows.find(function (e) { return e.id === id; }) || null;
 }
 
+function markDup(row) { Object.defineProperty(row, "duplicate", { value: true, enumerable: false }); return row; }
+
 async function create(fields, poolKey) {
   guard(true, poolKey);
   const row = Object.assign({ id: newId(), status: "anrejistre", createdAt: new Date().toISOString(), finishedBy: null, finishedAt: null }, fields);
   const d = DB.getDriver(poolKey);
   if (d) {
     await pg.driver(poolKey);
+    const have = await d.query("SELECT * FROM invoices WHERE id = $1", [row.id]);
+    if (have.length) return markDup(fromSql(have[0]));
     await d.query(
       "INSERT INTO invoices (id, bill_id, invoice_number, invoice_date, due_date, client_name, client_address, items, notes, status, created_by, created_at, finished_by, finished_at) " +
       "VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)",
@@ -97,6 +101,8 @@ async function create(fields, poolKey) {
   }
   const all = await redis.get(REDIS_KEY);
   const rows = Array.isArray(all) ? all : [];
+  const dup = rows.find(function (e) { return e.id === row.id; });
+  if (dup) return markDup(Object.assign({}, dup));
   rows.unshift(toRedisShape(row));
   await redis.set(REDIS_KEY, rows.slice(0, MAX_LEGACY));
   return row;

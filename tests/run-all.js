@@ -16,6 +16,10 @@ const runs = [
   ["archive + scan (Redis)", "archive.server.test.js", {}],
   ["archive + scan (PostgreSQL layer)", "archive.server.test.js", { TEST_BACKEND: "pg" }],
   ["archive (browser logic)", "archive.client.test.mjs", {}],
+  ["offline (browser logic)", "offline.client.test.mjs", {}],
+  ["offline (server, Redis)", "offline.server.test.js", {}],
+  ["offline (server, PostgreSQL layer)", "offline.server.test.js", { TEST_BACKEND: "pg" }],
+  ["translations (French)", "i18n.test.mjs", {}],
 ];
 let bad = 0;
 runs.forEach(function (r) {

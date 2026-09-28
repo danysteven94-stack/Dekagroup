@@ -52,12 +52,16 @@ async function list(billId, poolKey) {
   return filtered.slice().sort(function (a, b) { return (b.createdAt || "").localeCompare(a.createdAt || ""); });
 }
 
+function markDup(row) { Object.defineProperty(row, "duplicate", { value: true, enumerable: false }); return row; }
+
 async function create(fields, poolKey) {
   guard(true, poolKey);
   const row = Object.assign({ id: newId(), createdAt: new Date().toISOString() }, fields);
   const d = DB.getDriver(poolKey);
   if (d) {
     await pg.driver(poolKey);
+    const have = await d.query("SELECT * FROM stock_entries WHERE id = $1", [row.id]);
+    if (have.length) return markDup(fromSql(have[0]));
     await d.query(
       "INSERT INTO stock_entries (id, bill_id, entry_date, description, quantity, unit, container_numewo, remarks, registered_by, created_at) " +
       "VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)",
@@ -67,6 +71,8 @@ async function create(fields, poolKey) {
   }
   const all = await redis.get(REDIS_KEY);
   const rows = Array.isArray(all) ? all : [];
+  const dup = rows.find(function (e) { return e.id === row.id; });
+  if (dup) return markDup(Object.assign({}, dup));
   rows.unshift(row);
   await redis.set(REDIS_KEY, rows.slice(0, MAX_LEGACY));
   return row;

@@ -1,5 +1,9 @@
 // The global event listeners (clicks, submits, changes, input) that route data-action attributes to functions.
 import {
+  dismissRejected,
+  rejectedList
+} from "./outbox.js";
+import {
   createGoodsIncident,
   createInvoice,
   createStockEntry,
@@ -52,6 +56,7 @@ import { state } from "./state.js";
 import { storageSet } from "./utils.js";
 import {
   downloadDailyReport,
+  leaveFromDaily,
   loadDailyState,
   setDailyOverride,
   toggleDailyCheck,
@@ -284,6 +289,8 @@ document.addEventListener("click", function (event) {
       toggleDailyCheck(o);
     } else if (i === "dr-verify") {
       verifyFromDaily(o);
+    } else if (i === "dr-leave") {
+      leaveFromDaily(o);
     } else if (i === "dr-report") {
       downloadDailyReport(n.getAttribute("data-status"));
     } else if (i === "dr-retry") {
@@ -384,7 +391,28 @@ document.addEventListener("click", function (event) {
       state.gateError = false;
       render();
     } else if (i === "logout") {
+      var unsent = state.pendingCount + (state.dirty ? 1 : 0);
+      if (unsent && !window.confirm(`Ou gen ${ unsent } chanjman ki poko voye. Yo ap rete sou aparèy sa a jiskaske w konekte ankò. Dekonekte kanmenm ?`)) {
+        return;
+      }
       logout();
+    } else if (i === "rejected-open") {
+      rejectedList().then(function (items) {
+        state.modal = { mode: "rejected", items: items };
+        render();
+      });
+    } else if (i === "rejected-dismiss") {
+      dismissRejected(o).then(function () {
+        return rejectedList();
+      }).then(function (items) {
+        state.modal = items.length ? { mode: "rejected", items: items } : null;
+        render();
+      });
+    } else if (i === "rejected-clear") {
+      dismissRejected(null).then(function () {
+        state.modal = null;
+        render();
+      });
     } else if (i === "driver-toggle-select") {
       state.driverSelected[o] = !state.driverSelected[o];
       render();

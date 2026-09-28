@@ -1,5 +1,11 @@
 // Login session bookkeeping: what happens after login / logout.
-import { loadData } from "./api.js";
+import { loadData, showToast } from "./api.js";
+import { syncNow } from "./offline.js";
+import {
+  dropLastSession,
+  dropSnapshot,
+  saveLastSession
+} from "./outbox.js";
 import {
   LS_ADMIN_UNLOCKED,
   LS_DAILY_UNLOCKED,
@@ -13,6 +19,21 @@ import { loadTwoFactor } from "./views/account.js";
 
 export function switchDivision(pool) {
   if (!pool || pool === state.pool || state.divisionSwitching) return;
+  if (state.dirty || state.pendingCount > 0) {
+    // Work done without network belongs to the current division: send it before leaving.
+    state.divisionSwitching = true;
+    render();
+    syncNow().then(function () {
+      state.divisionSwitching = false;
+      if (state.dirty || state.pendingCount > 0) {
+        showToast("Voye chanjman ki poko voye yo anvan ou chanje divizyon.");
+        render();
+        return;
+      }
+      switchDivision(pool);
+    });
+    return;
+  }
   state.divisionSwitching = true;
   render();
   fetch("/api/auth/division", {
@@ -39,6 +60,22 @@ export function switchDivision(pool) {
 }
 
 export function logout() {
+  // The cached data of this person is erased with the login, unless work is still waiting to be sent.
+  if (!state.dirty) {
+    dropSnapshot();
+  }
+  dropLastSession();
+  state.dirty = false;
+  state.base = null;
+  state.pendingCount = 0;
+  state.rejectedCount = 0;
+  state.offlineData = false;
+  state.stockEntries = [];
+  state.stockLoaded = false;
+  state.invoices = [];
+  state.invoicesLoaded = false;
+  state.goodsIncidents = [];
+  state.goodsLoaded = false;
   state.depotDivision = null;
   state.navDrawerOpen = false;
   state.tab = "dashboard";
@@ -133,6 +170,17 @@ export function applyAuth(role, username, name, needs, personal, divisions, pool
   state.pendingGatePassword = "";
   state.gateCanEmail = false;
   state.gateEmailMsg = "";
+  saveLastSession({
+    authenticated: true,
+    role: role,
+    username: username || "",
+    name: name || "",
+    needs: needs || null,
+    personal: !!personal,
+    divisions: divisions || [],
+    pools: pools && pools.length ? pools : ["default"],
+    pool: pool || "default"
+  });
   if (state.needs) {
     render();
     if (state.needs === "2fa") {

@@ -1,6 +1,36 @@
 // French translations of the app's Kreyòl text. EXACT: whole text -> French. PATTERNS: texts with numbers/names inside.
 // Business words kept as people use them at the terminal: Bill, Trucking, Daily Report, DKN, CFC.
 export const EXACT = {
+  // ---- Daily Report: leave action
+  "Kite Jodi a": "Parti aujourd'hui",
+  "make kite epi sove nan Lojistik.": "marqué parti et enregistré dans Logistic.",
+  "Kite: ": "Parti : ",
+  // ---- offline mode
+  "↑ Sa 4 yo pataje YON SÈL baz done — yo mache ansanm san pwoblèm.": "↑ Ces 4 partagent UNE SEULE base de données — elles fonctionnent ensemble sans problème.",
+  "↑ Chak nan sa yo gen pwòp baz done pa yo, separe de tout lòt divizyon.": "↑ Chacune a sa propre base de données, séparée de toutes les autres divisions.",
+  "Ou pa gen entènèt. Ou ka kontinye travay: chanjman yo sove sou aparèy la epi y ap voye otomatikman lè entènèt la tounen.": "Pas de connexion. Vous pouvez continuer à travailler : les modifications sont enregistrées sur l'appareil et seront envoyées automatiquement au retour du réseau.",
+  "K ap voye chanjman ki te sove sou aparèy la...": "Envoi des modifications enregistrées sur l'appareil...",
+  "Chanjman yo sove sou aparèy la — y ap voye lè entènèt la tounen": "Modifications enregistrées sur l'appareil — envoi au retour du réseau",
+  "Sove sou aparèy la. L ap voye lè entènèt la tounen.": "Enregistré sur l'appareil. Envoi au retour du réseau.",
+  "Sesyon an fini. Rekonekte pou voye chanjman ki rete yo.": "Session terminée. Reconnectez-vous pour envoyer les modifications restantes.",
+  "Kèk chanjman pa t ka pase (konfli). Gade nan lis la.": "Certaines modifications n'ont pas pu passer (conflit). Consultez la liste.",
+  "Yon lòt moun te chanje kontenè sa yo anvan chanjman ou yo rive. Se vèsyon sèvè a ki rete.": "Une autre personne a modifié ces conteneurs avant l'arrivée de vos modifications. La version du serveur est conservée.",
+  "Chanjman ki pa t pase": "Modifications non enregistrées",
+  "Sèvè a pa t aksepte chanjman sa yo lè yo te rive (egzanp yon lòt moun te chanje yo anvan). Refè yo si sa nesesè.": "Le serveur n'a pas accepté ces modifications à leur arrivée (par exemple, quelqu'un les avait déjà modifiées). Refaites-les si nécessaire.",
+  "Efase tout": "Tout effacer",
+  "Pa gen anyen.": "Rien à afficher.",
+  "Voye chanjman ki poko voye yo anvan ou chanje divizyon.": "Envoyez les modifications en attente avant de changer de division.",
+  "Chanjman an pa sove": "La modification n'est pas enregistrée",
+  "Transfè": "Transfert",
+  "Depa": "Départ",
+  "Antre estòk": "Entrée de stock",
+  "Fakti fini": "Facture terminée",
+  "Rapò jounalye": "Rapport quotidien",
+  "Verifikasyon": "Vérification",
+  "Livrezon": "Livraison",
+  "Avarye": "Avarie",
+  "Retou": "Retour",
+  "Kantite a dwe yon nonm ki pi gran pase 0.": "La quantité doit être un nombre supérieur à 0.",
   // ---- statuses, tabs, titles
   "Disponib": "Disponible",
   "Poko Verifye": "À vérifier",
@@ -681,6 +711,17 @@ const plural = (n, one, many) => (Number(n) > 1 ? many : one);
 
 // Texts with numbers or names inside. Each entry: [regex on the whole text, function(...groups) -> French].
 export const PATTERNS = [
+  [/^Kontenè (\S+) kite jodi a\.$/, (n) => `Conteneur ${ n } parti aujourd'hui.`],
+  [/^Kontenè (\S+) kite jodi a \?\n\nChanjman sa a ap sove nan Lojistik tou\.$/, (n) => `Conteneur ${ n } parti aujourd'hui ?\n\nCette modification sera aussi enregistrée dans Logistic.`],
+  [/^(\S+) make kite sou aparèy la\. L ap sove nan Lojistik lè entènèt la tounen\.$/, (n) => `${ n } marqué parti sur l'appareil. Enregistrement dans Logistic au retour du réseau.`],
+  [/^Pa t kapab make (\S+) kite: (.+)$/, (n, e) => `Impossible de marquer ${ n } comme parti : ${ e }`],
+  [/^Envantè jounalye kontenè yo · (.+)$/, (d) => `Inventaire quotidien des conteneurs · ${ d }`],
+  [/^(\d+) chanjman an atant\.$/, (n) => `${ n } modification${ plural(n, "", "s") } en attente.`],
+  [/^(\d+) chanjman ap tann pou voye\.$/, (n) => `${ n } modification${ plural(n, "", "s") } en attente d'envoi.`],
+  [/^(\d+) chanjman pa t pase\. (?:Peze la a pou w wè yo|Gade lis la)\.$/, (n) => `${ n } modification${ plural(n, "", "s") } non enregistrée${ plural(n, "", "s") }. Touchez ici pour ${ Number(n) > 1 ? "les" : "la" } voir.`],
+  [/^Ou gen (\d+) chanjman ki poko voye\. Yo ap rete sou aparèy sa a jiskaske w konekte ankò\. Dekonekte kanmenm \?$/, (n) => `Vous avez ${ n } modification${ plural(n, "", "s") } non envoyée${ plural(n, "", "s") }. Elle${ plural(n, " reste", "s restent") } sur cet appareil jusqu'à votre prochaine connexion. Se déconnecter quand même ?`],
+  [/^(\S+) verifye sou aparèy la\. L ap sove nan Lojistik lè entènèt la tounen\.$/, (n) => `${ n } vérifié sur l'appareil. Enregistrement dans Logistic au retour du réseau.`],
+  [/^Depa: (\d+) kontenè \((.+)\)$/, (n, t) => `Départ : ${ n } conteneur${ plural(n, "", "s") } (${ t })`],
   // counts
   [/^(\d+) rezilta · (\d+) nan achiv$/, (a, b) => `${ a } résultat${ Number(a) > 1 ? "s" : "" } · ${ b } dans les archives`],
   [/^(\d+) rezilta$/, (n) => `${ n } résultat${ plural(n, "", "s") }`],
@@ -747,5 +788,6 @@ export const PATTERNS = [
   [/^Kontenè (\S+) transfere nan depo (.+) \(te nan (.+)\)\.$/, (n, d, o) => `Conteneur ${ n } transféré au dépôt ${ d } (était au ${ o }).`],
   [/^Kontenè (\S+) kite ak chofè (.+)\.$/, (n, t) => `Conteneur ${ n } sorti avec le chauffeur ${ t }.`],
   [/^Kontenè (\S+) verifye(.*)$/, (n, rest) => `Conteneur ${ n } vérifié${ rest.replace(/^ [—-] /, " — ") }`],
-  [/^Kontenè (\S+) antre (.*)$/, (n, rest) => `Conteneur ${ n } entré ${ rest }`]
+  [/^Kontenè (\S+) antre (.*)$/, (n, rest) => `Conteneur ${ n } entré ${ rest }`],
+  [/^Kontenè (\S+) transfere nan depo (.+)\.$/, (n, d) => `Conteneur ${ n } transféré au dépôt ${ d }.`]
 ];

@@ -1,5 +1,9 @@
 // Daily Report interface.
-import { apiFetch } from "../api.js";
+import {
+  apiFetch,
+  queueRequest
+} from "../api.js";
+import { isNetworkError } from "../outbox.js";
 import {
   COLORS,
   DAILY_DKN_OPTIONS,
@@ -61,7 +65,16 @@ export function loadDailyState() {
   });
 }
 
+// Without network the change waits on the device (the screen already shows it) and is sent later, in order.
+function queueDaily(patch) {
+  queueRequest("daily", "/api/daily", patch, "Rapò jounalye", false, true);
+}
+
 function saveDailyPatch(patch) {
+  if (!state.online || state.pendingCount > 0) {
+    queueDaily(patch);
+    return;
+  }
   apiFetch("/api/daily", {
     method: "POST",
     headers: {
@@ -81,6 +94,10 @@ function saveDailyPatch(patch) {
       render();
     }
   }).catch(function (e) {
+    if (isNetworkError(e)) {
+      queueDaily(patch);
+      return;
+    }
     state.dr.saveErr = true;
     state.dr.saveErrorDetail = e && e.message ? e.message : String(e);
     render();
@@ -252,6 +269,19 @@ export function verifyFromDaily(id) {
   if (!window.confirm(`Verifye ${ cc.numewo } ?\nDepo: ${ depo }\nTrucking: ${ tr || "\u2014" }\n\nChanjman sa a ap sove nan Lojistik tou.`)) {
     return;
   }
+  function verifyOnDevice(maybeDone) {
+    state.dr.verifying = false;
+    var local = { dateVerified: today(), depo: depo, trucking: tr };
+    state.containers = state.containers.map(function (container) {
+      return container.id === id ? Object.assign({}, container, local) : container;
+    });
+    queueRequest("verify", "/api/verify", { id: id, date: today(), depo: depo, trucking: tr }, "Verifikasyon: " + cc.numewo, maybeDone, true);
+    showDailyNotice(`${ cc.numewo } verifye sou aparèy la. L ap sove nan Lojistik lè entènèt la tounen.`, true);
+  }
+  if (!state.online || state.pendingCount > 0) {
+    verifyOnDevice(false);
+    return;
+  }
   state.dr.verifying = true;
   apiFetch("/api/verify", {
     method: "POST",
@@ -286,8 +316,68 @@ export function verifyFromDaily(id) {
     });
     showDailyNotice(`${ cc.numewo } verifye epi sove nan Lojistik.`, true);
   }).catch(function (e) {
+    if (isNetworkError(e)) {
+      verifyOnDevice(true);
+      return;
+    }
     state.dr.verifying = false;
     showDailyNotice(`Pa t kapab verifye ${ cc.numewo }: ${ e && e.message ? e.message : e }`, false);
+  });
+}
+
+export function leaveFromDaily(id) {
+  var cc = state.containers.find(function (container) {
+    return container.id === id;
+  });
+  if (!cc || statusOf(cc) !== "vid" || state.dr.leaving) {
+    return;
+  }
+  if (!window.confirm(`Kontenè ${ cc.numewo } kite jodi a ?\n\nChanjman sa a ap sove nan Lojistik tou.`)) {
+    return;
+  }
+  function leaveOnDevice(maybeDone) {
+    state.dr.leaving = false;
+    state.containers = state.containers.map(function (container) {
+      return container.id === id ? Object.assign({}, container, { dateLeft: today() }) : container;
+    });
+    queueRequest("leave", "/api/leave", { id: id }, "Kite: " + cc.numewo, maybeDone, true);
+    showDailyNotice(`${ cc.numewo } make kite sou aparèy la. L ap sove nan Lojistik lè entènèt la tounen.`, true);
+  }
+  if (!state.online || state.pendingCount > 0) {
+    leaveOnDevice(false);
+    return;
+  }
+  state.dr.leaving = true;
+  apiFetch("/api/leave", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-Device-Id": getDeviceId()
+    },
+    body: JSON.stringify({ id: id })
+  }).then(function (r) {
+    return r.json().catch(function () {
+      return {};
+    }).then(function (d) {
+      if (!r.ok) {
+        throw new Error(d && d.error ? d.error : "HTTP " + r.status);
+      }
+      return d;
+    });
+  }).then(function (d) {
+    state.dr.leaving = false;
+    var nc = d.container || { dateLeft: today() };
+    state.containers = state.containers.map(function (container) {
+      return container.id === id ? Object.assign({}, container, nc) : container;
+    });
+    showDailyNotice(`${ cc.numewo } make kite epi sove nan Lojistik.`, true);
+  }).catch(function (e) {
+    if (isNetworkError(e)) {
+      leaveOnDevice(true);
+      return;
+    }
+    state.dr.leaving = false;
+    showDailyNotice(`Pa t kapab make ${ cc.numewo } kite: ${ e && e.message ? e.message : e }`, false);
   });
 }
 
@@ -333,7 +423,7 @@ export function dailyReportView() {
       return bill.id === cc.billId;
     });
     var ef = effectiveDailyValues(cc);
-    return `<div class="row" style="border-left:4px solid ${ col }${ ck ? ";opacity:.6" : "" }"><div class="row-min"><span class="plate" style="border-color:${ col }">${ escapeHtml(cc.numewo) }</span> <span style="display:inline-block;font-family:var(--font-mono);font-weight:700;font-size:11px;background:var(--navy);color:#fff;padding:2px 6px;border-radius:4px;vertical-align:middle">${ cc.size || "\u2014" }'</span><div class="row-sub">${ STATUS_LABELS[sx] } · ${ cc.division ? escapeHtml(cc.division) : "\u2014" }</div><div class="row-sub light">${ bl && bl.product ? `Pwodwi: <strong>${ escapeHtml(bl.product) }</strong>` : "" }</div></div><div style="width:150px;flex-shrink:0"><span class="field-label" style="font-size:9.5px">Depo</span><input class="input dr-depo-input" data-id="${ cc.id }" value="${ escapeHtml(ef.depo || "") }" placeholder="Egz. Depo Kòdòn" style="padding:6px 8px;font-size:12.5px" /></div>${ dailyTruckingCell(cc, ef) }${ sx === "pokoverifye" ? `<button class="btn" data-action="dr-verify" data-id="${ cc.id }" style="background:${ COLORS.pokoverifye };color:#fff;padding:8px 14px;font-size:12px;flex-shrink:0;align-self:flex-end">Verifye</button>` : "" }<button class="btn small${ ck ? "" : " ghost" }" data-action="dr-toggle" data-id="${ cc.id }" style="flex-shrink:0;margin-left:8px;align-self:flex-end;background:${ ck ? COLORS.green : "transparent" };color:${ ck ? "#fff" : "var(--ink)" };border:1.5px solid ${ ck ? COLORS.green : "var(--border)" }">${ icon("check", 14, ck ? "#fff" : "var(--ink)") } ${ ck ? "Konfime — Anile" : "Konfime" }</button></div>`;
+    return `<div class="row" style="border-left:4px solid ${ col }${ ck ? ";opacity:.6" : "" }"><div class="row-min"><span class="plate" style="border-color:${ col }">${ escapeHtml(cc.numewo) }</span> <span style="display:inline-block;font-family:var(--font-mono);font-weight:700;font-size:11px;background:var(--navy);color:#fff;padding:2px 6px;border-radius:4px;vertical-align:middle">${ cc.size || "\u2014" }'</span><div class="row-sub">${ STATUS_LABELS[sx] } · ${ cc.division ? escapeHtml(cc.division) : "\u2014" }</div><div class="row-sub light">${ bl && bl.product ? `Pwodwi: <strong>${ escapeHtml(bl.product) }</strong>` : "" }</div></div><div style="width:150px;flex-shrink:0"><span class="field-label" style="font-size:9.5px">Depo</span><input class="input dr-depo-input" data-id="${ cc.id }" value="${ escapeHtml(ef.depo || "") }" placeholder="Egz. Depo Kòdòn" style="padding:6px 8px;font-size:12.5px" /></div>${ dailyTruckingCell(cc, ef) }${ sx === "pokoverifye" ? `<button class="btn" data-action="dr-verify" data-id="${ cc.id }" style="background:${ COLORS.pokoverifye };color:#fff;padding:8px 14px;font-size:12px;flex-shrink:0;align-self:flex-end">Verifye</button>` : "" }${ sx === "vid" ? `<button class="btn" data-action="dr-leave" data-id="${ cc.id }" style="background:${ COLORS.green || "#1D7A5A" };color:#fff;padding:8px 14px;font-size:12px;flex-shrink:0;align-self:flex-end">Kite Jodi a</button>` : "" }<button class="btn small${ ck ? "" : " ghost" }" data-action="dr-toggle" data-id="${ cc.id }" style="flex-shrink:0;margin-left:8px;align-self:flex-end;background:${ ck ? COLORS.green : "transparent" };color:${ ck ? "#fff" : "var(--ink)" };border:1.5px solid ${ ck ? COLORS.green : "var(--border)" }">${ icon("check", 14, ck ? "#fff" : "var(--ink)") } ${ ck ? "Konfime — Anile" : "Konfime" }</button></div>`;
   }
   var rows = pending.map(function (cc) {
     return dailyRow(cc, false);

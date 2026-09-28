@@ -80,7 +80,9 @@ module.exports = async function handler(req, res) {
         return;
       }
 
+      const clientId = /^[A-Za-z0-9]{8,40}$/.test(typeof body.clientId === "string" ? body.clientId : "") ? body.clientId : null;
       const incident = await Goods.create({
+        ...(clientId ? { id: clientId } : {}),
         kind: kind,
         billId: billId,
         entryDate: entryDate,
@@ -91,6 +93,12 @@ module.exports = async function handler(req, res) {
         remarks: remarks,
         registeredBy: session.username,
       }, session.pool);
+      if (incident.duplicate) {
+        // A replay of a request that was already saved (network dropped after the save): return it, do not repeat side effects.
+        if (incident.registeredBy !== session.username) { res.status(409).json({ error: "Idantifyan an deja itilize.", code: "id_taken" }); return; }
+        res.status(200).json({ ok: true, incident: incident, duplicate: true });
+        return;
+      }
 
       await A.audit(req, "goods_incident_create", { kind: kind, billId: billId, billNumewo: bill.numewo, description: description }, session);
       res.status(200).json({ ok: true, incident: incident });

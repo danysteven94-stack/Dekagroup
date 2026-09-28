@@ -1,17 +1,63 @@
-var CACHE_NAME = "deka-log-shell-v12";
+// v14: the whole app (page, styles and every module) is stored at install, so it opens without network.
+var CACHE_NAME = "deka-log-shell-v14";
 var SHELL_FILES = [
   "/",
   "/index.html",
+  "/app.css",
   "/manifest.json",
+  "/logo.jpg",
   "/icon-192.png",
   "/icon-512.png",
-  "/apple-touch-icon.png"
+  "/apple-touch-icon.png",
+  "/js/api.js",
+  "/js/archive.js",
+  "/js/constants.js",
+  "/js/csv.js",
+  "/js/events-account.js",
+  "/js/events-archive.js",
+  "/js/events-lang.js",
+  "/js/events.js",
+  "/js/i18n-fr.js",
+  "/js/i18n.js",
+  "/js/icons.js",
+  "/js/iso6346.js",
+  "/js/lockdown.js",
+  "/js/main.js",
+  "/js/mutations.js",
+  "/js/offline.js",
+  "/js/offlinedb.js",
+  "/js/outbox.js",
+  "/js/pdf.js",
+  "/js/push.js",
+  "/js/register-sw.js",
+  "/js/render.js",
+  "/js/session.js",
+  "/js/state.js",
+  "/js/utils.js",
+  "/js/views/account.js",
+  "/js/views/admin.js",
+  "/js/views/archive.js",
+  "/js/views/daily.js",
+  "/js/views/delivery.js",
+  "/js/views/depot.js",
+  "/js/views/driver.js",
+  "/js/views/gate.js",
+  "/js/views/goods.js",
+  "/js/views/help.js",
+  "/js/views/invoices.js",
+  "/js/views/modals.js",
+  "/js/views/security.js",
+  "/js/views/stock.js",
+  "/js/views/users.js"
 ];
 
 self.addEventListener("install", function (event) {
   event.waitUntil(
     caches.open(CACHE_NAME).then(function (cache) {
-      return cache.addAll(SHELL_FILES);
+      // One missing file must not stop the whole install.
+      return Promise.all(SHELL_FILES.map(function (f) {
+        return cache.add(new Request(f, { cache: "reload" })).catch(function () {});
+      }));
     })
   );
   self.skipWaiting();
@@ -27,6 +73,44 @@ self.addEventListener("activate", function (event) {
   );
   self.clients.claim();
 });
+
+// Network first, but a weak connection can hang for minutes: after 4 seconds the stored copy is used
+// (the network answer, if it comes later, still refreshes the stored copy for next time).
+function networkFirst(request, store) {
+  return new Promise(function (resolve) {
+    var done = false;
+    function fromCache() {
+      return caches.match(request, { ignoreSearch: true }).then(function (c) {
+        return c || (request.mode === "navigate" ? caches.match("/index.html") : null);
+      });
+    }
+    var timer = setTimeout(function () {
+      fromCache().then(function (c) {
+        if (c && !done) {
+          done = true;
+          resolve(c);
+        }
+      });
+    }, 4000);
+    fetch(request).then(function (r) {
+      clearTimeout(timer);
+      if (done) {
+        store(r);
+      } else {
+        done = true;
+        resolve(store(r));
+      }
+    }, function () {
+      clearTimeout(timer);
+      fromCache().then(function (c) {
+        if (!done) {
+          done = true;
+          resolve(c || Response.error());
+        }
+      });
+    });
+  });
+}
 
 self.addEventListener("fetch", function (event) {
   var url = new URL(event.request.url);
@@ -48,11 +132,7 @@ self.addEventListener("fetch", function (event) {
   // (a mix of old and new modules would break the app). The cache is only the offline fallback.
   var isCode = event.request.mode === "navigate" || /\.(js|css|html)$/.test(url.pathname) || url.pathname === "/";
   if (isCode) {
-    event.respondWith(
-      fetch(event.request).then(store).catch(function () {
-        return caches.match(event.request, { ignoreSearch: true });
-      })
-    );
+    event.respondWith(networkFirst(event.request, store));
     return;
   }
 

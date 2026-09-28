@@ -1,8 +1,14 @@
 // Application start-up: polling, favicon, first session check.
 import { pollData } from "./api.js";
-import { initOffline } from "./offline.js";
+import { initOffline, markOffline } from "./offline.js";
 import { LOGO_URL } from "./constants.js";
 import { applyDocumentLang } from "./i18n.js";
+import {
+  dropLastSession,
+  loadLastSession,
+  saveLastSession,
+  timedFetch
+} from "./outbox.js";
 import { pushInit } from "./push.js";
 import { render } from "./render.js";
 import { state } from "./state.js";
@@ -28,24 +34,39 @@ if (/[?&]tab=notifs/.test(location.search)) {
 
 render();
 
-fetch("/api/auth/me", { credentials: "same-origin" }).then(function (r) {
+function useSession(d) {
+  state.sessionRole = d.role;
+  state.sessionUser = d.username;
+  state.sessionName = d.name || "";
+  state.sessionNeeds = d.needs || null;
+  state.sessionPersonal = !!d.personal;
+  state.sessionDivisions = d.divisions || [];
+  state.sessionPools = d.pools && d.pools.length ? d.pools : ["default"];
+  state.sessionPool = d.pool || "default";
+}
+
+timedFetch("/api/auth/me", { credentials: "same-origin" }, 8000).then(function (r) {
   return r.json();
 }).then(function (d) {
   state.authChecking = false;
   if (d && d.authenticated && d.role) {
-    state.sessionRole = d.role;
-    state.sessionUser = d.username;
-    state.sessionName = d.name || "";
-    state.sessionNeeds = d.needs || null;
-    state.sessionPersonal = !!d.personal;
-    state.sessionDivisions = d.divisions || [];
-    state.sessionPools = d.pools && d.pools.length ? d.pools : ["default"];
-    state.sessionPool = d.pool || "default";
+    useSession(d);
+    saveLastSession(d);
+  } else {
+    dropLastSession();
   }
   render();
 }).catch(function () {
-  state.authChecking = false;
-  render();
+  // No network: open with the last session seen on this device (the server checks it again as soon as it is reachable).
+  loadLastSession().then(function (d) {
+    state.authChecking = false;
+    if (d && d.authenticated && d.role) {
+      useSession(d);
+      state.online = false;
+      markOffline();
+    }
+    render();
+  });
 });
 
 pushInit();

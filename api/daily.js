@@ -66,6 +66,49 @@ async function handleVerify(req, res, session) {
   }
 }
 
+// Marks a container that is Vid as left today — the one change the Daily Report screen may write straight
+// into Logistic data, the same way handleVerify does for the Poko Verifye → Full step.
+async function handleLeave(req, res, session) {
+  if (req.method !== "POST") {
+    res.setHeader("Allow", "POST");
+    res.status(405).json({ error: "Method not allowed" });
+    return;
+  }
+  try {
+    const body = A.parseBody(req);
+    const id = typeof body.id === "string" ? body.id : "";
+    if (!id) { res.status(400).json({ error: "Konteneur pa idantifye." }); return; }
+
+    const out = await repo.mutate(async function (data) {
+      const c = data.containers.find(function (x) { return x.id === id; });
+      if (!c) throw new ApiError(404, "not_found", "Pa jwenn konteneur la.");
+      if (c.dateLeft) return { already: true, container: Object.assign({}, c) }; // already left: untouched
+      if (S2.statusOf(c) !== "vid") throw new ApiError(409, "wrong_status", "Konteneur sa a pa nan estati Vid ank\u00F2.");
+      const bill = data.bills.find(function (b) { return b.id === c.billId; });
+      c.dateLeft = S2.today();
+      S2.addNotification(data, bill ? bill.numewo : "", "Konten\u00E8 " + c.numewo + " kite jodi a.");
+      S2.recomputeBills(data);
+      return { container: Object.assign({}, c), left: c.numewo };
+    }, { cid: session.username, pool: session.pool });
+
+    if (out.changed) {
+      await S2.afterCommit(out.prev, out.blob, req);
+      await A.audit(req, "container_left", { numewo: out.info.left }, session);
+    }
+    const body2 = { ok: true, container: out.info.container };
+    if (out.info.already) body2.already = true;
+    res.status(200).json(body2);
+  } catch (err) {
+    if (err instanceof ApiError && err.status !== 503) {
+      res.status(err.status).json({ error: err.message, code: err.code });
+      return;
+    }
+    console.error("leave error:", err && err.message);
+    const busy = err instanceof ApiError && err.status === 503;
+    res.status(busy ? 503 : 500).json({ error: busy ? err.message : "Er\u00E8 s\u00E8v\u00E8. Eseye ank\u00F2.", code: "server_error" });
+  }
+}
+
 module.exports = async function handler(req, res) {
   try {
     const session = await A.requireAuth(req, res, ["daily", "admin"]);
@@ -73,6 +116,9 @@ module.exports = async function handler(req, res) {
 
     if (req.query && req.query.action === "verify") {
       return handleVerify(req, res, session);
+    }
+    if (req.query && req.query.action === "leave") {
+      return handleLeave(req, res, session);
     }
 
     if (req.method === "GET") {

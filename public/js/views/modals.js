@@ -31,6 +31,12 @@ export function modalView() {
   if (e.mode === "arch") {
     return archiveModalView(e);
   }
+  if (e.mode === "rejected") {
+    var rows = (e.items || []).map(function (x) {
+      return `<div style="border:1px solid var(--line,#E2E8F0);border-radius:10px;padding:10px 12px;margin-bottom:8px;text-align:left"><div style="font-weight:700;font-size:13px">${ escapeHtml(x.label || x.kind) }</div><div style="font-size:12px;color:var(--rust-deep);margin-top:3px">${ escapeHtml(x.error || "") }</div><div style="margin-top:6px"><button class="linklike" data-action="rejected-dismiss" data-id="${ escapeHtml(x.id) }">Efase</button></div></div>`;
+    }).join("");
+    return `<div class="modal-overlay"><div class="modal-card"><div class="h3" style="margin-bottom:6px">Chanjman ki pa t pase</div><p style="font-size:12.5px;color:var(--muted);margin-bottom:14px">Sèvè a pa t aksepte chanjman sa yo lè yo te rive (egzanp yon lòt moun te chanje yo anvan). Refè yo si sa nesesè.</p><div style="max-height:50vh;overflow:auto">${ rows || "<div style=\"font-size:13px;color:var(--muted)\">Pa gen anyen.</div>" }</div><div style="display:flex;gap:8px;justify-content:flex-end;margin-top:18px"><button class="btn ghost" data-action="close-modal">Fèmen</button><button class="btn teal" data-action="rejected-clear">Efase tout</button></div></div></div>`;
+  }
   if (e.mode === "correct") {
     return `<div class="modal-overlay"><div class="modal-card"><div class="h3" style="margin-bottom:16px">Korije Dat Antre</div><p style="font-size:12.5px;color:var(--muted);margin-top:-8px;margin-bottom:16px">Chanje dat antre a si te gen yon erè. Sa ap rekalkile jou Full otomatikman.</p><div><span class="field-label">Dat Antre</span><input class="input" type="date" id="modal-correct-date" value="${ escapeHtml(e.date) }" /></div><div style="display:flex;gap:8px;justify-content:flex-end;margin-top:22px"><button class="btn ghost" data-action="close-modal">Anile</button><button class="btn teal" data-action="submit-modal">Konfime</button></div></div></div>`;
   }

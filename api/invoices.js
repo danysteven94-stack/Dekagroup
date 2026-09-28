@@ -107,7 +107,9 @@ module.exports = async function handler(req, res) {
       const dueDate = DATE_RE.test(body.dueDate || "") ? body.dueDate : null;
       const invoiceNumber = text(body.invoiceNumber, 40) || ("FACT-" + bill.numewo.replace(/[^A-Za-z0-9]/g, "") + "-" + invoiceDate.replace(/-/g, ""));
 
+      const clientId = /^[A-Za-z0-9]{8,40}$/.test(typeof body.clientId === "string" ? body.clientId : "") ? body.clientId : null;
       const invoice = await Invoices.create({
+        ...(clientId ? { id: clientId } : {}),
         billId: billId,
         invoiceNumber: invoiceNumber,
         invoiceDate: invoiceDate,
@@ -118,6 +120,12 @@ module.exports = async function handler(req, res) {
         notes: text(body.notes, 300) || null,
         createdBy: session.username,
       }, session.pool);
+      if (invoice.duplicate) {
+        // A replay of a request that was already saved (network dropped after the save): return it, do not repeat side effects.
+        if (invoice.createdBy !== session.username) { res.status(409).json({ error: "Idantifyan an deja itilize.", code: "id_taken" }); return; }
+        res.status(200).json({ ok: true, invoice: invoice, duplicate: true });
+        return;
+      }
 
       await A.audit(req, "invoice_create", { billId: billId, billNumewo: bill.numewo, invoiceNumber: invoiceNumber }, session);
       res.status(200).json({ ok: true, invoice: invoice });

@@ -20,6 +20,10 @@
     {
       "source": "/api/verify",
       "destination": "/api/daily?action=verify"
+    },
+    {
+      "source": "/api/leave",
+      "destination": "/api/daily?action=leave"
     }
   ],
   "headers": [

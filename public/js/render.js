@@ -66,7 +66,16 @@ export function render() {
   } else {
     html = loginView();
   }
-  var offlineBanner = state.online ? "" : `<div class="offline-banner">${ icon("alert", 15, "#fff") }Ou pa gen entènèt kounye a. App la ap kontinye ak dènye done ki te sove a; li ap rekonekte otomatikman.</div>`;
-  root.innerHTML = offlineBanner + html + modalView() + confirmModalView() + toastsView();
+  var waiting = state.pendingCount + (state.dirty ? 1 : 0);
+  var offlineBanner = "";
+  if (!state.online) {
+    offlineBanner = `<div class="offline-banner">${ icon("alert", 15, "#fff") }Ou pa gen entènèt. Ou ka kontinye travay: chanjman yo sove sou aparèy la epi y ap voye otomatikman lè entènèt la tounen.${ waiting ? ` <b>${ waiting } an atant.</b>` : "" }</div>`;
+  } else if (state.syncing && waiting) {
+    offlineBanner = `<div class="offline-banner sync">K ap voye chanjman ki te sove sou aparèy la...</div>`;
+  } else if (waiting && state.authRole) {
+    offlineBanner = `<div class="offline-banner sync">${ waiting } chanjman ap tann pou voye.</div>`;
+  }
+  var rejectedBanner = state.rejectedCount && state.authRole ? `<div class="offline-banner warn" data-action="rejected-open" style="cursor:pointer">${ icon("alert", 15, "#fff") }${ state.rejectedCount } chanjman pa t pase. Peze la a pou w wè yo.</div>` : "";
+  root.innerHTML = offlineBanner + rejectedBanner + html + modalView() + confirmModalView() + toastsView();
   translateDom(root);
 }

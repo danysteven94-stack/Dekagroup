@@ -6,7 +6,8 @@ const require_fs_write = (p, b) => writeFileSync(p, b);
 const root = { innerHTML: "" };
 globalThis.document = { getElementById: (id) => (id === "root" ? root : null), addEventListener() {}, querySelector: () => null, activeElement: null };
 globalThis.window = { addEventListener() {}, createImageBitmap: undefined };
-globalThis.localStorage = { getItem: () => null, setItem() {}, removeItem() {} };
+// These tests check logic, not translation: pin the language to Kreyòl (the fake DOM has no TreeWalker).
+globalThis.localStorage = { getItem: (k) => (k === "deka-log-lang" ? "ht" : null), setItem() {}, removeItem() {} };
 let posts = [];
 globalThis.fetch = async (url, opts) => { posts.push([url, opts]); return { ok: true, status: 200, json: async () => ({ ok: true }), clone() { return this; } }; };
 

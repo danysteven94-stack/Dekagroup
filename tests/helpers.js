@@ -20,7 +20,7 @@ Module._load = function (request, ...rest) {
 // that way to stay under Vercel's Hobby-plan function limit) — tests call the old, pre-consolidation
 // path names, so route those through the real file with the right action already set.
 const ADMIN_ACTIONS = { audit: "audit", health: "health", backup: "backup" };
-const DAILY_ACTIONS = { verify: "verify" };
+const DAILY_ACTIONS = { verify: "verify", leave: "leave" };
 function withAction(modulePath, action) {
   const real = require(modulePath);
   return (req, res) => real(Object.assign({}, req, { query: Object.assign({}, req.query, { action: action }) }), res);
