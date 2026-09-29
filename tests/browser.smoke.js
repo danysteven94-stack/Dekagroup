@@ -5,6 +5,9 @@
 // Needs puppeteer (or puppeteer-core + CHROME_PATH). Not part of `npm test` because it needs a browser.
 const assert = require("assert");
 const fs = require("fs");
+const path = require("path");
+const os = require("os");
+const shotPath = (name) => path.join(os.tmpdir(), name);
 
 function loadPuppeteer() {
   const tries = [() => require("puppeteer"), () => require("puppeteer-core"), () => require(process.env.PUPPETEER_MODULE || "/nonexistent")];
@@ -66,7 +69,7 @@ function loadPuppeteer() {
     await page.waitForSelector("#gate-form");
     assert.deepStrictEqual(await page.evaluate(() => window.__csp), [], "no CSP violation");
     assert.deepStrictEqual(errors, [], "no console error: " + errors.join(" | "));
-    fs.writeFileSync("/tmp/shot-login.png", await page.screenshot());
+    fs.writeFileSync(shotPath("shot-login.png"), await page.screenshot());
   });
 
   await step("an injected inline script is blocked by the CSP", async () => {
@@ -91,11 +94,11 @@ function loadPuppeteer() {
     await page.type("#gate-pw", creds.admin.pass);
     await page.click(".gate-btn");
     await page.waitForSelector('[data-action="set-tab"][data-tab="sekirite"]');
-    fs.writeFileSync("/tmp/shot-admin.png", await page.screenshot());
+    fs.writeFileSync(shotPath("shot-admin.png"), await page.screenshot());
     await page.click('[data-action="set-tab"][data-tab="sekirite"]');
     await waitText("Baz done: PostgreSQL");
     assert.ok((await text()).includes("Jounal aktivite"));
-    fs.writeFileSync("/tmp/shot-sekirite.png", await page.screenshot({ fullPage: true }));
+    fs.writeFileSync(shotPath("shot-sekirite.png"), await page.screenshot({ fullPage: true }));
   });
 
   await step("admin edits a container in the real UI and the change is saved on the server", async () => {
@@ -109,7 +112,7 @@ function loadPuppeteer() {
     await logout();
     await login(creds.depot);
     await page.waitForSelector('[data-action="view-depot-division"]');
-    fs.writeFileSync("/tmp/shot-depot.png", await page.screenshot());
+    fs.writeFileSync(shotPath("shot-depot.png"), await page.screenshot());
     await page.click('[data-action="view-depot-division"][data-division="ACS"]');
     await waitText("MSCU7001001");
   });
@@ -126,7 +129,7 @@ function loadPuppeteer() {
     const t = await text();
     assert.ok(t.includes("MSCU7001002") || t.includes("TGHU7002002"), "a Vid container is listed");
     assert.ok(!t.includes("CAXU7003001"), "planned containers are not shown to the driver");
-    fs.writeFileSync("/tmp/shot-chofe.png", await page.screenshot());
+    fs.writeFileSync(shotPath("shot-chofe.png"), await page.screenshot());
   });
 
   await step("daily report: own interface, inventory list and PDF buttons", async () => {
@@ -135,7 +138,7 @@ function loadPuppeteer() {
     await waitText("Envant");
     await waitText("PDF");
     assert.ok(await page.$('[data-action="dr-verify"]'), "a 'Poko Verifye' container has its Verifye button");
-    fs.writeFileSync("/tmp/shot-daily.png", await page.screenshot());
+    fs.writeFileSync(shotPath("shot-daily.png"), await page.screenshot());
   });
 
   const Totp = require("../api/_lib/totp");
@@ -164,14 +167,14 @@ function loadPuppeteer() {
     jeanTemp = await make("jean.paul", "Jean Paul", "depot");
     bossTemp = await make("boss.admin", "Boss Admin", "admin");
     assert.ok((await bodyText()).includes("Jean Paul") && (await bodyText()).includes("boss.admin"));
-    fs.writeFileSync("/tmp/shot-users.png", await page.screenshot({ fullPage: true }));
+    fs.writeFileSync(shotPath("shot-users.png"), await page.screenshot({ fullPage: true }));
   });
 
   await step("a person with a temporary password is forced to change it, then lands in their interface", async () => {
     await logout();
     await loginAs("jean.paul", jeanTemp);
     await waitText("Ou dwe chanje modpass tanporè a");
-    fs.writeFileSync("/tmp/shot-forced-pw.png", await page.screenshot());
+    fs.writeFileSync(shotPath("shot-forced-pw.png"), await page.screenshot());
     await fill("#pw-cur", jeanTemp); await fill("#pw-new", "short"); await fill("#pw-new2", "short");
     await page.click("#pw-form .gate-btn");
     await waitText("omwen 10");
@@ -192,7 +195,7 @@ function loadPuppeteer() {
     await waitText("Antre kle sa a");
     const secret = (await page.evaluate(() => [...document.querySelectorAll("div")].map((d) => d.textContent.trim()).find((x) => /^([A-Z2-7]{4} ){7}[A-Z2-7]{4}$/.test(x)) || "")).replace(/\s/g, "");
     assert.ok(/^[A-Z2-7]{32}$/.test(secret), "setup key shown: " + secret);
-    fs.writeFileSync("/tmp/shot-2fa-setup.png", await page.screenshot({ fullPage: true }));
+    fs.writeFileSync(shotPath("shot-2fa-setup.png"), await page.screenshot({ fullPage: true }));
     await fill("#tf-code", "000000");
     await page.click("#tf-confirm-form .gate-btn");
     await waitText("Kòd la pa bon");
@@ -203,7 +206,7 @@ function loadPuppeteer() {
     await waitText("Sove kòd sekou sa yo");
     const codes = (await bodyText()).match(/[A-Z2-9]{4}-[A-Z2-9]{4}/g) || [];
     assert.ok(codes.length >= 8, "8 recovery codes shown");
-    fs.writeFileSync("/tmp/shot-recovery.png", await page.screenshot({ fullPage: true }));
+    fs.writeFileSync(shotPath("shot-recovery.png"), await page.screenshot({ fullPage: true }));
     await page.click('[data-action="tf-done"]');
     await page.waitForSelector('[data-action="set-tab"][data-tab="itilizate"]', { timeout: 10000 });
     globalThis.__bossSecret = secret;
@@ -213,7 +216,7 @@ function loadPuppeteer() {
     await logout();
     await loginAs("boss.admin", "Moonlight-River-77");
     await page.waitForSelector("#gate-code");
-    fs.writeFileSync("/tmp/shot-2fa-gate.png", await page.screenshot());
+    fs.writeFileSync(shotPath("shot-2fa-gate.png"), await page.screenshot());
     await fill("#gate-code", "123456");
     await page.click(".gate-btn");
     await waitText("Kòd la pa bon");
@@ -276,7 +279,7 @@ function loadPuppeteer() {
     await page.setOfflineMode(true);
     await page.evaluate(() => window.dispatchEvent(new Event("offline")));
     await waitText("Ou pa gen entènèt");
-    fs.writeFileSync("/tmp/shot-offline.png", await page.screenshot());
+    fs.writeFileSync(shotPath("shot-offline.png"), await page.screenshot());
     await page.setOfflineMode(false);
     await page.evaluate(() => window.dispatchEvent(new Event("online")));
     await page.waitForFunction(() => !document.body.innerText.includes("Ou pa gen entènèt"), { timeout: 8000 });

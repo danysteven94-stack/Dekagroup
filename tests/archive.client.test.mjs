@@ -1,6 +1,8 @@
 // Client-side archive logic (run with: node --no-warnings tests/archive.client.test.mjs)
 import assert from "assert";
 import { writeFileSync } from "fs";
+import { tmpdir } from "os";
+import { join } from "path";
 const require_fs_write = (p, b) => writeFileSync(p, b);
 
 const root = { innerHTML: "" };
@@ -131,7 +133,7 @@ await test("DKN report: only DKN trucking not yet left, with driver + plate, val
   const txt = Buffer.from(bytes).toString("latin1");
   assert.ok(txt.startsWith("%PDF-1.4") && txt.trim().endsWith("%%EOF"));
   assert.ok(txt.includes("(AA 1234)") && txt.includes("(Jean Pierre)") && txt.includes("(Plak)"));
-  require_fs_write("/tmp/dnk-test.pdf", bytes);
+  require_fs_write(join(tmpdir(), "dnk-test.pdf"), bytes);
 });
 
 let bad = 0;

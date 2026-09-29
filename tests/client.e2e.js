@@ -56,11 +56,15 @@ function openPage(b) {
   };
   ctx.addEventListener = (t, f) => { (handlers["window:" + t] = handlers["window:" + t] || []).push(f); };
   ctx.window = ctx;
+  root.querySelectorAll = () => [];
   ctx.document = {
     getElementById: (id) => (id === "root" ? root : id === "app-favicon" ? {} : els[id] || null),
     addEventListener: (t, f) => { (handlers[t] = handlers[t] || []).push(f); },
     querySelector: () => ({ focus() {} }), activeElement: null, body: { appendChild() {}, removeChild() {} },
     createElement: () => ({ click() {} }), documentElement: {},
+    // This fake DOM has no real node tree (the app's HTML is only ever a string here), so French-mode's DOM-based
+    // translateDom() cannot walk it \u2014 same no-op stub already used for that reason in tests/i18n.test.mjs.
+    createTreeWalker: () => ({ nextNode: () => null }),
   };
   vm.createContext(ctx);
   vm.runInContext(main, ctx);
