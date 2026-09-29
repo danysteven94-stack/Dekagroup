@@ -15,7 +15,7 @@ H.env = () => {
   process.env.AUTH_ADMIN_PASS = LEGACY.admin; process.env.AUTH_DEPOT_PASS = LEGACY.depot;
   process.env.AUTH_DAILY_PASS = LEGACY.daily; process.env.AUTH_CHOFE_PASS = LEGACY.chofe;
   process.env.APP_SECRET = "unit-test-app-secret-0123456789abcdef";
-  delete process.env.AUTH_LEGACY_DISABLED; delete process.env.AUTH_SESSION_EPOCH;
+  delete process.env.AUTH_LEGACY_DISABLED; delete process.env.AUTH_SESSION_EPOCH; delete process.env.PRINCIPAL_USERNAME;
 };
 
 const A = () => ({
@@ -149,7 +149,9 @@ async function enroll2fa(b) {
     assert.strictEqual(ok.body.recoveryCodes.length, 8);
     assert.deepStrictEqual(ok.body.needs, null);
     assert.strictEqual((await b.call(A().data)).statusCode, 200);
-    assert.strictEqual((await b.call(A().users)).statusCode, 200, "full admin now");
+    // 2FA is done, but this admin is not the principal account: user management stays out of reach.
+    const afterTfa = await b.call(A().users);
+    assert.deepStrictEqual([afterTfa.statusCode, afterTfa.body.code], [403, "principal_required"]);
     const stored = await Users.get("chef.admin");
     assert.ok(stored.recovery.every((h) => /^[0-9a-f]{64}$/.test(h)) && !JSON.stringify(stored).includes(ok.body.recoveryCodes[0]), "recovery codes are stored hashed");
     // an admin cannot switch 2FA off for themselves
@@ -233,12 +235,18 @@ async function enroll2fa(b) {
     await post(admin, A().users, { action: "set_role", username: "marie", role: "chofe" });
     const l2 = await post(H.browser("198.51.100.182"), A().login, { username: "marie", password: r.body.tempPassword });
     assert.strictEqual(l2.body.role, "chofe");
-    // a personal admin cannot demote / disable / reset himself
+    // the principal cannot demote / disable / reset himself; a second, non-principal admin cannot even try
     const boss = await onboard(admin, "boss", "admin", "Sunrise-Harbor-42");
     await enroll2fa(boss.b);
+    const deniedForNonPrincipal = await post(boss.b, A().users, { action: "set_active", username: "boss", active: false });
+    assert.deepStrictEqual([deniedForNonPrincipal.statusCode, deniedForNonPrincipal.body.code], [403, "principal_required"]);
+    // make "boss" the principal account so self-protection can be exercised on a real personal account
+    process.env.PRINCIPAL_USERNAME = "boss";
     for (const body of [{ action: "set_active", username: "boss", active: false }, { action: "set_role", username: "boss", role: "depot" }, { action: "reset_password", username: "boss" }]) {
-      assert.strictEqual((await post(boss.b, A().users, body)).statusCode, 400, JSON.stringify(body));
+      const r2 = await post(boss.b, A().users, body);
+      assert.strictEqual(r2.statusCode, 400, JSON.stringify(body) + ": " + JSON.stringify(r2.body));
     }
+    delete process.env.PRINCIPAL_USERNAME;
   });
 
   await test("another admin can reset someone's 2FA: they must enroll again", async () => {
