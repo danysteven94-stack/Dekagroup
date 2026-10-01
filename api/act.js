@@ -3,6 +3,7 @@
 // on the freshest data (under a lock), so a stale screen can never overwrite someone else's work.
 const A = require("./_lib/auth");
 const S = require("./_lib/store");
+const Users = require("./_lib/users");
 const repo = require("./_lib/repo");
 const { ApiError } = require("./_lib/errors");
 
@@ -48,20 +49,29 @@ const ACTIONS = {
   } },
 
   // Driver (or admin): confirm that empty containers have left with a trucking.
-  depart: { roles: ["chofe", "admin"], run: function (data, body) {
+  // When a driver (not admin) does this, their own account's name and plate are stamped onto
+  // the containers automatically — the driver never has to type them in.
+  depart: { roles: ["chofe", "admin"], run: function (data, body, ctx) {
     const trucking = text(body.trucking, 40);
     if (!trucking || !/^[A-Za-z0-9 ._-]+$/.test(trucking)) throw new ActionError(400, "Trucking la obligatwa.", "invalid");
     const ids = Array.isArray(body.ids) ? body.ids.filter(function (i) { return typeof i === "string"; }).slice(0, 200) : [];
     if (ids.length === 0) throw new ActionError(400, "Chwazi omwen yon konteneur.", "invalid");
+    const driver = ctx && ctx.driver;
+    const chofer = driver && driver.name ? driver.name : null;
+    const plak = driver && driver.plate ? driver.plate : null;
 
     const left = [];
     data.containers = data.containers.map(function (x) {
       if (ids.indexOf(x.id) === -1 || S.statusOf(x) !== "vid") return x;
       left.push(x.numewo);
-      return Object.assign({}, x, { dateLeft: S.today() });
+      const patch = { dateLeft: S.today() };
+      if (chofer) patch.chofer = chofer;
+      if (plak) patch.plak = plak;
+      return Object.assign({}, x, patch);
     });
     if (left.length === 0) throw new ActionError(409, "Konteneur sa yo pa disponib ankò. Done yo rafrechi.", "wrong_status");
-    left.slice().reverse().forEach(function (n) { S.addNotification(data, "", "Konten\u00E8 " + n + " kite ak chof\u00E8 " + trucking + "."); });
+    const tag = chofer ? " (" + chofer + (plak ? ", " + plak : "") + ")" : "";
+    left.slice().reverse().forEach(function (n) { S.addNotification(data, "", "Konten\u00E8 " + n + " kite ak chof\u00E8 " + trucking + tag + "."); });
     S.recomputeBills(data);
     return { left: left.length, requested: ids.length };
   } },
@@ -86,8 +96,12 @@ module.exports = async function handler(req, res) {
       return;
     }
 
+    let driver = null;
+    if (body.action === "depart" && session.role === "chofe") {
+      driver = await Users.get(session.username);
+    }
     const out = await repo.mutate(async function (data) {
-      return def.run(data, body);
+      return def.run(data, body, { session: session, driver: driver });
     }, { cid: session.username, pool: session.pool });
     if (out.changed) await S.afterCommit(out.prev, out.blob, req);
 

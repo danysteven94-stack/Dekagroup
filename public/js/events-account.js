@@ -130,6 +130,7 @@ document.addEventListener("submit", function (event) {
     fm.name = document.getElementById("usr-name").value.trim();
     fm.email = document.getElementById("usr-email").value.trim();
     fm.role = document.getElementById("usr-role").value;
+    fm.plate = document.getElementById("usr-plate").value.trim();
     fm.divisions = Array.prototype.map.call(document.querySelectorAll(".usr-create-division:checked"), function (el) { return el.value; });
     fm.err = "";
     apiJson("/api/users", {
@@ -138,6 +139,7 @@ document.addEventListener("submit", function (event) {
       name: fm.name,
       email: fm.email,
       role: fm.role,
+      plate: fm.plate,
       divisions: fm.divisions
     }).then(function (d) {
       U.temp = {
@@ -149,6 +151,7 @@ document.addEventListener("submit", function (event) {
         name: "",
         email: "",
         role: fm.role,
+        plate: "",
         divisions: [],
         err: ""
       };
@@ -287,6 +290,17 @@ document.addEventListener("click", function (event) {
       action: "set_email",
       username: u,
       email: next.trim()
+    });
+  } else if (a === "usr-edit-plate") {
+    var currentPlate = n.getAttribute("data-plate") || "";
+    var nextPlate = window.prompt(`Plak kamyon pou ${ u } (ap antre otomatikman sou kontenè l konfime pran). Kite l vid pou retire l.`, currentPlate);
+    if (nextPlate === null) {
+      return;
+    }
+    userAction({
+      action: "set_plate",
+      username: u,
+      plate: nextPlate.trim()
     });
   } else if (a === "usr-edit-divisions") {
     var target = (state.usr.users || []).find(function (x) { return x.username === u; });

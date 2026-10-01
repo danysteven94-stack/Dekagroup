@@ -117,6 +117,8 @@ const DDL = [
   // Which divisions (see _lib/divisions.js) a personal account may work in. Accounts always live in the
   // "default" database only, even though the divisions they list may point at other pools.
   "ALTER TABLE users ADD COLUMN IF NOT EXISTS divisions TEXT NOT NULL DEFAULT '[]'",
+  // Truck licence plate for a driver (role "chofe"); auto-filled onto a container when that driver confirms departure.
+  "ALTER TABLE users ADD COLUMN IF NOT EXISTS plate TEXT",
   // Stock entries ("Antre Estòk"): goods registered into the depot, always tied to a Bill.
   "CREATE TABLE IF NOT EXISTS stock_entries (" +
     "id TEXT PRIMARY KEY, bill_id TEXT NOT NULL, entry_date TEXT NOT NULL, description TEXT NOT NULL, " +

@@ -78,6 +78,40 @@ async function enroll2fa(b) {
     assert.ok(stored.passHash.startsWith("scrypt:") && stored.mustChange === true && stored.createdBy === "logistic");
   });
 
+  await test("a driver's plate is set on their account, and auto-stamped onto a container when they confirm departure", async () => {
+    const admin = await legacyAdmin();
+    let r = await post(admin, A().users, { action: "create", username: "pye.chofe", role: "chofe", name: "Py\u00E8 Louis", plate: "aa-1234" });
+    assert.strictEqual(r.statusCode, 200, JSON.stringify(r.body));
+    assert.strictEqual(r.body.user.plate, "AA-1234", "plate is cleaned/uppercased on create");
+
+    // the plate can be changed later, or cleared
+    r = await post(admin, A().users, { action: "set_plate", username: "pye.chofe", plate: "bb 5678" });
+    assert.strictEqual(r.statusCode, 200);
+    assert.strictEqual(r.body.plate, "BB 5678");
+    assert.strictEqual((await admin.call(A().users)).body.users.find((u) => u.username === "pye.chofe").plate, "BB 5678");
+
+    // onboard a fresh driver with a plate set at creation
+    let r2 = await post(admin, A().users, { action: "create", username: "jan.chofe", role: "chofe", name: "Jan Batis", plate: "cc-9999" });
+    assert.strictEqual(r2.statusCode, 200);
+    const driverTemp = r2.body.tempPassword;
+    const driver = H.browser("198.51.100.120");
+    r = await post(driver, A().login, { username: "jan.chofe", password: driverTemp });
+    assert.strictEqual(r.statusCode, 200);
+    assert.strictEqual(r.body.needs, "password");
+    r = await post(driver, A().password, { current: driverTemp, next: "Jan-Chofe-Strong-9" });
+    assert.strictEqual(r.statusCode, 200, JSON.stringify(r.body));
+
+    await H.setData({ containers: [{ id: "cv1", numewo: "AUTO0000001", billId: null, size: "20", division: "ACS", dateEntered: "2026-09-01", dateVerified: "2026-09-02", depo: "D", trucking: "CFC", dateEmpty: "2026-09-15", dateLeft: null }], bills: [], notifications: [], inventoryChecks: {} });
+    const act = H.api("act");
+    const dep = await driver.call(act, { method: "POST", body: { action: "depart", ids: ["cv1"], trucking: "CTSA" } });
+    assert.strictEqual(dep.statusCode, 200, JSON.stringify(dep.body));
+    const d = await H.getData();
+    const c = d.containers.find((x) => x.id === "cv1");
+    assert.strictEqual(c.chofer, "Jan Batis", "driver's own name is stamped automatically");
+    assert.strictEqual(c.plak, "CC-9999", "driver's own plate is stamped automatically");
+    assert.ok(d.notifications[0].message.includes("Jan Batis") && d.notifications[0].message.includes("CC-9999"));
+  });
+
   await test("only admins can manage accounts (depot, a limited session and a stranger cannot)", async () => {
     const admin = await legacyAdmin();
     const temp = await createUser(admin, "marie", "depot");

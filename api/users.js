@@ -10,7 +10,7 @@ const { ApiError } = require("./_lib/errors");
 function safe(u) {
   return {
     username: u.username, name: u.name, role: u.role, active: u.active, mustChange: u.mustChange, totpEnabled: u.totpEnabled,
-    email: u.email || null, principal: u.username === A.principalUsername(), divisions: u.divisions || [],
+    email: u.email || null, plate: u.plate || null, principal: u.username === A.principalUsername(), divisions: u.divisions || [],
     lastLoginAt: u.lastLoginAt, createdAt: u.createdAt, createdBy: u.createdBy, passChangedAt: u.passChangedAt,
   };
 }
@@ -39,6 +39,12 @@ function reserved() {
 
 function clean(v, max) {
   return typeof v === "string" ? v.trim().replace(/\s+/g, " ").slice(0, max) : "";
+}
+
+// Truck licence plate for a driver account: letters, digits, spaces and dashes only.
+function cleanPlate(v) {
+  const s = typeof v === "string" ? v.trim().toUpperCase().replace(/\s+/g, " ").slice(0, 20) : "";
+  return /^[A-Z0-9 -]*$/.test(s) ? s : "";
 }
 
 // Refuse a change that would leave nobody able to administer the app.
@@ -97,8 +103,9 @@ module.exports = async function handler(req, res) {
       if (email && !Email.EMAIL_RE.test(email)) throw new ApiError(400, "invalid_email", "Adrès imèl la pa valid.");
       if (role === "admin" && !Secret.available()) throw new ApiError(503, "no_app_secret", "Pou kreye yon administratè, APP_SECRET dwe konfigire sou sèvè a (2FA obligatwa). Gade SEKIRITE.md.");
       const divisions = cleanDivisions(body.divisions);
+      const plate = cleanPlate(body.plate);
       const temp = Users.tempPassword();
-      const u = await Users.create({ username: target, name: name, role: role, email: email || null, passHash: await A.hashPassword(temp), mustChange: true, divisions: divisions, createdBy: session.username });
+      const u = await Users.create({ username: target, name: name, role: role, email: email || null, plate: plate || null, passHash: await A.hashPassword(temp), mustChange: true, divisions: divisions, createdBy: session.username });
       await A.audit(req, "user_create", { username: target, role: role, divisions: divisions }, session);
       res.status(200).json({ ok: true, user: safe(u), tempPassword: temp });
       return;
@@ -158,6 +165,14 @@ module.exports = async function handler(req, res) {
       await A.killUserSessions(user.username, self ? session.key : undefined);
       await A.audit(req, "user_reset_2fa", { username: user.username }, session);
       res.status(200).json({ ok: true });
+      return;
+    }
+
+    if (action === "set_plate") {
+      const plate = cleanPlate(body.plate);
+      await Users.update(user.username, { plate: plate || null });
+      await A.audit(req, "user_set_plate", { username: user.username, hasPlate: !!plate }, session);
+      res.status(200).json({ ok: true, plate: plate || null });
       return;
     }
 
