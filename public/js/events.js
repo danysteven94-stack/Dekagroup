@@ -351,6 +351,9 @@ document.addEventListener("click", function (event) {
       openTransferModal(o);
     } else if (i === "correct-date") {
       openCorrectDateModal(o);
+    } else if (i === "container-info") {
+      state.modal = { mode: "container-info", id: o };
+      render();
     } else if (i === "edit-container") {
       openEditContainerModal(o);
     } else if (i === "close-modal") {

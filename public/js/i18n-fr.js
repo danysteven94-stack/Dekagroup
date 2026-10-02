@@ -2,7 +2,7 @@
 // Business words kept as people use them at the terminal: Bill, Trucking, Daily Report, DKN, CFC.
 export const EXACT = {
   // ---- administrator: Trucking tab + driver accounts tied to a trucking
-  "Pou chak trucking (CFC, CTSA, MAD, DKN) wè konbyen kontenè Full, Vid ak Pran li genyen. Peze sou yon trucking pou wè detay kontenè li yo, separe 40 pye ak 20 pye.": "Pour chaque trucking (CFC, CTSA, MAD, DKN), voyez combien de conteneurs Full, Vides et Pris il a. Appuyez sur un trucking pour voir le détail de ses conteneurs, séparés en 40 pieds et 20 pieds.",
+  "Pou chak trucking (CFC, CTSA, MAD) wè konbyen kontenè Full, Vid ak Pran li genyen. DKN se menm bagay ak CTSA, kidonk yo konte ansanm. Peze sou yon trucking pou wè detay kontenè li yo, separe 40 pye ak 20 pye. Non chofè ak plak la parèt sèlman lè w peze sou yon kontenè.": "Pour chaque trucking (CFC, CTSA, MAD), voyez combien de conteneurs Full, Vides et Pris il a. DKN est la même société que CTSA, ils sont donc comptés ensemble. Appuyez sur un trucking pour voir le détail de ses conteneurs, séparés en 40 pieds et 20 pieds. Le nom du chauffeur et la plaque n'apparaissent que lorsque vous appuyez sur un conteneur.",
   "Kontenè pa Trucking": "Conteneurs par trucking",
   "Apèsi pa Trucking": "Aperçu par trucking",
   "Tout trucking": "Tous les truckings",
@@ -614,6 +614,9 @@ export const EXACT = {
   "Gid Rapid": "Guide rapide",
   "Gen yon kesyon sistèm nan pa reponn? Mande administratè a.": "Une question que le système ne résout pas ? Demandez à l’administrateur.",
   "Fèmen": "Fermer",
+  "Detay": "Détail",
+  "Pran pa chofè": "Pris par le chauffeur",
+  "Pa gen chofè ni plak anrejistre pou kontenè sa a.": "Aucun chauffeur ni plaque enregistré pour ce conteneur.",
   "Premye ekran ou wè a. Li montre konbyen kontenè Full, konteneur ki poko verifye, ak alèt pou kontenè ki rete twò lontan.": "Le premier écran que vous voyez. Il montre combien de conteneurs sont pleins ou à vérifier, avec des alertes pour ceux qui restent trop longtemps.",
   "Tab «Ajoute» — mete nimewo kontenè a, gwosè (20' oswa 40'), divizyon, epi swa kreye yon nouvo bill oswa chwazi youn ki egziste deja.": "Onglet « Ajouter » — saisissez le numéro du conteneur, la taille (20’ ou 40’), la division, puis créez un nouveau Bill ou choisissez-en un existant.",
   "Lis tout kontenè yo. Klike sou yon kontenè pou verifye l, transfere l nan yon depo, oswa korije dat antre a si te gen yon erè.": "Liste de tous les conteneurs. Cliquez sur un conteneur pour le vérifier, le transférer dans un dépôt ou corriger la date d’entrée en cas d’erreur.",

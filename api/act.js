@@ -5,7 +5,6 @@ const A = require("./_lib/auth");
 const S = require("./_lib/store");
 const Users = require("./_lib/users");
 const repo = require("./_lib/repo");
-const Div = require("./_lib/divisions");
 const { ApiError } = require("./_lib/errors");
 
 class ActionError extends Error {
@@ -88,9 +87,7 @@ const ACTIONS = {
     if (!c) throw new ActionError(404, "Pa jwenn konteneur la.", "not_found");
     const st = S.statusOf(c);
     if (st !== "disponib" && st !== "pran") throw new ActionError(409, "Konteneur sa a deja antre. Done yo rafrechi.", "wrong_status");
-    // a personal account only works on the divisions it was given (same rule as what it can see)
-    const visible = Div.visibleDivisions(ctx.session.src, ctx.session.divisions);
-    if (visible && visible.indexOf(c.division) === -1) throw new ActionError(404, "Pa jwenn konteneur la.", "not_found");
+    // a driver sees every container (only the depot interface is split by division), so no division check here
     const me = ctx.session.username;
     if (c.datePran && c.pranBy && c.pranBy !== me) throw new ActionError(409, "Yon lot chof\u00E8 deja pran konteneur sa a.", "already_taken");
     const driver = ctx.driver;

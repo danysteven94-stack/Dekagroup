@@ -223,7 +223,7 @@ async function afterCommit(prev, next, req) {
 }
 
 // What each session is allowed to read: first narrowed by role (as before), then, for a personal
-// account, narrowed again to the divisions it was actually assigned (see _lib/divisions.js).
+// depot account only, narrowed again to the divisions it was actually assigned (see _lib/divisions.js).
 function viewFor(session, d) {
   const role = session.role;
   if (role === "admin") return d;
@@ -235,7 +235,9 @@ function viewFor(session, d) {
     out.notifications = [];
     narrowed = true;
   }
-  const visible = Div.visibleDivisions(session.src, session.divisions);
+  // Only the depot interface is split by division. Logistic admin, driver and Daily Report accounts
+  // always see every container, whatever divisions their account happens to list.
+  const visible = role === "depot" ? Div.visibleDivisions(session.src, session.divisions) : null;
   if (visible) {
     const allowed = {};
     visible.forEach(function (dv) { allowed[dv] = true; });

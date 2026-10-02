@@ -24,7 +24,8 @@ import {
   formatTime,
   getDeviceId,
   statusOf,
-  today
+  today,
+  truckingSearchText
 } from "../utils.js";
 import { accountButton } from "./account.js";
 import { helpButton } from "./help.js";
@@ -397,7 +398,7 @@ export function dailyReportView() {
         return bill.id === cc.billId;
       });
       var ef = effectiveDailyValues(cc);
-      return cc.numewo.toLowerCase().indexOf(q2) !== -1 || cc.division && cc.division.toLowerCase().indexOf(q2) !== -1 || ef.depo && ef.depo.toLowerCase().indexOf(q2) !== -1 || ef.trucking && ef.trucking.toLowerCase().indexOf(q2) !== -1 || bl && bl.product && bl.product.toLowerCase().indexOf(q2) !== -1;
+      return cc.numewo.toLowerCase().indexOf(q2) !== -1 || cc.division && cc.division.toLowerCase().indexOf(q2) !== -1 || ef.depo && ef.depo.toLowerCase().indexOf(q2) !== -1 || ef.trucking && truckingSearchText(ef.trucking).toLowerCase().indexOf(q2) !== -1 || bl && bl.product && bl.product.toLowerCase().indexOf(q2) !== -1;
     });
   }
   items = items.sort(function (a, l) {

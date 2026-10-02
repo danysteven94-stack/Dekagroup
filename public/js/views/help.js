@@ -26,7 +26,7 @@ const GUIDES = {
     ["Rejis Bill", "Tout bill yo ak estati yo (planifye, aktif, fini). Yon bill fini otomatikman lè tout kontenè li yo kite."],
     ["Rapò", "Telechaje rapò PDF pa gwoup divizyon, oswa tout rejis kontenè a nan yon fichye Excel (.csv)."],
     ["Sekirite", "Gade ki moun ki konekte, kilè, ak kopi otomatik done yo — itil si yon bagay pa sanble kòrèk."],
-    ["Trucking", "Pou chak trucking (CFC, CTSA, MAD, DKN) wè konbyen kontenè Full, Vid ak Pran li genyen. Peze sou yon trucking pou wè detay kontenè li yo, separe 40 pye ak 20 pye."],
+    ["Trucking", "Pou chak trucking (CFC, CTSA, MAD) wè konbyen kontenè Full, Vid ak Pran li genyen. DKN se menm bagay ak CTSA, kidonk yo konte ansanm. Peze sou yon trucking pou wè detay kontenè li yo, separe 40 pye ak 20 pye. Non chofè ak plak la parèt sèlman lè w peze sou yon kontenè."],
     ["Itilizatè", "Kreye yon kont pou chak moun, chanje wòl yo, oswa dezaktive yon kont si yon moun kite ekip la. Pou yon chofè, mete plak kamyon an ak trucking li travay ladan: li p ap bezwen chwazi l ankò."]
   ],
   depot: [

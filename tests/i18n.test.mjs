@@ -169,7 +169,8 @@ await test("driver page: taken containers leave the available list; available on
   assert.ok(avail.includes("DISP0000040") && avail.includes("DISP0000020"));
   assert.ok(!avail.includes("PRAN0000001") && !avail.includes("PRAN0000002"), "a taken container is no longer in the available boxes");
   assert.ok(html.slice(iBox40, iBox20).includes("DISP0000040") && !html.slice(iBox40, iBox20).includes("DISP0000020"), "40' box holds only 40' containers");
-  assert.ok(html.slice(iTaken).includes("PRAN0000001") && html.slice(iTaken).includes("Jan Batis"), "taken list shows who took it");
+  assert.ok(html.slice(iTaken).includes("PRAN0000001"), "taken list shows the container");
+  assert.ok(!html.includes("Jan Batis"), "a driver's name is not shown on the cards");
 });
 
 await test("driver page: empty containers are split in a 40' box and a 20' box, and \"select all\" works per box", async () => {
@@ -214,22 +215,24 @@ const trSetup = () => {
   ];
 };
 
-await test("trucking tab: containers are grouped per trucking (CFC 7 counts as CFC, DKN 003 as DKN), Full / Vid / Pran are counted, a waiting container is left out", () => {
+await test("trucking tab: containers are grouped per trucking (CFC 7 counts as CFC, DKN 003 counts as CTSA: same company), Full / Vid / Pran are counted, a waiting container is left out", () => {
   I.setLang("ht");
   trSetup();
   const g = Object.fromEntries(TR.truckingGroups(state.containers).map((x) => [x.key, x.list.map((c) => c.numewo).sort()]));
   assert.deepStrictEqual(g["CFC"], ["FULLCFC0001", "FULLCFC0002", "KITECFC0001", "VIDCFC00001"]);
-  assert.deepStrictEqual(g["CTSA"], ["PRANCTSA001", "VIDCTSA0001"]);
-  assert.deepStrictEqual(g["DKN"], ["FULLDKN0001"]);
+  assert.deepStrictEqual(g["CTSA"], ["FULLDKN0001", "PRANCTSA001", "VIDCTSA0001"], "DKN is the same company as CTSA");
+  assert.strictEqual(g["DKN"], undefined, "no separate DKN group");
   assert.deepStrictEqual(g["MAD"], [], "a known trucking is always shown, even with nothing on it");
   assert.deepStrictEqual(g["__none"], ["FULLNONE001"], "containers without trucking are visible too");
   assert.ok(!JSON.stringify(g).includes("DISPONIB001"), "a container still waiting is not part of any trucking yet");
   const html = admin("trucking", trSetup);
   I.setLang("fr");
-  ["CFC", "CTSA", "MAD", "DKN", "__none"].forEach((k) => assert.ok(html.includes('data-group="' + k + '"'), "a card for " + k));
+  ["CFC", "CTSA", "MAD", "__none"].forEach((k) => assert.ok(html.includes('data-group="' + k + '"'), "a card for " + k));
+  assert.ok(!html.includes('data-group="DKN"'), "no separate DKN card");
   assert.ok(html.includes("FULLCFC0001") && html.includes("FULLNONE001") && html.includes("PRANCTSA001"), "no trucking picked: the detail shows every active container");
   assert.ok(!html.includes("KITECFC0001") && !html.includes("DISPONIB001"), "kite and waiting containers stay out of the default list");
-  assert.ok(html.includes("Jan Batis (CC-9999)"), "the trucking card names the driver and plate");
+  assert.ok(!html.includes("Jan Batis") && !html.includes("CC-9999"), "no driver name or plate on the trucking card or the container cards");
+  assert.ok(html.includes('data-action="container-info" data-id="t8"'), "a container card opens the detail");
 });
 
 await test("trucking tab: pick a trucking and a status, containers show in a 40' box and a 20' box", () => {
@@ -245,11 +248,15 @@ await test("trucking tab: pick a trucking and a status, containers show in a 40'
   html = view(() => { state.truckingGroup = "CFC"; state.truckingStatus = "vid"; });
   assert.ok(html.includes("VIDCFC00001") && !html.includes("FULLCFC0001"));
   html = view(() => { state.truckingGroup = "CTSA"; state.truckingStatus = "pran"; });
-  assert.ok(html.includes("PRANCTSA001") && html.includes("Jan Batis") && html.includes("CC-9999"), "a taken container shows the driver and the plate");
+  assert.ok(html.includes("PRANCTSA001") && !html.includes("Jan Batis") && !html.includes("CC-9999"), "a taken container card does not show the driver or the plate");
   html = view(() => { state.truckingGroup = ""; state.truckingStatus = "kite"; });
   assert.ok(html.includes("KITECFC0001") && !html.includes("FULLCFC0001"));
   html = view(() => { state.truckingGroup = ""; state.truckingStatus = "tout"; state.search = "cc-9999"; });
   assert.ok(html.includes("PRANCTSA001") && !html.includes("VIDCFC00001"), "the search finds a plate");
+  html = view(() => { state.truckingGroup = ""; state.truckingStatus = "tout"; state.search = "dkn"; });
+  assert.ok(html.includes("FULLDKN0001") && html.includes("VIDCTSA0001") && !html.includes("VIDCFC00001"), "searching DKN also finds CTSA containers");
+  html = view(() => { state.truckingGroup = ""; state.truckingStatus = "tout"; state.search = "ctsa"; });
+  assert.ok(html.includes("FULLDKN0001") && html.includes("VIDCTSA0001"), "searching CTSA also finds DKN containers");
   I.setLang("fr");
   state.truckingGroup = ""; state.truckingStatus = "tout"; state.search = "";
 });

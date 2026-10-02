@@ -5,6 +5,7 @@ import { archiveModalView } from "./archive.js";
 import { state } from "../state.js";
 import {
   escapeHtml,
+  statusOf,
   truckingOptionsHtml
 } from "../utils.js";
 
@@ -36,6 +37,18 @@ export function modalView() {
       return `<div style="border:1px solid var(--line,#E2E8F0);border-radius:10px;padding:10px 12px;margin-bottom:8px;text-align:left"><div style="font-weight:700;font-size:13px">${ escapeHtml(x.label || x.kind) }</div><div style="font-size:12px;color:var(--rust-deep);margin-top:3px">${ escapeHtml(x.error || "") }</div><div style="margin-top:6px"><button class="linklike" data-action="rejected-dismiss" data-id="${ escapeHtml(x.id) }">Efase</button></div></div>`;
     }).join("");
     return `<div class="modal-overlay"><div class="modal-card"><div class="h3" style="margin-bottom:6px">Chanjman ki pa t pase</div><p style="font-size:12.5px;color:var(--muted);margin-bottom:14px">Sèvè a pa t aksepte chanjman sa yo lè yo te rive (egzanp yon lòt moun te chanje yo anvan). Refè yo si sa nesesè.</p><div style="max-height:50vh;overflow:auto">${ rows || "<div style=\"font-size:13px;color:var(--muted)\">Pa gen anyen.</div>" }</div><div style="display:flex;gap:8px;justify-content:flex-end;margin-top:18px"><button class="btn ghost" data-action="close-modal">Fèmen</button><button class="btn teal" data-action="rejected-clear">Efase tout</button></div></div></div>`;
+  }
+  if (e.mode === "container-info") {
+    var ci = state.containers.find(function (x) { return x.id === e.id; });
+    if (!ci) {
+      return "";
+    }
+    var cb = state.bills.find(function (x) { return x.id === ci.billId; });
+    var crow = function (label, value) {
+      return `<div style="display:flex;justify-content:space-between;gap:12px;padding:8px 0;border-bottom:1px solid var(--line,#E2E8F0);font-size:13.5px"><span style="color:var(--muted)">${ label }</span><strong style="text-align:right">${ value ? escapeHtml(value) : "\u2014" }</strong></div>`;
+    };
+    var cWho = ci.chofer || ci.plak ? crow(statusOf(ci) === "pran" ? "Pran pa chof\u00E8" : "Chof\u00E8", ci.chofer) + crow("Plak", ci.plak) : `<p style="font-size:12.5px;color:var(--muted);margin:10px 0 0">Pa gen chof\u00E8 ni plak anrejistre pou kontenè sa a.</p>`;
+    return `<div class="modal-overlay"><div class="modal-card"><div class="h3" style="margin-bottom:12px">${ escapeHtml(ci.numewo) }</div>${ crow("Bill", cb && cb.numewo) }${ crow("Trucking", ci.trucking) }${ crow("Depo", ci.depo) }${ cWho }<div style="display:flex;justify-content:flex-end;margin-top:20px"><button class="btn ghost" data-action="close-modal">F\u00E8men</button></div></div></div>`;
   }
   if (e.mode === "correct") {
     return `<div class="modal-overlay"><div class="modal-card"><div class="h3" style="margin-bottom:16px">Korije Dat Antre</div><p style="font-size:12.5px;color:var(--muted);margin-top:-8px;margin-bottom:16px">Chanje dat antre a si te gen yon erè. Sa ap rekalkile jou Full otomatikman.</p><div><span class="field-label">Dat Antre</span><input class="input" type="date" id="modal-correct-date" value="${ escapeHtml(e.date) }" /></div><div style="display:flex;gap:8px;justify-content:flex-end;margin-top:22px"><button class="btn ghost" data-action="close-modal">Anile</button><button class="btn teal" data-action="submit-modal">Konfime</button></div></div></div>`;

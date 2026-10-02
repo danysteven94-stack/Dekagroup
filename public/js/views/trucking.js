@@ -11,20 +11,21 @@ import {
   daysBetween,
   escapeHtml,
   formatDateShort,
-  statusOf
+  statusOf,
+  truckingSearchText
 } from "../utils.js";
 
 var NONE = "__none";
 var COUNTED = ["full", "vid", "pran", "pokoverifye"];
 
-// "CFC 12" -> "CFC", "DKN 003" (or the old "DNK" spelling) -> "DKN", nothing -> NONE.
+// "CFC 12" -> "CFC", "DKN 003" (or the old "DNK" spelling) -> "CTSA" (DKN is the same company as CTSA), nothing -> NONE.
 export function truckingGroupOf(value) {
   var v = String(value || "").trim().toUpperCase().replace(/\s+/g, " ");
   if (!v) {
     return NONE;
   }
   if (/^(DKN|DNK)(\s|\d|$)/.test(v)) {
-    return "DKN";
+    return "CTSA";
   }
   return v.replace(/[\s._-]*\d+$/, "") || v;
 }
@@ -52,13 +53,13 @@ export function truckingGroups(containers) {
   function get(key) {
     return map[key] || (map[key] = { key: key, list: [] });
   }
-  TRUCKING_OPTIONS.concat(["DKN"]).forEach(get);
+  TRUCKING_OPTIONS.forEach(get);
   containers.forEach(function (c) {
     if (statusOf(c) !== "disponib") {
       get(truckingGroupOf(c.trucking)).list.push(c);
     }
   });
-  var fixed = TRUCKING_OPTIONS.concat(["DKN"]);
+  var fixed = TRUCKING_OPTIONS;
   var others = Object.keys(map).filter(function (k) {
     return fixed.indexOf(k) === -1 && k !== NONE;
   }).sort();
@@ -88,16 +89,7 @@ function groupCard(g, selected) {
     return `<div class="kpi-sub">${ STATUS_LABELS[s] }: <strong style="color:${ COLORS[s] };font-size:15px">${ l.length }</strong>${ l.length ? ` <span style="color:var(--muted-light)">(${ sizeNote(l) })</span>` : "" }</div>`;
   }).join("");
   var kite = countBy(g.list, "kite").length;
-  // drivers seen on the containers of this trucking that have not left yet (name + plate, no duplicates)
-  var seen = {};
-  g.list.forEach(function (c) {
-    if (c.chofer && statusOf(c) !== "kite") {
-      seen[c.chofer + (c.plak ? " (" + c.plak + ")" : "")] = true;
-    }
-  });
-  var names = Object.keys(seen).sort();
-  var drivers = names.length ? `<div class="kpi-sub">Chofè: <strong style="color:var(--ink)">${ names.map(escapeHtml).join(", ") }</strong></div>` : "";
-  return `<div class="kpi sel-tile${ selected ? " selected" : "" }" data-action="trucking-group" data-group="${ escapeHtml(g.key) }" style="--sel:${ COLORS.navy }" role="checkbox" aria-checked="${ selected ? "true" : "false" }"><div class="kpi-top"><span class="plate" style="border-color:${ COLORS.navy }">${ escapeHtml(name) }</span><div class="kpi-value" style="font-size:22px">${ active }</div></div>${ rows }${ drivers }<div class="kpi-sub" style="color:var(--muted-light)">Kite: ${ kite }</div></div>`;
+  return `<div class="kpi sel-tile${ selected ? " selected" : "" }" data-action="trucking-group" data-group="${ escapeHtml(g.key) }" style="--sel:${ COLORS.navy }" role="checkbox" aria-checked="${ selected ? "true" : "false" }"><div class="kpi-top"><span class="plate" style="border-color:${ COLORS.navy }">${ escapeHtml(name) }</span><div class="kpi-value" style="font-size:22px">${ active }</div></div>${ rows }<div class="kpi-sub" style="color:var(--muted-light)">Kite: ${ kite }</div></div>`;
 }
 
 function tile(c) {
@@ -114,8 +106,7 @@ function tile(c) {
   } else if (st === "kite") {
     extra = line("Kite", formatDateShort(c.dateLeft), "var(--ink)");
   }
-  var who = (c.chofer ? line(st === "pran" ? "Pran pa" : "Chofè", escapeHtml(c.chofer), COLORS.pran) : "") + (c.plak ? line("Plak", escapeHtml(c.plak), "var(--ink)") : "");
-  return `<div class="kpi" style="border-left:4px solid ${ color };gap:8px"><div class="kpi-top"><span class="plate" style="border-color:${ color }">${ escapeHtml(c.numewo) }</span><span class="badge" style="background:${ color }">${ STATUS_LABELS[st] }</span></div>${ line("Bill", bill ? escapeHtml(bill.numewo) : "\u2014") }${ line("Pwodwi", bill && bill.product ? escapeHtml(bill.product) : "\u2014", "var(--muted)") }${ line("Trucking", c.trucking ? escapeHtml(c.trucking) : "\u2014", "var(--ink)") }${ c.depo ? line("Depo", escapeHtml(c.depo), COLORS.full) : "" }${ extra }${ who }</div>`;
+  return `<div class="kpi" data-action="container-info" data-id="${ escapeHtml(c.id) }" style="border-left:4px solid ${ color };gap:8px;cursor:pointer"><div class="kpi-top"><span class="plate" style="border-color:${ color }">${ escapeHtml(c.numewo) }</span><span class="badge" style="background:${ color }">${ STATUS_LABELS[st] }</span></div>${ line("Bill", bill ? escapeHtml(bill.numewo) : "\u2014") }${ line("Pwodwi", bill && bill.product ? escapeHtml(bill.product) : "\u2014", "var(--muted)") }${ line("Trucking", c.trucking ? escapeHtml(c.trucking) : "\u2014", "var(--ink)") }${ c.depo ? line("Depo", escapeHtml(c.depo), COLORS.full) : "" }${ extra }</div>`;
 }
 
 function box(title, list, color) {
@@ -162,7 +153,7 @@ export function truckingView() {
     var b = state.bills.find(function (x) {
       return x.id === c.billId;
     });
-    return [c.numewo, b && b.numewo, b && b.product, c.chofer, c.plak, c.trucking, c.depo].some(function (v) {
+    return [c.numewo, b && b.numewo, b && b.product, c.chofer, c.plak, truckingSearchText(c.trucking), c.depo].some(function (v) {
       return v && String(v).toLowerCase().indexOf(q) !== -1;
     });
   }).sort(function (a, b) {

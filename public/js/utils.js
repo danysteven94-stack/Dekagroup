@@ -167,3 +167,9 @@ export function roleLabel(role) {
     chofe: "Chofè"
   }[role] || role;
 }
+
+// DKN is the same company as CTSA: a search for either word must find containers saved under both.
+export function truckingSearchText(value) {
+  var v = String(value || "");
+  return /^\s*(CTSA|DKN|DNK)/i.test(v) ? v + " CTSA DKN" : v;
+}

@@ -88,7 +88,7 @@ export function driverView() {
   // ---- Pran: mine (tap to undo) and the other drivers' (locked)
   function takenTile(r) {
     var isMine = r.pranBy === mine;
-    var extra = line("Pran pa", r.chofer ? escapeHtml(r.chofer) : "\u2014", COLORS.pran) + (r.trucking ? line("Trucking", escapeHtml(r.trucking), "var(--ink)") : "") + (r.plak ? line("Plak", escapeHtml(r.plak), "var(--ink)") : "");
+    var extra = (r.trucking ? line("Trucking", escapeHtml(r.trucking), "var(--ink)") : "");
     return tile(r, { action: "driver-toggle-pran", selected: true, locked: !isMine, color: COLORS.pran, extra: extra });
   }
   var tv = split(taken);
