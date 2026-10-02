@@ -40,6 +40,7 @@ import { exportContainersCsv } from "./csv.js";
 import {
   downloadDailyDelivery,
   downloadDeliveryReport,
+  downloadDeliverySlip,
   downloadDknReport,
   downloadGoodsReport,
   downloadInvoice,
@@ -367,6 +368,8 @@ document.addEventListener("click", function (event) {
       finishInvoice(o);
     } else if (i === "download-invoice") {
       downloadInvoice(o);
+    } else if (i === "download-delivery-slip") {
+      downloadDeliverySlip(o);
     } else if (i === "download-goods-report") {
       downloadGoodsReport(n.getAttribute("data-kind"));
     } else if (i === "download-delivery-report") {

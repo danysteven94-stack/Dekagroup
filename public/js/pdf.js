@@ -29,7 +29,7 @@ var PDF_STATUS_LABELS = {
 
 function toWinAnsiCode(char) {
   var n = char.charCodeAt(0);
-  return n === 8212 ? 151 : n === 8211 ? 150 : n === 8216 ? 145 : n === 8217 ? 146 : n === 8220 ? 147 : n === 8221 ? 148 : n <= 255 ? n : 63;
+  return n === 8212 ? 151 : n === 8211 ? 150 : n === 8216 ? 145 : n === 8217 ? 146 : n === 8220 ? 147 : n === 8221 ? 148 : n === 8226 ? 149 : n <= 255 ? n : 63;
 }
 
 function pdfEscape(text) {
@@ -894,6 +894,209 @@ export function downloadInvoice(invoiceId) {
   var a = document.createElement("a");
   a.href = url;
   a.download = "deka-log-fakti-" + (inv.invoiceNumber || invoiceId) + ".pdf";
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(function () {
+    URL.revokeObjectURL(url);
+  }, 4000);
+}
+
+// ============================================================================
+// Fiche de Livraison (delivery slip): reproduces the DEKA GROUP paper pad
+// (company checkboxes, Date/Bon#, client/Facture#, a product/quantity table,
+// signature lines) and fills it with one finished invoice's data. Same
+// low-level PDF dialect and page size as the landing sheet / invoice above,
+// but its own plain-bordered layout instead of the navy banded one, since it
+// has to look like the pre-printed pad, not like the app's other documents.
+// ============================================================================
+
+var DS_COMPANIES = ["CRISTO AL", "CRISTO PA", "CRISTO COM", "CONFIDEKA", "APOLLO MOTORS", "DEKA TIRES", "PCP", "LA MENAG\u00C8RE"];
+// The pad's company list predates this app and only partly overlaps the divisions it tracks
+// (api/_lib/divisions.js) — this just maps the exact or near-exact names across the two.
+var DS_DIVISION_ALIAS = { "CRISTO COMM": "CRISTO COM" };
+
+function dsLine(x1, y1, x2, y2, rgb) {
+  var c = rgb || [0.55, 0.6, 0.66];
+  return `${ c[0] } ${ c[1] } ${ c[2] } RG 0.8 w ${ x1 } ${ y1 } m ${ x2 } ${ y2 } l S\n`;
+}
+
+function dsDiamond(cx, cy, r) {
+  var w = "";
+  w += dsLine(cx - r, cy, cx, cy + r, LS_NAVY) + dsLine(cx, cy + r, cx + r, cy, LS_NAVY);
+  w += dsLine(cx + r, cy, cx, cy - r, LS_NAVY) + dsLine(cx, cy - r, cx - r, cy, LS_NAVY);
+  var r2 = r * 0.5;
+  w += dsLine(cx - r2, cy, cx, cy + r2, LS_NAVY) + dsLine(cx, cy + r2, cx + r2, cy, LS_NAVY);
+  w += dsLine(cx + r2, cy, cx, cy - r2, LS_NAVY) + dsLine(cx, cy - r2, cx - r2, cy, LS_NAVY);
+  return w;
+}
+
+function dsCheckbox(x, y, label, checked) {
+  var s = 8;
+  var w = dsLine(x, y, x + s, y) + dsLine(x + s, y, x + s, y + s) + dsLine(x + s, y + s, x, y + s) + dsLine(x, y + s, x, y);
+  if (checked) w += lsRect(x + 1.4, y + 1.4, s - 2.8, s - 2.8, [0, 0, 0]);
+  w += lsText("F1", 8, x + s + 4, y + 1.5, label);
+  return w;
+}
+
+function dsCenterX(str, size, bold) {
+  var w = str.length * size * (bold ? 0.62 : 0.52);
+  return LS_MARGIN + ((LS_PAGE_W - 2 * LS_MARGIN) - w) / 2;
+}
+
+function dsLabelLine(x, y, label, lineEndX) {
+  var w = lsText("F2", 9.5, x, y, label);
+  var lx = x + label.length * 9.5 * 0.62 + 5;
+  w += dsLine(lx, y - 2, lineEndX, y - 2, [0.1, 0.13, 0.18]);
+  return w;
+}
+
+function dsQty(n) {
+  var v = Number(n) || 0;
+  return v % 1 === 0 ? String(v) : v.toFixed(2);
+}
+
+export function buildDeliverySlipPdf(opts) {
+  var date = opts.date || "";
+  var clientName = opts.clientName || "";
+  var factureNumber = opts.factureNumber || "";
+  var checkedCompany = opts.checkedCompany || null;
+  var rows = (opts.rows || []).slice(0, 30);
+
+  var x0 = LS_MARGIN;
+  var x1 = LS_PAGE_W - LS_MARGIN;
+  var top = LS_PAGE_H - LS_MARGIN;
+  var c = "";
+
+  // ---- header: logo, checkboxes, title ----
+  c += dsDiamond(x0 + 15, top - 8, 13);
+  c += lsText("F2", 9, x0 + 2, top - 27, "DEKA", LS_NAVY);
+  c += lsText("F2", 9, x0 + 1, top - 37, "GROUP", LS_NAVY);
+
+  var chkX = x0 + 56;
+  var cols = [chkX, chkX + 116, chkX + 232, chkX + 335];
+  DS_COMPANIES.forEach(function (name, i) {
+    var row = i < 4 ? 0 : 1;
+    c += dsCheckbox(cols[i % 4], top - 2 - row * 15, name, checkedCompany === name);
+  });
+
+  var titleStr = "FICHE DE LIVRAISON";
+  c += lsText("F2", 15, dsCenterX(titleStr, 15, true), top - 48, titleStr);
+
+  // ---- Date / Bon# / client / facture# ----
+  var y = top - 72;
+  c += lsText("F2", 9.5, x0, y, "Date : " + date);
+  c += dsLabelLine(x1 - 150, y, "Bon # :", x1);
+
+  y -= 22;
+  var clientLabel = "Je (client) : ";
+  var tail = ", certifie avoir re\u00E7u les articles suivants pour la";
+  var labelW = clientLabel.length * 9.5 * 0.62;
+  var tailW = tail.length * 9.5 * 0.52;
+  var clientBudget = Math.max(5, Math.floor(((x1 - x0) - labelW - tailW - 10) / (9.5 * 0.56)));
+  var clientDisplay = clientName.length > clientBudget ? clientName.slice(0, clientBudget - 1) + "." : clientName;
+  c += lsText("F2", 9.5, x0, y, clientLabel);
+  var afterClientX = x0 + labelW + clientDisplay.length * 9.5 * 0.56 + 4;
+  c += lsText("F1", 9.5, x0 + labelW, y, clientDisplay);
+  c += lsText("F1", 9.5, afterClientX, y, tail);
+
+  y -= 20;
+  c += lsText("F2", 9.5, x0, y, "Facture # : " + factureNumber);
+
+  // ---- product / quantity table ----
+  var tableTop = y - 14;
+  var bottomReserve = 110;
+  var colSplit = x1 - 130;
+  var nRows = Math.max(rows.length + 2, 10);
+  var rowH = Math.max(11, Math.min(17, (tableTop - bottomReserve) / (nRows + 1)));
+  var headH = rowH + 4;
+  var tableBottom = tableTop - headH - nRows * rowH;
+
+  c += dsLine(x0, tableTop, x1, tableTop, [0, 0, 0]) + dsLine(x0, tableBottom, x1, tableBottom, [0, 0, 0]);
+  c += dsLine(x0, tableTop, x0, tableBottom, [0, 0, 0]) + dsLine(x1, tableTop, x1, tableBottom, [0, 0, 0]);
+  c += dsLine(colSplit, tableTop, colSplit, tableBottom, [0, 0, 0]);
+  c += dsLine(x0, tableTop - headH, x1, tableTop - headH, [0, 0, 0]);
+  var descLabel = "Description du Produit";
+  c += lsText("F2", 9.5, x0 + ((colSplit - x0) - descLabel.length * 9.5 * 0.62) / 2, tableTop - headH + 7, descLabel);
+  var qtyLabel = "Quantit\u00E9";
+  c += lsText("F2", 9.5, colSplit + ((x1 - colSplit) - qtyLabel.length * 9.5 * 0.62) / 2, tableTop - headH + 7, qtyLabel);
+
+  for (var ri = 0; ri < nRows; ri++) {
+    var ry = tableTop - headH - ri * rowH;
+    if (ri > 0) c += dsLine(x0, ry, x1, ry, [0.65, 0.68, 0.72]);
+    if (rows[ri]) {
+      c += lsText("F1", 9, x0 + 6, ry - rowH + 5, lsClip(rows[ri][0], colSplit - x0 - 10, 9));
+      c += lsText("F1", 9, colSplit + 10, ry - rowH + 5, rows[ri][1]);
+    }
+  }
+
+  // ---- signatures + footer note ----
+  y = tableBottom - 24;
+  c += dsLabelLine(x0, y, "Magasinier :", x0 + 190);
+  c += dsLabelLine(x0 + 210, y, "Chauffeur :", x1);
+  y -= 22;
+  c += dsLabelLine(x0, y, "Re\u00E7u par :", x1);
+
+  y -= 22;
+  c += lsText("F2", 8, x0, y, "N.B.");
+  c += lsText("F1", 8, x0 + 20, y, "En cas de perte de la facture originale, cette fiche de livraison la remplace et sert", [0.2, 0.2, 0.2]);
+  c += lsText("F1", 8, x0 + 20, y - 11, "de document administratif \u00E0 toutes fins utiles.", [0.2, 0.2, 0.2]);
+
+  y -= 32;
+  c += lsText("F1", 7.5, x0, y, "Blanc. Original: Chauffeur/Bureau \u2022 Rose. Copie: D\u00E9p\u00F4t \u2014 g\u00E9n\u00E9r\u00E9 par DEKA LOG le " + formatDateShort(today()), [0.5, 0.55, 0.6]);
+
+  var V = [];
+  V.push({ dict: true, body: "<< /Type /Catalog /Pages 2 0 R >>" });
+  V.push({ dict: true, body: "<< /Type /Pages /Kids [5 0 R] /Count 1 >>" });
+  V.push({ dict: true, body: "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>" });
+  V.push({ dict: true, body: "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>" });
+  V.push({ dict: true, body: `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${ LS_PAGE_W } ${ LS_PAGE_H }] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents 6 0 R >>` });
+  V.push({ stream: true, body: c });
+
+  var out = "%PDF-1.4\n%\xE2\xE3\xCF\xD3\n";
+  var offsets = [];
+  for (var oi = 0; oi < V.length; oi++) {
+    offsets.push(out.length);
+    var objNum = oi + 1;
+    var obj = V[oi];
+    out += obj.dict ? `${ objNum } 0 obj\n${ obj.body }\nendobj\n` : `${ objNum } 0 obj\n<< /Length ${ obj.body.length } >>\nstream\n${ obj.body }\nendstream\nendobj\n`;
+  }
+  var xrefStart = out.length;
+  var total = V.length + 1;
+  out += `xref\n0 ${ total }\n0000000000 65535 f \n`;
+  for (var h = 0; h < offsets.length; h++) {
+    var p = String(offsets[h]);
+    while (p.length < 10) p = "0" + p;
+    out += `${ p } 00000 n \n`;
+  }
+  out += `trailer\n<< /Size ${ total } /Root 1 0 R >>\nstartxref\n${ xrefStart }\n%%EOF`;
+
+  var bytes = new Uint8Array(out.length);
+  for (var ch = 0; ch < out.length; ch++) bytes[ch] = out.charCodeAt(ch) & 255;
+  return bytes;
+}
+
+// Builds and downloads a Fiche de Livraison, pre-filled from one finished invoice.
+export function downloadDeliverySlip(invoiceId) {
+  var inv = state.invoices.find(function (i) { return i.id === invoiceId; });
+  if (!inv) return;
+  var bill = state.bills.find(function (b) { return b.id === inv.billId; });
+  var division = bill ? bill.division : null;
+  var checkedCompany = DS_COMPANIES.indexOf(division) !== -1 ? division : (DS_DIVISION_ALIAS[division] || null);
+  var rows = (inv.items || []).map(function (it) { return [it.description, dsQty(it.qty)]; });
+
+  var bytes = buildDeliverySlipPdf({
+    date: formatDateShort(inv.invoiceDate || today()),
+    clientName: inv.clientName || "",
+    factureNumber: inv.invoiceNumber || "",
+    checkedCompany: checkedCompany,
+    rows: rows
+  });
+
+  var url = URL.createObjectURL(new Blob([bytes], { type: "application/pdf" }));
+  var a = document.createElement("a");
+  a.href = url;
+  a.download = "deka-log-fiche-livrezon-" + (inv.invoiceNumber || invoiceId) + ".pdf";
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);

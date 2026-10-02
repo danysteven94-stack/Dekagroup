@@ -79,11 +79,12 @@ function invoiceRowHtml(inv, mode) {
   var bill = billById(inv.billId);
   var total = invoiceTotal(inv);
   var isFinished = inv.status === "fini";
+  var slipBtn = `<button class="btn small ghost" data-action="download-delivery-slip" data-id="${ escapeHtml(inv.id) }" title="Fiche de Livraison (pou chofè/kliyan siyen)">${ icon("boxes", 13, "var(--ink)") } Fiche Livrezon</button>`;
   var actionHtml = mode === "registration"
     ? (isFinished
-      ? `<button class="btn small navy" data-action="download-invoice" data-id="${ escapeHtml(inv.id) }">${ icon("boxes", 13, "#fff") } PDF</button>`
+      ? `<button class="btn small navy" data-action="download-invoice" data-id="${ escapeHtml(inv.id) }">${ icon("boxes", 13, "#fff") } PDF</button>${ slipBtn }`
       : `<button class="btn small green" data-action="finish-invoice" data-id="${ escapeHtml(inv.id) }"${ state.invoiceBusy ? " disabled" : "" }>${ icon("check", 13, "#fff") } Make Fini</button>`)
-    : `<button class="btn small navy" data-action="download-invoice" data-id="${ escapeHtml(inv.id) }">${ icon("boxes", 13, "#fff") } Telechaje PDF</button>`;
+    : `<button class="btn small navy" data-action="download-invoice" data-id="${ escapeHtml(inv.id) }">${ icon("boxes", 13, "#fff") } Telechaje PDF</button>${ slipBtn }`;
   return `<div class="row"><div class="row-min"><span class="plate" style="border-color:${ isFinished ? COLORS.green : COLORS.full }">${ escapeHtml(inv.invoiceNumber) }</span><div class="row-sub">Bill: <strong style="color:var(--navy)">${ bill ? escapeHtml(bill.numewo) : "\u2014" }</strong></div><div class="row-sub light">Kliyan: <strong style="color:var(--muted)">${ escapeHtml(inv.clientName || "\u2014") }</strong></div><div class="row-sub light">Total: <strong style="color:var(--muted)">${ money(total) } HTG</strong></div></div><div class="mini">Estati<strong style="color:${ isFinished ? COLORS.green : COLORS.rust }">${ isFinished ? "Fini" : "Anrejistre" }</strong></div>${ actionHtml }</div>`;
 }
 

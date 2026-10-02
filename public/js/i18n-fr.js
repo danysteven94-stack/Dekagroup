@@ -226,6 +226,8 @@ export const EXACT = {
   "Tout kontenè yo, yon fichye .csv ki louvri nan Excel": "Tous les conteneurs, un fichier .csv qui s’ouvre dans Excel",
   "Telechaje CSV": "Télécharger CSV",
   "Telechaje PDF": "Télécharger PDF",
+  "Fiche Livrezon": "Bon de livraison",
+  "Fiche de Livraison (pou chofè/kliyan siyen)": "Bon de livraison (\u00e0 signer par le chauffeur/client)",
   "Telechaje": "Télécharger",
   "Rapò Trucking DKN": "Rapport Trucking DKN",
   "Tout kontenè ki asiyen a yon trucking DKN. Ekri non chofè ak plak kamyon ki vini ak chak kontenè a, epi telechaje rapò a an PDF.": "Tous les conteneurs assignés à un trucking DKN. Saisissez le nom du chauffeur et la plaque du camion venu chercher chaque conteneur, puis téléchargez le rapport en PDF.",
