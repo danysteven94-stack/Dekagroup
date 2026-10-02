@@ -614,6 +614,8 @@ export const EXACT = {
   "Gid Rapid": "Guide rapide",
   "Gen yon kesyon sistèm nan pa reponn? Mande administratè a.": "Une question que le système ne résout pas ? Demandez à l’administrateur.",
   "Fèmen": "Fermer",
+  "Peze sou yon pwodwi pou wè kontenè li yo.": "Appuyez sur un produit pour voir ses conteneurs.",
+  "Peze ankò sou pwodwi a pou kache kontenè yo.": "Appuyez à nouveau sur le produit pour masquer ses conteneurs.",
   "Detay": "Détail",
   "Pran pa chofè": "Pris par le chauffeur",
   "Pa gen chofè ni plak anrejistre pou kontenè sa a.": "Aucun chauffeur ni plaque enregistré pour ce conteneur.",

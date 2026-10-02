@@ -261,6 +261,23 @@ await test("trucking tab: pick a trucking and a status, containers show in a 40'
   state.truckingGroup = ""; state.truckingStatus = "tout"; state.search = "";
 });
 
+await test("products tab: one dashboard-style card per product; tapping a card shows its containers", () => {
+  I.setLang("ht");
+  const setup = (pick) => () => {
+    trSetup();
+    state.bills = [{ id: "b1", numewo: "BILL-1", product: "Lait" }];
+    state.productGroup = pick;
+  };
+  let html = admin("pwodwi", setup(""));
+  assert.ok(html.includes('data-action="product-group" data-group="LAIT"'), "a card for the product");
+  assert.ok(html.includes("kpi-value"), "same card look as the dashboard");
+  assert.ok(!html.includes("FULLCFC0001"), "containers stay hidden until a product is picked");
+  html = admin("pwodwi", setup("LAIT"));
+  assert.ok(html.includes("FULLCFC0001") && html.includes("sel-tile selected"), "the picked product lists its containers");
+  state.productGroup = "";
+  I.setLang("fr");
+});
+
 await test("driver page: an account tied to a trucking sees it as fixed text (no dropdown); without one the driver chooses", () => {
   I.setLang("ht");
   let html = show(() => { state.authRole = "chofe"; state.role = "chofe"; state.sessionTrucking = "CTSA"; state.driverTrucking = "CTSA"; });

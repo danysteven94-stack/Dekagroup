@@ -36,6 +36,7 @@ export const state = {
   driverTrucking: "",
   sessionTrucking: "",
   truckingGroup: "",
+  productGroup: "",
   truckingStatus: "tout",
   driverSelected: {},
   containers: [],

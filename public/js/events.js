@@ -338,6 +338,11 @@ document.addEventListener("click", function (event) {
       var tg = n.getAttribute("data-group");
       state.truckingGroup = state.truckingGroup === tg ? "" : tg;
       render();
+    } else if (i === "product-group") {
+      // tap a product card to see its containers; tap it again to hide them
+      var pg = n.getAttribute("data-group");
+      state.productGroup = state.productGroup === pg ? "" : pg;
+      render();
     } else if (i === "trucking-status") {
       state.truckingStatus = n.getAttribute("data-filter") || "tout";
       render();

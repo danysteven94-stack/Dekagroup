@@ -54,19 +54,38 @@ function productRow(item) {
   return `<div class="row" style="border-left:4px solid ${ col }"><div class="row-min"><span class="plate" style="border-color:${ col }">${ escapeHtml(c.numewo) }</span> <span style="display:inline-block;font-family:var(--font-mono);font-weight:700;font-size:11px;background:var(--navy);color:#fff;padding:2px 6px;border-radius:4px;vertical-align:middle">${ c.size || "\u2014" }'</span><div class="row-sub">Bill: <strong style="color:var(--navy)">${ item.bill ? escapeHtml(item.bill.numewo) : "\u2014" }</strong></div>${ c.division ? `<div class="row-sub light">Divizyon: <strong style="color:var(--navy)">${ escapeHtml(c.division) }</strong></div>` : "" }${ c.depo ? `<div class="row-sub light">Depo: <strong style="color:${ COLORS.full }">${ escapeHtml(c.depo) }</strong></div>` : "" }</div><div class="mini">Antre<strong>${ formatDateShort(c.dateEntered) }</strong></div><div class="mini">Jou Full<strong style="color:${ col }">${ days } jou</strong></div><div style="margin-left:auto"><span class="chip" style="color:${ col };background:${ col }1A;border:1px solid ${ col }55"><span class="mini-dot" style="background:${ col }"></span>${ STATUS_LABELS[item.status] }</span></div></div>`;
 }
 
+export function productKey(g) {
+  return g.name ? g.name.toUpperCase() : "__none";
+}
+
+function productTile(g, selected) {
+  var key = productKey(g);
+  var sub = [];
+  if (g.full) {
+    sub.push(`<div class="kpi-sub">Full: <strong style="color:${ COLORS.full };font-size:15px">${ g.full }</strong></div>`);
+  }
+  if (g.pokoverifye) {
+    sub.push(`<div class="kpi-sub">Poko Verifye: <strong style="color:${ COLORS.pokoverifye };font-size:15px">${ g.pokoverifye }</strong></div>`);
+  }
+  return `<div class="kpi sel-tile${ selected ? " selected" : "" }" data-action="product-group" data-group="${ escapeHtml(key) }" style="--sel:${ COLORS.navy }" role="checkbox" aria-checked="${ selected ? "true" : "false" }"><div class="kpi-top"><span class="kpi-label">${ escapeHtml(g.name || "San pwodwi") }</span><div class="kpi-icon" style="background:${ COLORS.navy }1A;color:${ COLORS.navy }">${ icon("boxes", 14, COLORS.navy) }</div></div><div class="kpi-value">${ g.containers.length }</div>${ sub.join("") }</div>`;
+}
+
 export function productsView() {
   var groups = productGroups(state.containers, state.bills);
   var total = groups.reduce(function (sum, g) {
     return sum + g.containers.length;
   }, 0);
-  var head = `<div class="section-head"><div><div class="eyebrow">${ total } kontenè \u00B7 ${ groups.length } pwodwi</div><h2 class="h2">Kontenè pa Pwodwi</h2></div></div><p style="font-size:12.5px;color:var(--muted-light);margin-top:-10px;margin-bottom:16px">Kontenè ki Full ak kontenè ki Poko Verifye yo, gwoupe selon pwodwi ki nan Bill la.</p>`;
+  var head = `<div class="section-head"><div><div class="eyebrow">${ total } kontenè \u00B7 ${ groups.length } pwodwi</div><h2 class="h2">Kontenè pa Pwodwi</h2></div></div>`;
   if (groups.length === 0) {
     return `${ head }<div class="empty">${ icon("circle", 22) }<div>Pa gen kontenè Full oswa Poko Verifye kounye a.</div></div>`;
   }
-  var cards = groups.map(function (g) {
-    var fullChip = g.full ? `<span class="chip" style="color:${ COLORS.rust };background:${ COLORS.rust }1A;border:1px solid ${ COLORS.rust }55"><strong>${ g.full }</strong> Full</span>` : "";
-    var pvChip = g.pokoverifye ? `<span class="chip" style="color:${ COLORS.pokoverifye };background:${ COLORS.pokoverifye }1A;border:1px solid ${ COLORS.pokoverifye }55"><strong>${ g.pokoverifye }</strong> Poko Verifye</span>` : "";
-    return `<div class="card" style="margin-bottom:16px"><div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px"><span class="product-tag" style="font-size:13.5px">${ escapeHtml(g.name || "San pwodwi") }</span><span style="font-size:12.5px;color:var(--muted);font-family:var(--font-mono)">${ g.containers.length } kontenè</span><div style="margin-left:auto;display:flex;gap:6px;flex-wrap:wrap">${ fullChip }${ pvChip }</div></div><div style="display:flex;flex-direction:column;gap:8px">${ g.containers.map(productRow).join("") }</div></div>`;
+  var picked = groups.find(function (g) {
+    return productKey(g) === state.productGroup;
+  });
+  var tiles = groups.map(function (g) {
+    return productTile(g, g === picked);
   }).join("");
-  return head + cards;
+  var hint = `<p class="size-hint">${ picked ? "Peze ankò sou pwodwi a pou kache kontenè yo." : "Peze sou yon pwodwi pou wè kontenè li yo." }</p>`;
+  var details = picked ? `<div class="section-head" style="margin-top:8px"><div><div class="eyebrow">${ picked.containers.length } kontenè</div><h2 class="h2">${ escapeHtml(picked.name || "San pwodwi") }</h2></div></div><div style="display:flex;flex-direction:column;gap:8px">${ picked.containers.map(productRow).join("") }</div>` : "";
+  return `${ head }<div class="grid-kpi">${ tiles }</div>${ hint }${ details }`;
 }
