@@ -33,6 +33,7 @@ import {
 import { accountButton } from "./account.js";
 import { helpButton } from "./help.js";
 import { archiveView } from "./archive.js";
+import { productsView } from "./products.js";
 import { securityView } from "./security.js";
 import { usersView } from "./users.js";
 
@@ -460,6 +461,8 @@ export function adminContent() {
     e = addContainerView();
   } else if (state.tab === "containers") {
     e = containersView();
+  } else if (state.tab === "pwodwi") {
+    e = productsView();
   } else if (state.tab === "inventory") {
     e = inventoryView();
   } else if (state.tab === "bills") {

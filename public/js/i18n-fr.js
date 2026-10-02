@@ -245,6 +245,10 @@ export const EXACT = {
   "CSV": "CSV",
   "Modifye": "Modifier",
   "Pwodwi": "Produit",
+  "Pwodwi yo": "Produits",
+  "Kontenè pa Pwodwi": "Conteneurs par produit",
+  "Kontenè ki Full ak kontenè ki Poko Verifye yo, gwoupe selon pwodwi ki nan Bill la.": "Conteneurs pleins et conteneurs à vérifier, regroupés par produit du Bill.",
+  "Pa gen kontenè Full oswa Poko Verifye kounye a.": "Aucun conteneur plein ou à vérifier pour le moment.",
   "Dire": "Durée",
   "OK": "OK",
   "Retire": "Retirer",
@@ -729,6 +733,7 @@ export const PATTERNS = [
   // counts
   [/^(\d+) rezilta · (\d+) nan achiv$/, (a, b) => `${ a } résultat${ Number(a) > 1 ? "s" : "" } · ${ b } dans les archives`],
   [/^(\d+) rezilta$/, (n) => `${ n } résultat${ plural(n, "", "s") }`],
+  [/^(\d+) pwodwi$/, (n) => `${ n } produit${ plural(n, "", "s") }`],
   [/^(\d+) kontenè$/, (n) => `${ n } conteneur${ plural(n, "", "s") }`],
   [/^(\d+) bill \u00b7 (\d+) kontenè$/, (b, c) => `${ b } Bill${ plural(b, "", "s") } \u00b7 ${ c } conteneur${ plural(c, "", "s") }`],
   [/^(\d+) kontenè kite$/, (n) => `${ n } conteneur${ plural(n, "", "s") } sorti${ plural(n, "", "s") }`],

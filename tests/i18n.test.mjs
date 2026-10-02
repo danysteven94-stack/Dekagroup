@@ -95,6 +95,8 @@ const SCREENS = {
   "admin add (planifye)": () => admin("add", () => { state.entryMode = "planifye"; state.billMode = "ekzistan"; }),
   "admin containers": () => admin("containers"),
   "admin containers (search none)": () => admin("containers", () => { state.search = "zzz"; }),
+  "admin pwodwi": () => admin("pwodwi"),
+  "admin pwodwi (empty)": () => admin("pwodwi", () => { state.containers = []; }),
   "admin inventory": () => admin("inventory"),
   "admin inventory (all done)": () => admin("inventory", () => { state.inventoryChecks = Object.fromEntries(state.containers.map((c) => [c.id, new Date().toISOString().slice(0, 10)])); state.inventoryShowConfirmed = true; }),
   "admin bills": () => admin("bills"),
