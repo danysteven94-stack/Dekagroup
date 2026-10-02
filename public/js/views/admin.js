@@ -58,6 +58,9 @@ function computeStats() {
   var n = state.containers.filter(function (container) {
     return statusOf(container) === "disponib";
   }).length;
+  var pr = state.containers.filter(function (container) {
+    return statusOf(container) === "pran";
+  }).length;
   var i = state.containers.filter(function (container) {
     return statusOf(container) === "pokoverifye";
   }).length;
@@ -80,6 +83,7 @@ function computeStats() {
   return {
     total: e,
     disponib: n,
+    pran: pr,
     pokoverifye: i,
     full: o,
     vid: a,
@@ -135,6 +139,15 @@ function dashboardView() {
       sub: "Poko antre",
       tab: "containers",
       filter: "disponib"
+    },
+    {
+      label: "Pran",
+      value: e.pran,
+      color: COLORS.pran,
+      icon: "boxes",
+      sub: "Chofè pran, poko antre",
+      tab: "containers",
+      filter: "pran"
     },
     {
       label: "Poko Verifye",
@@ -313,6 +326,7 @@ function containersView() {
   var n = [
     "tout",
     "disponib",
+    "pran",
     "pokoverifye",
     "full",
     "vid",
@@ -332,12 +346,12 @@ function containersView() {
     });
     var s = statusOf(a);
     var f = daysBetween(a.dateEntered, a.dateEmpty);
-    var g = s === "disponib" ? "\u2014" : f + " jou";
+    var g = s === "disponib" || s === "pran" ? "\u2014" : f + " jou";
     var v = isUrgent(a);
     var A = daysLabel(a);
     var r = v ? COLORS.urgent : COLORS[s];
     var d = "";
-    if (s === "disponib") {
+    if (s === "disponib" || s === "pran") {
       d += `<button class="btn small teal" data-action="confirm-enter" data-id="${ a.id }">Konfime Antre Jodi a</button>`;
     } else if (s === "pokoverifye") {
       d += `<button class="btn small teal" data-action="verify-container" data-id="${ a.id }">Verifye &amp; Mete nan Depo</button>`;
@@ -360,8 +374,9 @@ function containersView() {
     var E = a.depo ? `<div class="row-sub light">Depo: <strong style="color:${ COLORS.full }">${ escapeHtml(a.depo) }</strong></div>` : "";
     var y = a.trucking ? `<div class="row-sub light">Trucking: <strong style="color:var(--muted)">${ escapeHtml(a.trucking) }</strong></div>` : "";
     var P = a.plak ? `<div class="row-sub light">Plak: <strong style="color:var(--muted)">${ escapeHtml(a.plak) }</strong></div>` : "";
+    var Ch = a.chofer ? `<div class="row-sub light">${ a.datePran ? "Pran pa chofè" : "Chofè" }: <strong style="color:${ a.datePran ? COLORS.kite : "var(--muted)" }">${ escapeHtml(a.chofer) }</strong></div>` : "";
     var U = a.division ? `<div class="row-sub light">Divizyon: <strong style="color:var(--navy)">${ escapeHtml(a.division) }</strong></div>` : "";
-    return `<div class="row" style="border-left:4px solid ${ r }"><div class="row-min"><span class="plate" style="border-color:${ r }">${ escapeHtml(a.numewo) }</span> <span style="display:inline-block;font-family:var(--font-mono);font-weight:700;font-size:11px;background:var(--navy);color:#fff;padding:2px 6px;border-radius:4px;vertical-align:middle">${ a.size || "\u2014" }'</span><div class="row-sub">Bill: <strong style="color:var(--navy)">${ l ? escapeHtml(l.numewo) : "\u2014" }</strong></div><div class="row-sub light">Pwodwi: <strong style="color:var(--muted)">${ l && l.product ? escapeHtml(l.product) : "\u2014" }</strong></div>${ U }${ E }${ y }${ P }</div>${ u }<div class="mini">Antre<strong>${ formatDateShort(a.dateEntered) }</strong></div><div class="mini">Jou Full<strong style="color:${ s === "full" && v ? COLORS.urgent : COLORS.rust }">${ g }</strong></div><div class="mini">Jou Vid<strong style="color:${ s === "vid" && v ? COLORS.urgent : "var(--ink)" }">${ A }</strong></div><div class="mini">Vid Depi<strong>${ formatDateShort(a.dateEmpty) }</strong></div><div class="mini">Kite Depi<strong>${ formatDateShort(a.dateLeft) }</strong></div><div style="margin-left:auto;display:flex;gap:6px;align-items:center">${ v ? `<span class="chip" style="color:#fff;background:${ COLORS.urgent }">⚠ Ijan</span>` : "" }<span class="chip" style="color:${ COLORS[s] };background:${ COLORS[s] }1A;border:1px solid ${ COLORS[s] }55"><span class="mini-dot" style="background:${ COLORS[s] }"></span>${ STATUS_LABELS[s] }</span></div><div class="row-actions">${ d }</div></div>`;
+    return `<div class="row" style="border-left:4px solid ${ r }"><div class="row-min"><span class="plate" style="border-color:${ r }">${ escapeHtml(a.numewo) }</span> <span style="display:inline-block;font-family:var(--font-mono);font-weight:700;font-size:11px;background:var(--navy);color:#fff;padding:2px 6px;border-radius:4px;vertical-align:middle">${ a.size || "\u2014" }'</span><div class="row-sub">Bill: <strong style="color:var(--navy)">${ l ? escapeHtml(l.numewo) : "\u2014" }</strong></div><div class="row-sub light">Pwodwi: <strong style="color:var(--muted)">${ l && l.product ? escapeHtml(l.product) : "\u2014" }</strong></div>${ U }${ E }${ y }${ Ch }${ P }</div>${ u }<div class="mini">Antre<strong>${ formatDateShort(a.dateEntered) }</strong></div><div class="mini">Jou Full<strong style="color:${ s === "full" && v ? COLORS.urgent : COLORS.rust }">${ g }</strong></div><div class="mini">Jou Vid<strong style="color:${ s === "vid" && v ? COLORS.urgent : "var(--ink)" }">${ A }</strong></div><div class="mini">Vid Depi<strong>${ formatDateShort(a.dateEmpty) }</strong></div><div class="mini">Kite Depi<strong>${ formatDateShort(a.dateLeft) }</strong></div><div style="margin-left:auto;display:flex;gap:6px;align-items:center">${ v ? `<span class="chip" style="color:#fff;background:${ COLORS.urgent }">⚠ Ijan</span>` : "" }<span class="chip" style="color:${ COLORS[s] };background:${ COLORS[s] }1A;border:1px solid ${ COLORS[s] }55"><span class="mini-dot" style="background:${ COLORS[s] }"></span>${ STATUS_LABELS[s] }</span></div><div class="row-actions">${ d }</div></div>`;
   }).join("");
   return i + o;
 }

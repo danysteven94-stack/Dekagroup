@@ -36,7 +36,7 @@ export function downloadCsv(filename, headers, rows) {
 // One row per container, every container regardless of the current screen's filter — the full register.
 export function exportContainersCsv() {
   var headers = ["Numewo", "Divizyon", "Estati", "Depo", "Trucking", "Bill", "Pwodwi", "Dat Antre", "Dat Verifye", "Dat Vid", "Dat Kite", "Plak", "Chofè"];
-  var statusLabel = { disponib: "Disponib", pokoverifye: "Poko Verifye", full: "Full", vid: "Vid", kite: "Kite" };
+  var statusLabel = { disponib: "Disponib", pran: "Pran", pokoverifye: "Poko Verifye", full: "Full", vid: "Vid", kite: "Kite" };
   var rows = state.containers.slice().sort(function (a, b) {
     return a.numewo < b.numewo ? -1 : 1;
   }).map(function (c) {

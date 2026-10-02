@@ -9,6 +9,7 @@ export const LS_LAST_SEEN_NOTIFS = "deka-log-last-seen-notif-count";
 
 export const COLORS = {
   disponib: "#2E6F9E",
+  pran: "#0E7C86",
   pokoverifye: "#7C5CBF",
   full: "#D9531E",
   vid: "#F2A900",
@@ -23,6 +24,7 @@ export const COLORS = {
 
 export const STATUS_LABELS = {
   disponib: "Disponib",
+  pran: "Pran",
   pokoverifye: "Poko Verifye",
   full: "Full",
   vid: "Vid",

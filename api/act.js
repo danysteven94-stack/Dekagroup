@@ -5,6 +5,7 @@ const A = require("./_lib/auth");
 const S = require("./_lib/store");
 const Users = require("./_lib/users");
 const repo = require("./_lib/repo");
+const Div = require("./_lib/divisions");
 const { ApiError } = require("./_lib/errors");
 
 class ActionError extends Error {
@@ -75,6 +76,49 @@ const ACTIONS = {
     S.recomputeBills(data);
     return { left: left.length, requested: ids.length };
   } },
+
+  // Driver: tick a container that is still on its way (not entered yet) to say "I took it".
+  // The driver's own name and plate, and the trucking he picked, are stamped onto the container automatically.
+  pran: { roles: ["chofe"], run: function (data, body, ctx) {
+    const trucking = text(body.trucking, 40);
+    if (!trucking || !/^[A-Za-z0-9 ._-]+$/.test(trucking)) throw new ActionError(400, "Trucking la obligatwa.", "invalid");
+    const c = data.containers.find(function (x) { return x.id === body.id; });
+    if (!c) throw new ActionError(404, "Pa jwenn konteneur la.", "not_found");
+    const st = S.statusOf(c);
+    if (st !== "disponib" && st !== "pran") throw new ActionError(409, "Konteneur sa a deja antre. Done yo rafrechi.", "wrong_status");
+    // a personal account only works on the divisions it was given (same rule as what it can see)
+    const visible = Div.visibleDivisions(ctx.session.src, ctx.session.divisions);
+    if (visible && visible.indexOf(c.division) === -1) throw new ActionError(404, "Pa jwenn konteneur la.", "not_found");
+    const me = ctx.session.username;
+    if (c.datePran && c.pranBy && c.pranBy !== me) throw new ActionError(409, "Yon lot chof\u00E8 deja pran konteneur sa a.", "already_taken");
+    const driver = ctx.driver;
+    const chofer = driver && driver.name ? driver.name : null;
+    const plak = driver && driver.plate ? driver.plate : null;
+    if (c.datePran && c.pranBy === me) return { id: c.id, already: true };
+    data.containers = data.containers.map(function (x) {
+      return x.id === c.id ? Object.assign({}, x, { datePran: S.today(), pranBy: me, trucking: trucking, chofer: chofer, plak: plak }) : x;
+    });
+    const tag = chofer ? " (" + chofer + (plak ? ", " + plak : "") + ")" : "";
+    S.addNotification(data, "", "Konten\u00E8 " + c.numewo + " pran pa chof\u00E8 " + trucking + tag + ".");
+    return { id: c.id };
+  } },
+
+  // Driver: un-tick a container he ticked by mistake (only his own).
+  defePran: { roles: ["chofe"], run: function (data, body, ctx) {
+    const c = data.containers.find(function (x) { return x.id === body.id; });
+    if (!c) throw new ActionError(404, "Pa jwenn konteneur la.", "not_found");
+    if (!c.datePran) return { id: c.id, already: true };
+    if (S.statusOf(c) !== "pran") throw new ActionError(409, "Konteneur sa a deja antre. Done yo rafrechi.", "wrong_status");
+    if (c.pranBy !== ctx.session.username) throw new ActionError(403, "Se yon lot chof\u00E8 ki pran konteneur sa a.", "not_yours");
+    data.containers = data.containers.map(function (x) {
+      if (x.id !== c.id) return x;
+      const y = Object.assign({}, x, { trucking: null, chofer: null, plak: null });
+      delete y.datePran; delete y.pranBy;
+      return y;
+    });
+    S.addNotification(data, "", "Chof\u00E8 a retire konteneur " + c.numewo + " nan sa li te pran yo.");
+    return { id: c.id };
+  } },
 };
 
 module.exports = async function handler(req, res) {
@@ -97,7 +141,7 @@ module.exports = async function handler(req, res) {
     }
 
     let driver = null;
-    if (body.action === "depart" && session.role === "chofe") {
+    if ((body.action === "depart" || body.action === "pran") && session.role === "chofe") {
       driver = await Users.get(session.username);
     }
     const out = await repo.mutate(async function (data) {

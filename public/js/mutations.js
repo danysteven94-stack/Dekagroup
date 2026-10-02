@@ -522,3 +522,30 @@ export function confirmDeparture() {
     render();
   }
 }
+
+// A driver ticks (or un-ticks) a container that is still on its way, to say he took it.
+// The server stamps his name, the trucking he picked and his plate onto the container.
+export function toggleContainerTaken(id) {
+  var c = state.containers.find(function (x) {
+    return x.id === id;
+  });
+  if (!c || state.authRole !== "chofe") {
+    render();
+    return;
+  }
+  if (c.datePran) {
+    apiAct({ action: "defePran", id: id }, function () {
+      showToast(`Kontenè ${ c.numewo } retire nan sa w te pran yo.`);
+    });
+    return;
+  }
+  if (!state.driverTrucking) {
+    showToast("Chwazi trucking ou anvan w make kontenè a.");
+    render();
+    return;
+  }
+  var trucking = state.driverTrucking;
+  apiAct({ action: "pran", id: id, trucking: trucking }, function () {
+    showToast(`Kontenè ${ c.numewo } make: ou pran l ak ${ trucking }.`);
+  });
+}

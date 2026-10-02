@@ -121,6 +121,81 @@ async function enroll2fa(b) {
     assert.ok(d.notifications[0].message.includes("Jan Batis") && d.notifications[0].message.includes("CC-9999"));
   });
 
+  await test("driver ticks a not-yet-entered container: name, trucking and plate land on it automatically; only the same driver can undo", async () => {
+    const admin = await legacyAdmin();
+    async function onboard(username, name, plate, ip) {
+      const created = await post(admin, A().users, { action: "create", username: username, role: "chofe", name: name, plate: plate, divisions: ["DEKAV"] });
+      assert.strictEqual(created.statusCode, 200, JSON.stringify(created.body));
+      const b = H.browser(ip);
+      let r = await post(b, A().login, { username: username, password: created.body.tempPassword });
+      assert.strictEqual(r.statusCode, 200);
+      r = await post(b, A().password, { current: created.body.tempPassword, next: "Chofe-Strong-Pass-9" });
+      assert.strictEqual(r.statusCode, 200, JSON.stringify(r.body));
+      return b;
+    }
+    const d1 = await onboard("pran.un", "Jan Batis", "cc-9999", "198.51.100.140");
+    const d2 = await onboard("pran.de", "Pyer Louis", "dd-1111", "198.51.100.141");
+    await H.setData({ containers: [
+      { id: "p1", numewo: "PRAN0000001", billId: null, size: "20", division: "DEKAV", dateEntered: null, dateVerified: null, depo: null, trucking: null, dateEmpty: null, dateLeft: null },
+      { id: "p2", numewo: "PRAN0000002", billId: null, size: "20", division: "DEKAV", dateEntered: "2026-09-01", dateVerified: "2026-09-02", depo: "D", trucking: null, dateEmpty: null, dateLeft: null },
+      { id: "p3", numewo: "PRAN0000003", billId: null, size: "20", division: "DEKAV", dateEntered: "2026-09-01", dateVerified: "2026-09-02", depo: "D", trucking: null, dateEmpty: "2026-09-15", dateLeft: null },
+    ], bills: [], notifications: [], inventoryChecks: {} });
+    const act = H.api("act");
+    const call = (b, body) => b.call(act, { method: "POST", body: body });
+
+    // the driver sees the empty one and the one still on its way, never a Full one
+    let view = await d1.call(H.api("data"));
+    const seen = view.body.containers.map((c) => c.id).sort();
+    assert.deepStrictEqual(seen, ["p1", "p3"]);
+
+    // the trucking is required
+    assert.strictEqual((await call(d1, { action: "pran", id: "p1" })).statusCode, 400);
+    // a container already entered cannot be ticked
+    assert.strictEqual((await call(d1, { action: "pran", id: "p2", trucking: "CFC" })).statusCode, 409);
+
+    let r = await call(d1, { action: "pran", id: "p1", trucking: "CFC" });
+    assert.strictEqual(r.statusCode, 200, JSON.stringify(r.body));
+    let d = await H.getData();
+    let c = d.containers.find((x) => x.id === "p1");
+    assert.strictEqual(c.chofer, "Jan Batis");
+    assert.strictEqual(c.plak, "CC-9999");
+    assert.strictEqual(c.trucking, "CFC");
+    assert.ok(c.datePran && c.pranBy === "pran.un");
+    assert.ok(d.notifications[0].message.includes("PRAN0000001") && d.notifications[0].message.includes("Jan Batis"));
+    // it is no longer "disponib": it has its own status "pran" (still not entered)
+    assert.ok(!c.dateEntered);
+    const SS = require("../api/_lib/store");
+    assert.strictEqual(SS.statusOf(c), "pran");
+    assert.strictEqual(SS.statusOf(d.containers.find((x) => x.id === "p3")), "vid");
+
+    // a second driver sees who took it, cannot take it, and cannot undo it
+    view = await d2.call(H.api("data"));
+    assert.strictEqual(view.body.containers.find((x) => x.id === "p1").chofer, "Jan Batis");
+    assert.strictEqual((await call(d2, { action: "pran", id: "p1", trucking: "MAD" })).statusCode, 409);
+    assert.strictEqual((await call(d2, { action: "defePran", id: "p1" })).statusCode, 403);
+
+    // ticking twice is harmless
+    assert.strictEqual((await call(d1, { action: "pran", id: "p1", trucking: "CFC" })).statusCode, 200);
+
+    // depot and admin sessions cannot use the driver's action
+    const depot = H.browser("198.51.100.142");
+    await post(depot, A().login, { username: "depotnord", password: LEGACY.depot });
+    assert.strictEqual((await call(depot, { action: "pran", id: "p1", trucking: "CFC" })).statusCode, 403);
+
+    // the same driver can undo: everything stamped is cleared
+    r = await call(d1, { action: "defePran", id: "p1" });
+    assert.strictEqual(r.statusCode, 200, JSON.stringify(r.body));
+    d = await H.getData();
+    c = d.containers.find((x) => x.id === "p1");
+    assert.ok(!c.datePran && !c.pranBy && !c.chofer && !c.plak && !c.trucking);
+    assert.strictEqual(SS.statusOf(c), "disponib", "undoing puts it back in the available list");
+    // and now the other driver may take it
+    assert.strictEqual((await call(d2, { action: "pran", id: "p1", trucking: "MAD" })).statusCode, 200);
+    c = (await H.getData()).containers.find((x) => x.id === "p1");
+    assert.strictEqual(c.chofer, "Pyer Louis");
+    assert.strictEqual(c.plak, "DD-1111");
+  });
+
   await test("only admins can manage accounts (depot, a limited session and a stranger cannot)", async () => {
     const admin = await legacyAdmin();
     const temp = await createUser(admin, "marie", "depot");

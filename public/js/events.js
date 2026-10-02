@@ -28,6 +28,7 @@ import {
   openCorrectDateModal,
   openEditContainerModal,
   openTransferModal,
+  toggleContainerTaken,
   openVerifyModal,
   submitModal,
   syncBillCompletion,
@@ -419,6 +420,8 @@ document.addEventListener("click", function (event) {
     } else if (i === "driver-toggle-select") {
       state.driverSelected[o] = !state.driverSelected[o];
       render();
+    } else if (i === "driver-toggle-pran") {
+      toggleContainerTaken(o);
     } else if (i === "driver-confirm") {
       confirmDeparture();
     } else if (i === "mark-empty") {

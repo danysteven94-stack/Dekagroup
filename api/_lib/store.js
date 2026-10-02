@@ -42,7 +42,7 @@ function emptyData() {
 
 // ---- same status rules as the app
 function statusOf(c) {
-  return c.dateLeft ? "kite" : c.dateEmpty ? "vid" : c.dateEntered && c.dateVerified ? "full" : c.dateEntered ? "pokoverifye" : "disponib";
+  return c.dateLeft ? "kite" : c.dateEmpty ? "vid" : c.dateEntered && c.dateVerified ? "full" : c.dateEntered ? "pokoverifye" : c.datePran ? "pran" : "disponib";
 }
 
 function billState(bill, containers) {
@@ -133,8 +133,11 @@ function sanitizeState(body) {
     const cid = id(c.id, "id konteneur");
     if (seenC[cid]) throw new ValidationError("id konteneur double");
     seenC[cid] = true;
-    const known = ["id", "numewo", "billId", "size", "division", "dateEntered", "dateExpected", "dateVerified", "depo", "trucking", "chofer", "plak", "dateEmpty", "dateLeft"];
-    return withHint(c, extras(c, known, {
+    const known = ["id", "numewo", "billId", "size", "division", "dateEntered", "dateExpected", "dateVerified", "depo", "trucking", "chofer", "plak", "dateEmpty", "dateLeft", "datePran", "pranBy"];
+    // "Pran" = a driver confirmed he took this not-yet-entered container (see act.js "pran"); only kept when set.
+    const pran = {};
+    if (c.datePran) { pran.datePran = dateOrNull(c.datePran, "datePran"); pran.pranBy = str(c.pranBy, 60, "pranBy"); }
+    return withHint(c, extras(c, known, Object.assign(pran, {
       id: cid,
       numewo: str(c.numewo, 40, "numewo", true),
       billId: c.billId === null || c.billId === undefined || c.billId === "" ? null : id(c.billId, "billId"),
@@ -149,7 +152,7 @@ function sanitizeState(body) {
       plak: str(c.plak, 20, "plak"),
       dateEmpty: dateOrNull(c.dateEmpty, "dateEmpty"),
       dateLeft: dateOrNull(c.dateLeft, "dateLeft"),
-    }));
+    })));
   });
 
   const seenB = {};
@@ -227,7 +230,8 @@ function viewFor(session, d) {
   const out = { containers: d.containers, bills: d.bills, notifications: d.notifications, inventoryChecks: {} };
   let narrowed = false;
   if (role === "chofe") {
-    out.containers = out.containers.filter(function (c) { return statusOf(c) === "vid"; });
+    // A driver sees the empty containers to take, plus the ones still coming (not entered yet) so he can tick the ones he took.
+    out.containers = out.containers.filter(function (c) { const st = statusOf(c); return st === "vid" || st === "disponib" || st === "pran"; });
     out.notifications = [];
     narrowed = true;
   }

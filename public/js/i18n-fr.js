@@ -1,6 +1,25 @@
 // French translations of the app's Kreyòl text. EXACT: whole text -> French. PATTERNS: texts with numbers/names inside.
 // Business words kept as people use them at the terminal: Bill, Trucking, Daily Report, DKN, CFC.
 export const EXACT = {
+  // ---- driver: ticking containers still on their way ("pran")
+  "Lè w pran yon kontenè, make l. Non w, trucking ou chwazi a ak plak ou ap parèt sou kontenè a otomatikman, epi l ap soti nan lis disponib la.": "Quand vous prenez un conteneur, cochez-le. Votre nom, le trucking choisi et votre plaque apparaîtront automatiquement sur le conteneur, et il quittera la liste des disponibles.",
+  "Kontenè 40 pye": "Conteneurs 40 pieds",
+  "Kontenè 20 pye": "Conteneurs 20 pieds",
+  "Kontenè san gwosè": "Conteneurs sans taille",
+  "Pa gen kontenè 40 pye kounye a.": "Aucun conteneur 40 pieds pour le moment.",
+  "Pa gen kontenè 20 pye kounye a.": "Aucun conteneur 20 pieds pour le moment.",
+  "Pa gen kontenè kounye a.": "Aucun conteneur pour le moment.",
+  "Kontenè Pran (Poko Antre)": "Conteneurs pris (pas encore entrés)",
+  "Pran": "Pris",
+  "Chofè pran, poko antre": "Pris par un chauffeur, pas encore entré",
+  "Pran pa:": "Pris par :",
+  "· Plak:": "· Plaque :",
+  "· Trucking:": "· Trucking :",
+  "Pran pa chofè:": "Pris par le chauffeur :",
+  "Chwazi trucking ou anvan w make kontenè a.": "Choisissez votre trucking avant de cocher le conteneur.",
+  "Yon lot chofè deja pran konteneur sa a.": "Un autre chauffeur a déjà pris ce conteneur.",
+  "Konteneur sa a deja antre. Done yo rafrechi.": "Ce conteneur est déjà entré. Les données ont été actualisées.",
+  "Se yon lot chofè ki pran konteneur sa a.": "C'est un autre chauffeur qui a pris ce conteneur.",
   // ---- Daily Report: leave action
   "Kite Jodi a": "Parti aujourd'hui",
   "make kite epi sove nan Lojistik.": "marqué parti et enregistré dans Logistic.",
@@ -725,6 +744,14 @@ const plural = (n, one, many) => (Number(n) > 1 ? many : one);
 
 // Texts with numbers or names inside. Each entry: [regex on the whole text, function(...groups) -> French].
 export const PATTERNS = [
+  [/^(\d+) pran$/, (n) => `${ n } pris`],
+  [/^Kontenè (\S+) make: ou pran l ak (.+)\.$/, (n, t) => `Conteneur ${ n } coché : vous l'avez pris avec ${ t }.`],
+  [/^Kontenè (\S+) retire nan sa w te pran yo\.$/, (n) => `Conteneur ${ n } retiré de ceux que vous avez pris.`],
+  [/^Kontenè (\S+) pran pa chofè (.+?) \((.+)\)\.$/, (n, t, w) => `Conteneur ${ n } pris par le chauffeur ${ t } (${ w }).`],
+  [/^Kontenè (\S+) pran pa chofè (.+)\.$/, (n, t) => `Conteneur ${ n } pris par le chauffeur ${ t }.`],
+  [/^Chofè a retire kontenè (\S+) nan sa li te pran yo\.$/, (n) => `Le chauffeur a retiré le conteneur ${ n } de ceux qu'il avait pris.`],
+  [/^Pran: (\S+) \((.+)\)$/, (n, t) => `Pris : ${ n } (${ t })`],
+  [/^Retire pran: (\S+)$/, (n) => `Retiré : ${ n }`],
   [/^Kontenè (\S+) kite jodi a\.$/, (n) => `Conteneur ${ n } parti aujourd'hui.`],
   [/^Kontenè (\S+) kite jodi a \?\n\nChanjman sa a ap sove nan Lojistik tou\.$/, (n) => `Conteneur ${ n } parti aujourd'hui ?\n\nCette modification sera aussi enregistrée dans Logistic.`],
   [/^(\S+) make kite sou aparèy la\. L ap sove nan Lojistik lè entènèt la tounen\.$/, (n) => `${ n } marqué parti sur l'appareil. Enregistrement dans Logistic au retour du réseau.`],

@@ -75,7 +75,7 @@ export function daysBetween(from, to) {
 }
 
 export function statusOf(container) {
-  return container.dateLeft ? "kite" : container.dateEmpty ? "vid" : container.dateEntered && container.dateVerified ? "full" : container.dateEntered ? "pokoverifye" : "disponib";
+  return container.dateLeft ? "kite" : container.dateEmpty ? "vid" : container.dateEntered && container.dateVerified ? "full" : container.dateEntered ? "pokoverifye" : container.datePran ? "pran" : "disponib";
 }
 
 export function billStatus(bill, containers) {

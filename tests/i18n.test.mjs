@@ -117,6 +117,15 @@ const SCREENS = {
   "depot list": () => show(() => { state.authRole = "depot"; state.depotUnlocked = true; state.depotTab = "list"; }),
   "depot division": () => show(() => { state.authRole = "depot"; state.depotUnlocked = true; state.depotTab = "dashboard"; state.depotDivision = "ACS"; }),
   "driver": () => show(() => { state.authRole = "chofe"; state.role = "chofe"; }),
+  "driver (containers taken)": () => show(() => {
+    state.authRole = "chofe"; state.role = "chofe"; state.username = "me"; state.driverTrucking = "CFC";
+    state.containers = state.containers.concat([
+      { id: "c6", numewo: "PRAN0000001", billId: "b1", size: "20", division: "ACS", dateEntered: null, dateVerified: null, depo: null, trucking: "CFC", chofer: "Jan Batis", plak: "CC-9999", datePran: "2026-10-02", pranBy: "me", dateEmpty: null, dateLeft: null, dateExpected: "2026-10-03" },
+      { id: "c8", numewo: "DISP0000040", billId: "b1", size: "40", division: "ACS", dateEntered: null, dateVerified: null, depo: null, trucking: null, dateEmpty: null, dateLeft: null, dateExpected: null },
+      { id: "c9", numewo: "DISP0000020", billId: "b1", size: "20", division: "ACS", dateEntered: null, dateVerified: null, depo: null, trucking: null, dateEmpty: null, dateLeft: null, dateExpected: null },
+      { id: "c7", numewo: "PRAN0000002", billId: "b1", size: "20", division: "ACS", dateEntered: null, dateVerified: null, depo: null, trucking: "MAD", chofer: "Pyer Louis", plak: "DD-1111", datePran: "2026-10-02", pranBy: "other", dateEmpty: null, dateLeft: null, dateExpected: null },
+    ]);
+  }),
   "driver (trucking chosen)": () => show(() => { state.authRole = "chofe"; state.role = "chofe"; state.driverTrucking = "CFC"; state.driverSelected = { c3: true }; }),
   "daily report": () => show(() => { state.authRole = "daily"; state.drUnlocked = true; state.dr.loaded = true; }),
   "account": () => show(() => { state.authRole = "admin"; state.unlocked = true; state.acct = true; state.sessionPersonal = true; state.personal = true; }),
@@ -141,6 +150,21 @@ for (const [name, fn] of Object.entries(SCREENS)) {
     assert.deepStrictEqual(bad, [], "\n      " + bad.join("\n      "));
   });
 }
+
+await test("driver page: taken containers leave the available list; available ones are split in a 40' box and a 20' box", () => {
+  I.setLang("ht");
+  const html = SCREENS["driver (containers taken)"]();
+  I.setLang("fr");
+  const iBox40 = html.indexOf("Kontenè 40 pye");
+  const iBox20 = html.indexOf("Kontenè 20 pye");
+  const iTaken = html.indexOf("Kontenè Pran (Poko Antre)");
+  assert.ok(iBox40 > -1 && iBox20 > iBox40 && iTaken > iBox20, "two boxes (40 then 20), then the taken list");
+  const avail = html.slice(iBox40, iTaken);
+  assert.ok(avail.includes("DISP0000040") && avail.includes("DISP0000020"));
+  assert.ok(!avail.includes("PRAN0000001") && !avail.includes("PRAN0000002"), "a taken container is no longer in the available boxes");
+  assert.ok(html.slice(iBox40, iBox20).includes("DISP0000040") && !html.slice(iBox40, iBox20).includes("DISP0000020"), "40' box holds only 40' containers");
+  assert.ok(html.slice(iTaken).includes("PRAN0000001") && html.slice(iTaken).includes("Jan Batis"), "taken list shows who took it");
+});
 
 let bad = 0;
 results.forEach((r) => { console.log((r[0] ? "  ok    " : "  FAIL  ") + r[1]); if (!r[0]) { bad++; console.log("        " + String(r[2] && r[2].message || r[2]).split("\n").slice(0, 14).join("\n        ")); } });

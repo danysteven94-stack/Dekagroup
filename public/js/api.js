@@ -438,6 +438,24 @@ function applyActLocally(b) {
       });
       note("Kontenè " + d.numewo + " transfere nan depo " + b.depo + ".");
     }
+  } else if (b.action === "pran") {
+    var pc = find(b.id);
+    if (pc && statusOf(pc) === "disponib") {
+      state.containers = state.containers.map(function (x) {
+        return x.id === pc.id ? Object.assign({}, x, { datePran: t, pranBy: state.username, trucking: b.trucking, chofer: state.sessionName || state.name || null }) : x;
+      });
+    }
+  } else if (b.action === "defePran") {
+    var uc = find(b.id);
+    if (uc && statusOf(uc) === "pran" && uc.pranBy === state.username) {
+      state.containers = state.containers.map(function (x) {
+        if (x.id !== uc.id) return x;
+        var y = Object.assign({}, x, { trucking: null, chofer: null, plak: null });
+        delete y.datePran;
+        delete y.pranBy;
+        return y;
+      });
+    }
   } else if (b.action === "depart") {
     var ids = b.ids || [];
     state.containers = state.containers.map(function (x) {
@@ -460,6 +478,12 @@ function actLabel(b) {
   if (b.action === "transfer") {
     return "Transfè: " + (c ? c.numewo : "") + " \u2192 " + b.depo;
   }
+  if (b.action === "pran") {
+    return "Pran: " + (c ? c.numewo : "") + " (" + b.trucking + ")";
+  }
+  if (b.action === "defePran") {
+    return "Retire pran: " + (c ? c.numewo : "");
+  }
   return "Depa: " + (b.ids || []).length + " kontenè (" + b.trucking + ")";
 }
 
@@ -478,7 +502,7 @@ export function queueRequest(kind, url, body, label, maybeDone, quiet) {
 function queueAct(body, onOk, maybeDone) {
   applyActLocally(body);
   queueRequest("act", "/api/act", body, actLabel(body), maybeDone);
-  if (onOk && body.action === "depart") {
+  if (onOk && (body.action === "depart" || body.action === "pran" || body.action === "defePran")) {
     onOk({ queued: true, result: { left: (body.ids || []).length } });
   }
   render();

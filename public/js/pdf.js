@@ -21,6 +21,7 @@ import {
 // French, regardless of the app's own Kreyòl/Français display setting.
 var PDF_STATUS_LABELS = {
   disponib: "Disponible",
+  pran: "Pris par un chauffeur",
   pokoverifye: "\u00C0 v\u00E9rifier",
   full: "Plein",
   vid: "Vide",
