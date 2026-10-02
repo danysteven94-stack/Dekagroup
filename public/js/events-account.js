@@ -131,19 +131,13 @@ document.addEventListener("submit", function (event) {
     fm.email = document.getElementById("usr-email").value.trim();
     fm.role = document.getElementById("usr-role").value;
     fm.plate = document.getElementById("usr-plate").value.trim();
+    fm.trucking = document.getElementById("usr-trucking").value;
     fm.divisions = Array.prototype.map.call(document.querySelectorAll(".usr-create-division:checked"), function (el) { return el.value; });
     fm.err = "";
-    // Required: username, full name, role. A driver (chofe) also needs a plate. Everything else is optional.
-    if (!fm.username) {
-      fm.err = "Non itilizatè a obligatwa.";
-    } else if (fm.name.length < 2) {
-      fm.err = "Non konplè a obligatwa.";
-    } else if (!fm.role) {
-      fm.err = "Wòl la obligatwa.";
-    } else if (fm.role === "chofe" && !fm.plate) {
-      fm.err = "Plak kamyon an obligatwa pou yon chofè.";
-    }
-    if (fm.err) {
+    // same rules as the server, so the message shows right away
+    var missing = !fm.username ? "Non itilizatè a obligatwa." : !fm.name ? "Non konplè a obligatwa." : !fm.role ? "Wòl la obligatwa." : fm.role === "chofe" && !fm.plate ? "Plak kamyon an obligatwa pou yon chofè." : "";
+    if (missing) {
+      fm.err = missing;
       render();
       return;
     }
@@ -154,6 +148,7 @@ document.addEventListener("submit", function (event) {
       email: fm.email,
       role: fm.role,
       plate: fm.plate,
+      trucking: fm.role === "chofe" ? fm.trucking : "",
       divisions: fm.divisions
     }).then(function (d) {
       U.temp = {
@@ -166,6 +161,7 @@ document.addEventListener("submit", function (event) {
         email: "",
         role: fm.role,
         plate: "",
+        trucking: "",
         divisions: [],
         err: ""
       };
@@ -348,6 +344,14 @@ document.addEventListener("change", function (event) {
   }
   if (el && el.id === "division-switch") {
     switchDivision(el.value);
+    return;
+  }
+  if (el && el.classList && el.classList.contains("usr-trucking-select")) {
+    userAction({
+      action: "set_trucking",
+      username: el.getAttribute("data-user"),
+      trucking: el.value
+    });
     return;
   }
   if (el && el.classList && el.classList.contains("usr-role-select")) {

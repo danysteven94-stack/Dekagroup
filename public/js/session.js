@@ -90,6 +90,7 @@ export function logout() {
   state.gateCanEmail = false;
   state.gateEmailMsg = "";
   state.sessionName = "";
+  state.sessionTrucking = "";
   state.sessionNeeds = null;
   state.sessionDivisions = [];
   state.sessionPools = ["default"];
@@ -128,7 +129,7 @@ export function logout() {
   render();
 }
 
-export function applyAuth(role, username, name, needs, personal, divisions, pools, pool) {
+export function applyAuth(role, username, name, needs, personal, divisions, pools, pool, trucking) {
   state.depotDivision = null;
   state.navDrawerOpen = false;
   state.tab = "dashboard";
@@ -139,6 +140,9 @@ export function applyAuth(role, username, name, needs, personal, divisions, pool
   state.sessionRole = role;
   state.sessionUser = username || "";
   state.sessionName = name || "";
+  // a driver account tied to a trucking by the administrator: the driver page shows it instead of a dropdown
+  state.sessionTrucking = trucking || "";
+  state.driverTrucking = trucking || "";
   state.sessionNeeds = needs || null;
   state.sessionPersonal = !!personal;
   state.authRole = role;
@@ -179,7 +183,8 @@ export function applyAuth(role, username, name, needs, personal, divisions, pool
     personal: !!personal,
     divisions: divisions || [],
     pools: pools && pools.length ? pools : ["default"],
-    pool: pool || "default"
+    pool: pool || "default",
+    trucking: trucking || null
   });
   if (state.needs) {
     render();

@@ -143,6 +143,7 @@ module.exports = async function handler(req, res) {
     res.status(200).json({
       ok: true, role: account.role, username: account.username, name: account.name, personal: account.src === "db", needs: A.limitedFor(dbUser), roleLabel: ROLE_LABEL[account.role],
       divisions: account.divisions || [], pools: pools, pool: pools[0],
+      ...(account.role === "chofe" && dbUser && dbUser.trucking ? { trucking: dbUser.trucking } : {}),
     });
   } catch (err) {
     if (err instanceof ApiError) { res.status(err.status).json({ error: err.message, code: err.code }); return; }

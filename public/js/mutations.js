@@ -505,7 +505,7 @@ export function confirmDeparture() {
     }
     var i = [];
     state.containers = state.containers.map(function (container) {
-      return n.indexOf(container.id) === -1 ? container : (i.push(container.numewo), Object.assign({}, container, { dateLeft: today() }));
+      return n.indexOf(container.id) === -1 ? container : (i.push(container.numewo), Object.assign({}, container, { dateLeft: today(), trucking: e }));
     });
     var o = n.map(function (a, l) {
       return {

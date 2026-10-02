@@ -21,6 +21,7 @@ export function icon(name, size, color) {
     download: `<path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M4 19h16"/>`,
     filetext: `<path d="M6 2h9l5 5v15H6z"/><path d="M15 2v5h5"/><path d="M9 13h6M9 17h6M9 9h2"/>`,
     menu: `<path d="M3 6h18M3 12h18M3 18h18"/>`,
+    truck: `<path d="M2 6h11v10H2z"/><path d="M13 9h4l4 4v3h-8z"/><circle cx="7" cy="18" r="2"/><circle cx="17" cy="18" r="2"/>`,
     x: `<path d="M18 6L6 18M6 6l12 12"/>`,
     logout: `<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/>`
   };

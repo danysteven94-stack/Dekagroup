@@ -53,7 +53,8 @@ const ACTIONS = {
   // When a driver (not admin) does this, their own account's name and plate are stamped onto
   // the containers automatically — the driver never has to type them in.
   depart: { roles: ["chofe", "admin"], run: function (data, body, ctx) {
-    const trucking = text(body.trucking, 40);
+    // a driver account tied to a trucking by the administrator always works for that trucking (what the browser sent is ignored)
+    const trucking = ctx && ctx.driver && ctx.driver.trucking ? ctx.driver.trucking : text(body.trucking, 40);
     if (!trucking || !/^[A-Za-z0-9 ._-]+$/.test(trucking)) throw new ActionError(400, "Trucking la obligatwa.", "invalid");
     const ids = Array.isArray(body.ids) ? body.ids.filter(function (i) { return typeof i === "string"; }).slice(0, 200) : [];
     if (ids.length === 0) throw new ActionError(400, "Chwazi omwen yon konteneur.", "invalid");
@@ -65,7 +66,8 @@ const ACTIONS = {
     data.containers = data.containers.map(function (x) {
       if (ids.indexOf(x.id) === -1 || S.statusOf(x) !== "vid") return x;
       left.push(x.numewo);
-      const patch = { dateLeft: S.today() };
+      // the container leaves under the trucking that took it (so the Trucking tab counts it in the right place)
+      const patch = { dateLeft: S.today(), trucking: trucking };
       if (chofer) patch.chofer = chofer;
       if (plak) patch.plak = plak;
       return Object.assign({}, x, patch);
@@ -80,7 +82,7 @@ const ACTIONS = {
   // Driver: tick a container that is still on its way (not entered yet) to say "I took it".
   // The driver's own name and plate, and the trucking he picked, are stamped onto the container automatically.
   pran: { roles: ["chofe"], run: function (data, body, ctx) {
-    const trucking = text(body.trucking, 40);
+    const trucking = ctx.driver && ctx.driver.trucking ? ctx.driver.trucking : text(body.trucking, 40);
     if (!trucking || !/^[A-Za-z0-9 ._-]+$/.test(trucking)) throw new ActionError(400, "Trucking la obligatwa.", "invalid");
     const c = data.containers.find(function (x) { return x.id === body.id; });
     if (!c) throw new ActionError(404, "Pa jwenn konteneur la.", "not_found");

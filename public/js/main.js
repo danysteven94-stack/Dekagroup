@@ -38,6 +38,7 @@ function useSession(d) {
   state.sessionRole = d.role;
   state.sessionUser = d.username;
   state.sessionName = d.name || "";
+  state.sessionTrucking = d.trucking || "";
   state.sessionNeeds = d.needs || null;
   state.sessionPersonal = !!d.personal;
   state.sessionDivisions = d.divisions || [];

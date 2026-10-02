@@ -36,6 +36,7 @@ import { archiveView } from "./archive.js";
 import { productsView } from "./products.js";
 import { securityView } from "./security.js";
 import { usersView } from "./users.js";
+import { truckingView } from "./trucking.js";
 
 function adminSidebar() {
   var e = ADMIN_TABS.map(function (n) {
@@ -476,6 +477,8 @@ export function adminContent() {
     e = addContainerView();
   } else if (state.tab === "containers") {
     e = containersView();
+  } else if (state.tab === "trucking") {
+    e = truckingView();
   } else if (state.tab === "pwodwi") {
     e = productsView();
   } else if (state.tab === "inventory") {

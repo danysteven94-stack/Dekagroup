@@ -196,6 +196,65 @@ async function enroll2fa(b) {
     assert.strictEqual(c.plak, "DD-1111");
   });
 
+  await test("a driver account tied to a trucking: the browser cannot override it, it is returned at login and by /me, and the admin can change or clear it", async () => {
+    const admin = await legacyAdmin();
+    async function onboardDriver(username, name, plate, trucking, ip) {
+      const body = { action: "create", username: username, role: "chofe", name: name, plate: plate, divisions: ["DEKAV"] };
+      if (trucking !== undefined) body.trucking = trucking;
+      const created = await post(admin, A().users, body);
+      assert.strictEqual(created.statusCode, 200, JSON.stringify(created.body));
+      const b = H.browser(ip);
+      let r = await post(b, A().login, { username: username, password: created.body.tempPassword });
+      assert.strictEqual(r.statusCode, 200);
+      const loginTrucking = r.body.trucking;
+      r = await post(b, A().password, { current: created.body.tempPassword, next: "Chofe-Strong-Pass-9" });
+      assert.strictEqual(r.statusCode, 200, JSON.stringify(r.body));
+      return { b: b, created: created, loginTrucking: loginTrucking };
+    }
+    const d1 = await onboardDriver("truck.un", "Jan Batis", "cc-9999", "ctsa", "198.51.100.150");
+    assert.strictEqual(d1.created.body.user.trucking, "CTSA", "trucking is cleaned/uppercased on create");
+    assert.strictEqual(d1.loginTrucking, "CTSA", "the login answer carries the trucking");
+    assert.strictEqual((await d1.b.call(A().me)).body.trucking, "CTSA", "so does /api/auth/me");
+    const free = await onboardDriver("truck.de", "Pyer Louis", "dd-1111", undefined, "198.51.100.151");
+    assert.strictEqual(free.created.body.user.trucking, null, "trucking is optional");
+    assert.ok(!free.loginTrucking, "nothing is added when the account has no trucking");
+
+    await H.setData({ containers: [
+      { id: "t1", numewo: "TRUK0000001", billId: null, size: "20", division: "DEKAV", dateEntered: null, dateVerified: null, depo: null, trucking: null, dateEmpty: null, dateLeft: null },
+      { id: "t2", numewo: "TRUK0000002", billId: null, size: "20", division: "DEKAV", dateEntered: "2026-09-01", dateVerified: "2026-09-02", depo: "D", trucking: "CFC", dateEmpty: "2026-09-15", dateLeft: null },
+      { id: "t3", numewo: "TRUK0000003", billId: null, size: "20", division: "DEKAV", dateEntered: null, dateVerified: null, depo: null, trucking: null, dateEmpty: null, dateLeft: null },
+    ], bills: [], notifications: [], inventoryChecks: {} });
+    const act = H.api("act");
+    const call = (b, body) => b.call(act, { method: "POST", body: body });
+
+    // the browser says CFC, the account says CTSA: the account wins (for a tick and for a departure)
+    assert.strictEqual((await call(d1.b, { action: "pran", id: "t1", trucking: "CFC" })).statusCode, 200);
+    // an account without a trucking still sends the one it chose, and still has to send one
+    assert.strictEqual((await call(free.b, { action: "pran", id: "t3" })).statusCode, 400);
+    assert.strictEqual((await call(free.b, { action: "pran", id: "t3", trucking: "MAD" })).statusCode, 200);
+    assert.strictEqual((await call(d1.b, { action: "depart", ids: ["t2"], trucking: "MAD" })).statusCode, 200);
+    let d = await H.getData();
+    assert.strictEqual(d.containers.find((x) => x.id === "t1").trucking, "CTSA");
+    assert.strictEqual(d.containers.find((x) => x.id === "t3").trucking, "MAD");
+    assert.ok(d.notifications[0].message.includes("CTSA") && !d.notifications[0].message.includes("MAD"), "the departure note names the account's trucking");
+    assert.strictEqual(d.containers.find((x) => x.id === "t2").trucking, "CTSA", "a container that leaves now carries the trucking that took it (was CFC)");
+
+    // the administrator changes it, then clears it
+    let r = await post(admin, A().users, { action: "set_trucking", username: "truck.un", trucking: "mad" });
+    assert.strictEqual(r.statusCode, 200);
+    assert.strictEqual(r.body.trucking, "MAD");
+    assert.strictEqual((await admin.call(A().users)).body.users.find((u) => u.username === "truck.un").trucking, "MAD");
+    assert.strictEqual((await d1.b.call(A().me)).body.trucking, "MAD");
+    r = await post(admin, A().users, { action: "set_trucking", username: "truck.un", trucking: "" });
+    assert.strictEqual(r.body.trucking, null);
+    assert.strictEqual((await post(admin, A().users, { action: "set_trucking", username: "truck.un", trucking: "<b>x</b>" })).statusCode, 400);
+    // only drivers have a trucking; a driver cannot lose his plate
+    await createUser(admin, "marie.d", "depot", "Marie D");
+    assert.strictEqual((await post(admin, A().users, { action: "set_trucking", username: "marie.d", trucking: "CFC" })).statusCode, 400);
+    assert.strictEqual((await post(admin, A().users, { action: "set_plate", username: "truck.un", plate: "" })).body.code, "plate_required");
+    assert.strictEqual((await post(admin, A().users, { action: "create", username: "marie.e", role: "depot", name: "Marie E", trucking: "CFC" })).body.user.trucking, null, "a non-driver never keeps a trucking");
+  });
+
   await test("only admins can manage accounts (depot, a limited session and a stranger cannot)", async () => {
     const admin = await legacyAdmin();
     const temp = await createUser(admin, "marie", "depot");

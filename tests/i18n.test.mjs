@@ -95,6 +95,12 @@ const SCREENS = {
   "admin add (planifye)": () => admin("add", () => { state.entryMode = "planifye"; state.billMode = "ekzistan"; }),
   "admin containers": () => admin("containers"),
   "admin containers (search none)": () => admin("containers", () => { state.search = "zzz"; }),
+  "admin trucking": () => admin("trucking"),
+  "admin trucking (one trucking, Full)": () => admin("trucking", () => { state.truckingGroup = "CFC"; state.truckingStatus = "full"; }),
+  "admin trucking (Vid)": () => admin("trucking", () => { state.truckingStatus = "vid"; }),
+  "admin trucking (Pran)": () => admin("trucking", () => { state.truckingStatus = "pran"; }),
+  "admin trucking (Kite)": () => admin("trucking", () => { state.truckingStatus = "kite"; }),
+  "admin trucking (search none)": () => admin("trucking", () => { state.search = "zzz"; }),
   "admin pwodwi": () => admin("pwodwi"),
   "admin pwodwi (empty)": () => admin("pwodwi", () => { state.containers = []; }),
   "admin inventory": () => admin("inventory"),
@@ -189,6 +195,72 @@ await test("driver page: empty containers are split in a 40' box and a 20' box, 
   M.toggleSelectAllEmpty("40");
   assert.ok(!state.driverSelected.v1 && !state.driverSelected.v2 && state.driverSelected.v3, "second tap un-selects only the 40' ones");
   state.driverSelected = {};
+});
+
+const TR = await import("../public/js/views/trucking.js");
+const trCont = (id, numewo, size, trucking, extra) => Object.assign({ id, numewo, billId: "b1", size, division: "ACS", dateEntered: "2026-09-01", dateVerified: "2026-09-02", depo: "Depo A", trucking, dateEmpty: null, dateLeft: null }, extra || {});
+const trSetup = () => {
+  state.truckingGroup = ""; state.truckingStatus = "tout"; state.search = "";
+  state.containers = [
+    trCont("t1", "FULLCFC0001", "40", "CFC"),
+    trCont("t2", "FULLCFC0002", "20", "CFC 7"),
+    trCont("t3", "VIDCFC00001", "40", "CFC", { dateEmpty: "2026-09-10" }),
+    trCont("t4", "VIDCTSA0001", "20", "CTSA", { dateEmpty: "2026-09-10" }),
+    trCont("t5", "FULLDKN0001", "20", "DKN 003"),
+    trCont("t6", "FULLNONE001", "40", null),
+    trCont("t7", "KITECFC0001", "40", "CFC", { dateEmpty: "2026-09-05", dateLeft: "2026-09-06" }),
+    trCont("t8", "PRANCTSA001", "20", "CTSA", { dateEntered: null, dateVerified: null, depo: null, datePran: "2026-10-02", pranBy: "me", chofer: "Jan Batis", plak: "CC-9999" }),
+    trCont("t9", "DISPONIB001", "20", null, { dateEntered: null, dateVerified: null, depo: null }),
+  ];
+};
+
+await test("trucking tab: containers are grouped per trucking (CFC 7 counts as CFC, DKN 003 as DKN), Full / Vid / Pran are counted, a waiting container is left out", () => {
+  I.setLang("ht");
+  trSetup();
+  const g = Object.fromEntries(TR.truckingGroups(state.containers).map((x) => [x.key, x.list.map((c) => c.numewo).sort()]));
+  assert.deepStrictEqual(g["CFC"], ["FULLCFC0001", "FULLCFC0002", "KITECFC0001", "VIDCFC00001"]);
+  assert.deepStrictEqual(g["CTSA"], ["PRANCTSA001", "VIDCTSA0001"]);
+  assert.deepStrictEqual(g["DKN"], ["FULLDKN0001"]);
+  assert.deepStrictEqual(g["MAD"], [], "a known trucking is always shown, even with nothing on it");
+  assert.deepStrictEqual(g["__none"], ["FULLNONE001"], "containers without trucking are visible too");
+  assert.ok(!JSON.stringify(g).includes("DISPONIB001"), "a container still waiting is not part of any trucking yet");
+  const html = admin("trucking", trSetup);
+  I.setLang("fr");
+  ["CFC", "CTSA", "MAD", "DKN", "__none"].forEach((k) => assert.ok(html.includes('data-group="' + k + '"'), "a card for " + k));
+  assert.ok(html.includes("FULLCFC0001") && html.includes("FULLNONE001") && html.includes("PRANCTSA001"), "no trucking picked: the detail shows every active container");
+  assert.ok(!html.includes("KITECFC0001") && !html.includes("DISPONIB001"), "kite and waiting containers stay out of the default list");
+  assert.ok(html.includes("Jan Batis (CC-9999)"), "the trucking card names the driver and plate");
+});
+
+await test("trucking tab: pick a trucking and a status, containers show in a 40' box and a 20' box", () => {
+  I.setLang("ht");
+  trSetup();
+  const view = (extra) => admin("trucking", () => { trSetup(); extra(); });
+  let html = view(() => { state.truckingGroup = "CFC"; state.truckingStatus = "tout"; });
+  assert.ok(html.includes("FULLCFC0001") && html.includes("FULLCFC0002") && html.includes("VIDCFC00001"));
+  assert.ok(!html.includes("VIDCTSA0001") && !html.includes("KITECFC0001"), "other trucking and kite ones are not listed under Tout");
+  const b40 = html.indexOf("Kontenè 40 pye"), b20 = html.indexOf("Kontenè 20 pye");
+  assert.ok(b40 > -1 && b20 > b40, "40' box first, then 20' box");
+  assert.ok(html.slice(b40, b20).includes("FULLCFC0001") && !html.slice(b40, b20).includes("FULLCFC0002"), "the 20' one is not in the 40' box");
+  html = view(() => { state.truckingGroup = "CFC"; state.truckingStatus = "vid"; });
+  assert.ok(html.includes("VIDCFC00001") && !html.includes("FULLCFC0001"));
+  html = view(() => { state.truckingGroup = "CTSA"; state.truckingStatus = "pran"; });
+  assert.ok(html.includes("PRANCTSA001") && html.includes("Jan Batis") && html.includes("CC-9999"), "a taken container shows the driver and the plate");
+  html = view(() => { state.truckingGroup = ""; state.truckingStatus = "kite"; });
+  assert.ok(html.includes("KITECFC0001") && !html.includes("FULLCFC0001"));
+  html = view(() => { state.truckingGroup = ""; state.truckingStatus = "tout"; state.search = "cc-9999"; });
+  assert.ok(html.includes("PRANCTSA001") && !html.includes("VIDCFC00001"), "the search finds a plate");
+  I.setLang("fr");
+  state.truckingGroup = ""; state.truckingStatus = "tout"; state.search = "";
+});
+
+await test("driver page: an account tied to a trucking sees it as fixed text (no dropdown); without one the driver chooses", () => {
+  I.setLang("ht");
+  let html = show(() => { state.authRole = "chofe"; state.role = "chofe"; state.sessionTrucking = "CTSA"; state.driverTrucking = "CTSA"; });
+  assert.ok(!html.includes("driver-trucking-select") && html.includes("CTSA"));
+  html = show(() => { state.authRole = "chofe"; state.role = "chofe"; state.sessionTrucking = ""; state.driverTrucking = ""; });
+  assert.ok(html.includes("driver-trucking-select"));
+  I.setLang("fr");
 });
 
 let bad = 0;

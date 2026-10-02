@@ -10,7 +10,7 @@ const { ApiError } = require("./_lib/errors");
 function safe(u) {
   return {
     username: u.username, name: u.name, role: u.role, active: u.active, mustChange: u.mustChange, totpEnabled: u.totpEnabled,
-    email: u.email || null, plate: u.plate || null, principal: u.username === A.principalUsername(), divisions: u.divisions || [],
+    email: u.email || null, plate: u.plate || null, trucking: u.trucking || null, principal: u.username === A.principalUsername(), divisions: u.divisions || [],
     lastLoginAt: u.lastLoginAt, createdAt: u.createdAt, createdBy: u.createdBy, passChangedAt: u.passChangedAt,
   };
 }
@@ -47,6 +47,12 @@ function cleanPlate(v) {
   return /^[A-Z0-9 -]*$/.test(s) ? s : "";
 }
 
+// Trucking company a driver works for: same characters the "pran" / "depart" actions accept (CFC, CTSA, MAD, DKN 001...).
+function cleanTrucking(v) {
+  const s = typeof v === "string" ? v.trim().toUpperCase().replace(/\s+/g, " ").slice(0, 40) : "";
+  return /^[A-Z0-9 ._-]*$/.test(s) ? s : "";
+}
+
 // Refuse a change that would leave nobody able to administer the app.
 async function wouldLockOut(target, afterActive, afterRole) {
   const users = await Users.list();
@@ -60,7 +66,6 @@ async function wouldLockOut(target, afterActive, afterRole) {
 }
 
 module.exports = async function handler(req, res) {
-  let authed = false; // set once the caller is a signed-in admin
   try {
     if (req.method !== "GET" && req.method !== "POST") {
       res.setHeader("Allow", "GET, POST");
@@ -69,7 +74,6 @@ module.exports = async function handler(req, res) {
     }
     const session = await A.requireAuth(req, res, ["admin"]);
     if (!session) return;
-    authed = true;
     if (!A.isPrincipal(session)) {
       res.status(403).json({ error: "Sèl kont prensipal la ka jere itilizatè yo.", code: "principal_required" });
       return;
@@ -106,11 +110,13 @@ module.exports = async function handler(req, res) {
       if (role === "admin" && !Secret.available()) throw new ApiError(503, "no_app_secret", "Pou kreye yon administratè, APP_SECRET dwe konfigire sou sèvè a (2FA obligatwa). Gade SEKIRITE.md.");
       const divisions = cleanDivisions(body.divisions);
       const plate = cleanPlate(body.plate);
-      // Only username, full name and role are always required; the plate is required for a driver (role "chofe") only.
-      if (role === "chofe" && !plate) throw new ApiError(400, "plate_required", "Plak kamyon an obligatwa pou yon chofè (lèt, chif, espas ak tirè sèlman).");
+      // A driver's plate and trucking are stamped on every container he handles, so the plate is mandatory for a driver.
+      if (role === "chofe" && !plate) throw new ApiError(400, "plate_required", "Plak kamyon an obligatwa pou yon chofè.");
+      if (body.trucking && !cleanTrucking(body.trucking)) throw new ApiError(400, "invalid_trucking", "Trucking la pa valid.");
+      const trucking = role === "chofe" ? cleanTrucking(body.trucking) : "";
       const temp = Users.tempPassword();
-      const u = await Users.create({ username: target, name: name, role: role, email: email || null, plate: plate || null, passHash: await A.hashPassword(temp), mustChange: true, divisions: divisions, createdBy: session.username });
-      await A.audit(req, "user_create", { username: target, role: role, divisions: divisions }, session);
+      const u = await Users.create({ username: target, name: name, role: role, email: email || null, plate: plate || null, trucking: trucking || null, passHash: await A.hashPassword(temp), mustChange: true, divisions: divisions, createdBy: session.username });
+      await A.audit(req, "user_create", { username: target, role: role, divisions: divisions, trucking: trucking || null }, session);
       res.status(200).json({ ok: true, user: safe(u), tempPassword: temp });
       return;
     }
@@ -174,9 +180,20 @@ module.exports = async function handler(req, res) {
 
     if (action === "set_plate") {
       const plate = cleanPlate(body.plate);
+      if (user.role === "chofe" && !plate) throw new ApiError(400, "plate_required", "Plak kamyon an obligatwa pou yon chofè (lèt, chif, espas ak tirè sèlman).");
       await Users.update(user.username, { plate: plate || null });
       await A.audit(req, "user_set_plate", { username: user.username, hasPlate: !!plate }, session);
       res.status(200).json({ ok: true, plate: plate || null });
+      return;
+    }
+
+    if (action === "set_trucking") {
+      if (user.role !== "chofe") throw new ApiError(400, "not_driver", "Se sèlman yon chofè ki gen trucking.");
+      if (body.trucking && !cleanTrucking(body.trucking)) throw new ApiError(400, "invalid_trucking", "Trucking la pa valid.");
+      const trucking = cleanTrucking(body.trucking);
+      await Users.update(user.username, { trucking: trucking || null });
+      await A.audit(req, "user_set_trucking", { username: user.username, trucking: trucking || null }, session);
+      res.status(200).json({ ok: true, trucking: trucking || null });
       return;
     }
 
@@ -192,8 +209,6 @@ module.exports = async function handler(req, res) {
   } catch (err) {
     if (err instanceof ApiError) { res.status(err.status).json({ error: err.message, code: err.code }); return; }
     console.error("users error:", err && err.message);
-    // Only a signed-in administrator sees the technical reason (helps diagnose database problems); anonymous callers never do.
-    const detail = authed && err && err.message ? String(err.message).replace(/postgres(ql)?:\/\/\S+/gi, "[url]").slice(0, 200) : "";
-    res.status(500).json({ error: detail ? "Erè sèvè. · " + detail : "Erè sèvè. Eseye ankò.", code: "server_error" });
+    res.status(500).json({ error: "Erè sèvè. Eseye ankò.", code: "server_error" });
   }
 };

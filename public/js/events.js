@@ -119,7 +119,7 @@ document.addEventListener("submit", function (event) {
         state.gateUser = "";
         state.gate2fa = false;
         state.pendingGatePassword = "";
-        applyAuth(x.d.role, x.d.username, x.d.name, x.d.needs, x.d.personal, x.d.divisions, x.d.pools, x.d.pool);
+        applyAuth(x.d.role, x.d.username, x.d.name, x.d.needs, x.d.personal, x.d.divisions, x.d.pools, x.d.pool, x.d.trucking);
       } else if (x.ok && x.d && x.d.needs2fa) {
         state.gate2fa = true;
         state.pendingGatePassword = i;
@@ -333,6 +333,14 @@ document.addEventListener("click", function (event) {
     } else if (i === "set-filter") {
       state.filterStatus = n.getAttribute("data-filter");
       render();
+    } else if (i === "trucking-group") {
+      // tap a trucking card to see its containers; tap it again to see all of them
+      var tg = n.getAttribute("data-group");
+      state.truckingGroup = state.truckingGroup === tg ? "" : tg;
+      render();
+    } else if (i === "trucking-status") {
+      state.truckingStatus = n.getAttribute("data-filter") || "tout";
+      render();
     } else if (i === "confirm-enter") {
       openConfirmEnterModal(o);
     } else if (i === "unconfirm-enter") {
@@ -384,7 +392,7 @@ document.addEventListener("click", function (event) {
       loadData();
     } else if (i === "resume-session") {
       if (state.sessionRole) {
-        applyAuth(state.sessionRole, state.sessionUser, state.sessionName, state.sessionNeeds, state.sessionPersonal, state.sessionDivisions, state.sessionPools, state.sessionPool);
+        applyAuth(state.sessionRole, state.sessionUser, state.sessionName, state.sessionNeeds, state.sessionPersonal, state.sessionDivisions, state.sessionPools, state.sessionPool, state.sessionTrucking);
       }
     } else if (i === "choose-role") {
       state.role = n.getAttribute("data-role");
@@ -392,7 +400,7 @@ document.addEventListener("click", function (event) {
     } else if (i === "reset-role") {
       state.role = null;
       state.driverSelected = {};
-      state.driverTrucking = "";
+      state.driverTrucking = state.sessionTrucking || "";
       state.gateError = false;
       render();
     } else if (i === "logout") {

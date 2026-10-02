@@ -129,6 +129,11 @@ export const ADMIN_TABS = [
     icon: "boxes"
   },
   {
+    id: "trucking",
+    label: "Trucking",
+    icon: "truck"
+  },
+  {
     id: "pwodwi",
     label: "Pwodwi yo",
     icon: "clipboard"
@@ -174,6 +179,7 @@ export const TAB_TITLES = {
   dashboard: "Tablo Kontwòl",
   add: "Ajoute yon Kontenè",
   containers: "Rejis Kontenè",
+  trucking: "Kontenè pa Trucking",
   pwodwi: "Kontenè pa Pwodwi",
   inventory: "Envantè Jounalye",
   bills: "Rejis Bill",

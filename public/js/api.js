@@ -463,7 +463,7 @@ function applyActLocally(b) {
         return x;
       }
       note("Kontenè " + x.numewo + " kite ak chofè " + b.trucking + ".");
-      return Object.assign({}, x, { dateLeft: t });
+      return Object.assign({}, x, { dateLeft: t, trucking: b.trucking || x.trucking });
     });
   }
 }
