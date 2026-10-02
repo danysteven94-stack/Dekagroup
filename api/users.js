@@ -104,6 +104,8 @@ module.exports = async function handler(req, res) {
       if (role === "admin" && !Secret.available()) throw new ApiError(503, "no_app_secret", "Pou kreye yon administratè, APP_SECRET dwe konfigire sou sèvè a (2FA obligatwa). Gade SEKIRITE.md.");
       const divisions = cleanDivisions(body.divisions);
       const plate = cleanPlate(body.plate);
+      // Only username, full name and role are always required; the plate is required for a driver (role "chofe") only.
+      if (role === "chofe" && !plate) throw new ApiError(400, "plate_required", "Plak kamyon an obligatwa pou yon chofè (lèt, chif, espas ak tirè sèlman).");
       const temp = Users.tempPassword();
       const u = await Users.create({ username: target, name: name, role: role, email: email || null, plate: plate || null, passHash: await A.hashPassword(temp), mustChange: true, divisions: divisions, createdBy: session.username });
       await A.audit(req, "user_create", { username: target, role: role, divisions: divisions }, session);

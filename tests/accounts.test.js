@@ -78,6 +78,15 @@ async function enroll2fa(b) {
     assert.ok(stored.passHash.startsWith("scrypt:") && stored.mustChange === true && stored.createdBy === "logistic");
   });
 
+  await test("only username, full name and role are required; a driver also needs a plate", async () => {
+    const admin = await legacyAdmin();
+    let r = await post(admin, A().users, { action: "create", username: "kont.senp", role: "depot", name: "Kont Senp" });
+    assert.strictEqual(r.statusCode, 200, "no email / plate / divisions needed for a non-driver");
+    r = await post(admin, A().users, { action: "create", username: "chofe.san.plak", role: "chofe", name: "Chofe San Plak" });
+    assert.strictEqual(r.statusCode, 400);
+    assert.strictEqual(r.body.code, "plate_required");
+  });
+
   await test("a driver's plate is set on their account, and auto-stamped onto a container when they confirm departure", async () => {
     const admin = await legacyAdmin();
     let r = await post(admin, A().users, { action: "create", username: "pye.chofe", role: "chofe", name: "Py\u00E8 Louis", plate: "aa-1234" });

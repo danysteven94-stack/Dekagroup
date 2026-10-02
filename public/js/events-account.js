@@ -133,6 +133,20 @@ document.addEventListener("submit", function (event) {
     fm.plate = document.getElementById("usr-plate").value.trim();
     fm.divisions = Array.prototype.map.call(document.querySelectorAll(".usr-create-division:checked"), function (el) { return el.value; });
     fm.err = "";
+    // Required: username, full name, role. A driver (chofe) also needs a plate. Everything else is optional.
+    if (!fm.username) {
+      fm.err = "Non itilizatè a obligatwa.";
+    } else if (fm.name.length < 2) {
+      fm.err = "Non konplè a obligatwa.";
+    } else if (!fm.role) {
+      fm.err = "Wòl la obligatwa.";
+    } else if (fm.role === "chofe" && !fm.plate) {
+      fm.err = "Plak kamyon an obligatwa pou yon chofè.";
+    }
+    if (fm.err) {
+      render();
+      return;
+    }
     apiJson("/api/users", {
       action: "create",
       username: fm.username,
