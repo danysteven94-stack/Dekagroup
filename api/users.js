@@ -60,6 +60,7 @@ async function wouldLockOut(target, afterActive, afterRole) {
 }
 
 module.exports = async function handler(req, res) {
+  let authed = false; // set once the caller is a signed-in admin
   try {
     if (req.method !== "GET" && req.method !== "POST") {
       res.setHeader("Allow", "GET, POST");
@@ -68,6 +69,7 @@ module.exports = async function handler(req, res) {
     }
     const session = await A.requireAuth(req, res, ["admin"]);
     if (!session) return;
+    authed = true;
     if (!A.isPrincipal(session)) {
       res.status(403).json({ error: "Sèl kont prensipal la ka jere itilizatè yo.", code: "principal_required" });
       return;
@@ -190,6 +192,8 @@ module.exports = async function handler(req, res) {
   } catch (err) {
     if (err instanceof ApiError) { res.status(err.status).json({ error: err.message, code: err.code }); return; }
     console.error("users error:", err && err.message);
-    res.status(500).json({ error: "Erè sèvè. Eseye ankò.", code: "server_error" });
+    // Only a signed-in administrator sees the technical reason (helps diagnose database problems); anonymous callers never do.
+    const detail = authed && err && err.message ? String(err.message).replace(/postgres(ql)?:\/\/\S+/gi, "[url]").slice(0, 200) : "";
+    res.status(500).json({ error: detail ? "Erè sèvè. · " + detail : "Erè sèvè. Eseye ankò.", code: "server_error" });
   }
 };
