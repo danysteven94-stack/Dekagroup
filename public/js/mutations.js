@@ -14,6 +14,7 @@ import { state } from "./state.js";
 import {
   billStatus,
   newId,
+  statusOf,
   today
 } from "./utils.js";
 
@@ -548,4 +549,20 @@ export function toggleContainerTaken(id) {
   apiAct({ action: "pran", id: id, trucking: trucking }, function () {
     showToast(`Kontenè ${ c.numewo } make: ou pran l ak ${ trucking }.`);
   });
+}
+
+// "Seleksyone tout" for one size box (40, 20, or containers without a size) of the empty containers.
+// If they are all selected already, it un-selects them instead.
+export function toggleSelectAllEmpty(size) {
+  var list = state.containers.filter(function (c) {
+    var sz = String(c.size) === "40" ? "40" : String(c.size) === "20" ? "20" : "other";
+    return statusOf(c) === "vid" && sz === size;
+  });
+  var all = list.length > 0 && list.every(function (c) {
+    return !!state.driverSelected[c.id];
+  });
+  list.forEach(function (c) {
+    state.driverSelected[c.id] = !all;
+  });
+  render();
 }

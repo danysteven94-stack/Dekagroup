@@ -217,3 +217,18 @@ button,input,select{font-family:var(--font);}
 .arch-table td{padding:9px 12px;border-bottom:1px solid var(--line-soft);white-space:nowrap;}
 .arch-table tbody tr:last-child td{border-bottom:none;}
 .arch-actions{display:flex;gap:6px;}
+
+/* ---------- DRIVER (chofè): same card look as the dashboard, selectable ---------- */
+.size-box{background:var(--panel);border:1px solid var(--line);border-top:4px solid var(--sel,var(--steel));border-radius:12px;padding:16px;margin-bottom:16px;box-shadow:0 1px 2px rgba(15,27,36,.04);}
+.size-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:12px;}
+.size-count{font-size:11.5px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--muted-light);white-space:nowrap;}
+.size-empty{font-size:13px;color:var(--muted-light);padding:4px 0 2px;}
+.size-hint{font-size:12.5px;color:var(--muted);margin:-6px 0 14px;line-height:1.5;}
+.sel-tile{cursor:pointer;position:relative;gap:8px;border:2px solid var(--line);-webkit-tap-highlight-color:transparent;user-select:none;transition:border-color .12s ease,background .12s ease,transform .08s ease;}
+.sel-tile:active{transform:scale(.98);}
+.sel-tile.selected{border-color:var(--sel,var(--teal));background:color-mix(in srgb,var(--sel,var(--teal)) 8%,#fff);}
+.sel-tile.locked{cursor:not-allowed;opacity:.72;}
+.sel-check{width:28px;height:28px;border-radius:50%;border:2px solid var(--line);background:#fff;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.sel-tile.selected .sel-check{background:var(--sel,var(--teal));border-color:var(--sel,var(--teal));}
+.sel-tile .kpi-sub strong{font-weight:700;word-break:break-word;}
+.driver-bar{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid var(--line);padding:14px 20px calc(14px + env(safe-area-inset-bottom,0px));display:flex;align-items:center;justify-content:space-between;gap:12px;box-shadow:0 -4px 16px rgba(0,0,0,.08);z-index:20;}

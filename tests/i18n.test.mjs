@@ -166,6 +166,31 @@ await test("driver page: taken containers leave the available list; available on
   assert.ok(html.slice(iTaken).includes("PRAN0000001") && html.slice(iTaken).includes("Jan Batis"), "taken list shows who took it");
 });
 
+await test("driver page: empty containers are split in a 40' box and a 20' box, and \"select all\" works per box", async () => {
+  I.setLang("ht");
+  state.containers = [
+    { id: "v1", numewo: "VID00000401", billId: "b1", size: "40", division: "ACS", dateEntered: "2026-09-01", dateVerified: "2026-09-02", depo: "D", dateEmpty: "2026-09-10", dateLeft: null },
+    { id: "v2", numewo: "VID00000402", billId: "b1", size: "40", division: "ACS", dateEntered: "2026-09-01", dateVerified: "2026-09-02", depo: "D", dateEmpty: "2026-09-11", dateLeft: null },
+    { id: "v3", numewo: "VID00000201", billId: "b1", size: "20", division: "ACS", dateEntered: "2026-09-01", dateVerified: "2026-09-02", depo: "D", dateEmpty: "2026-09-12", dateLeft: null },
+  ];
+  state.authRole = "chofe"; state.role = "chofe"; state.driverSelected = { v3: true };
+  render();
+  let html = root.innerHTML;
+  I.setLang("fr");
+  const a = html.indexOf("Kontenè Vid 40 pye"), b = html.indexOf("Kontenè Vid 20 pye");
+  assert.ok(a > -1 && b > a, "40' box first, then 20' box");
+  assert.ok(html.slice(a, b).includes("VID00000401") && html.slice(a, b).includes("VID00000402") && !html.slice(a, b).includes("VID00000201"));
+  assert.ok(html.slice(b).includes("VID00000201"));
+  assert.ok(html.includes('data-action="driver-toggle-select" data-id="v1"'), "each card is a tap target");
+  assert.ok(html.includes("sel-tile selected"), "a selected card looks selected");
+  const M = await import("../public/js/mutations.js");
+  M.toggleSelectAllEmpty("40");
+  assert.ok(state.driverSelected.v1 && state.driverSelected.v2 && state.driverSelected.v3, "select all 40' keeps the 20' choice");
+  M.toggleSelectAllEmpty("40");
+  assert.ok(!state.driverSelected.v1 && !state.driverSelected.v2 && state.driverSelected.v3, "second tap un-selects only the 40' ones");
+  state.driverSelected = {};
+});
+
 let bad = 0;
 results.forEach((r) => { console.log((r[0] ? "  ok    " : "  FAIL  ") + r[1]); if (!r[0]) { bad++; console.log("        " + String(r[2] && r[2].message || r[2]).split("\n").slice(0, 14).join("\n        ")); } });
 console.log(`${results.length - bad}/${results.length} passed`);

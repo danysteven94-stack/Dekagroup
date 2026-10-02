@@ -1,6 +1,18 @@
 // French translations of the app's Kreyòl text. EXACT: whole text -> French. PATTERNS: texts with numbers/names inside.
 // Business words kept as people use them at the terminal: Bill, Trucking, Daily Report, DKN, CFC.
 export const EXACT = {
+  // ---- driver page (dashboard look)
+  "Seleksyone": "Sélectionnés",
+  "Dat Prevwa:": "Date prévue :",
+  "Pou konfime depa": "Pour confirmer le départ",
+  "Seleksyone tout": "Tout sélectionner",
+  "Dezeleksyone tout": "Tout désélectionner",
+  "Kontenè Vid 40 pye": "Conteneurs vides 40 pieds",
+  "Kontenè Vid 20 pye": "Conteneurs vides 20 pieds",
+  "Kontenè Vid san gwosè": "Conteneurs vides sans taille",
+  "Pa gen kontenè vid 40 pye kounye a.": "Aucun conteneur vide 40 pieds pour le moment.",
+  "Pa gen kontenè vid 20 pye kounye a.": "Aucun conteneur vide 20 pieds pour le moment.",
+  "Peze sou yon kontenè lè w pran l. Non w, trucking ou chwazi a ak plak ou ap parèt sou kontenè a otomatikman, epi l ap soti nan lis disponib la.": "Appuyez sur un conteneur quand vous le prenez. Votre nom, le trucking choisi et votre plaque apparaîtront automatiquement sur le conteneur, et il quittera la liste des disponibles.",
   // ---- driver: ticking containers still on their way ("pran")
   "Lè w pran yon kontenè, make l. Non w, trucking ou chwazi a ak plak ou ap parèt sou kontenè a otomatikman, epi l ap soti nan lis disponib la.": "Quand vous prenez un conteneur, cochez-le. Votre nom, le trucking choisi et votre plaque apparaîtront automatiquement sur le conteneur, et il quittera la liste des disponibles.",
   "Kontenè 40 pye": "Conteneurs 40 pieds",
