@@ -111,6 +111,8 @@ export function logout() {
   });
   state.authRole = null;
   state.username = "";
+  state.tour = null;
+  state.tourFor = "";
   state.containers = [];
   state.bills = [];
   state.notifications = [];

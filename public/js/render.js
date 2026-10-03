@@ -4,6 +4,7 @@ import { icon } from "./icons.js";
 import { state } from "./state.js";
 import { accountView } from "./views/account.js";
 import { helpView } from "./views/help.js";
+import { maybeStartTour, tourView } from "./views/tour.js";
 import { adminContent } from "./views/admin.js";
 import { dailyReportView } from "./views/daily.js";
 import { depotView } from "./views/depot.js";
@@ -23,6 +24,7 @@ import {
 export function render() {
   var root = document.getElementById("root");
   var html;
+  maybeStartTour();
   if (state.authChecking) {
     html = loadingView();
   } else if (state.authRole && (state.needs || state.acct)) {
@@ -76,6 +78,6 @@ export function render() {
     offlineBanner = `<div class="offline-banner sync">${ waiting } chanjman ap tann pou voye.</div>`;
   }
   var rejectedBanner = state.rejectedCount && state.authRole ? `<div class="offline-banner warn" data-action="rejected-open" style="cursor:pointer">${ icon("alert", 15, "#fff") }${ state.rejectedCount } chanjman pa t pase. Peze la a pou w wè yo.</div>` : "";
-  root.innerHTML = offlineBanner + rejectedBanner + html + modalView() + confirmModalView() + toastsView();
+  root.innerHTML = offlineBanner + rejectedBanner + html + modalView() + confirmModalView() + tourView() + toastsView();
   translateDom(root);
 }

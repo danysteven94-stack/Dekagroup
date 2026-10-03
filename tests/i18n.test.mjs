@@ -59,7 +59,10 @@ const base = () => {
   ];
   state.inventoryChecks = {};
 };
-const show = (setup) => { base(); setup(); render(); return root.innerHTML; };
+const T = await import("../public/js/views/tour.js");
+// the first-login tour is switched off for every screen test below (it has its own test)
+const seenAll = () => ["admin", "depot", "chofe", "daily"].forEach((r) => localStorage.setItem("deka_tour_seen:" + r + ":", "1"));
+const show = (setup) => { base(); seenAll(); state.tour = null; state.tourFor = ""; setup(); render(); return root.innerHTML; };
 const admin = (tab, extra) => show(() => { state.authRole = "admin"; state.unlocked = true; state.tab = tab; if (extra) extra(); });
 
 await test("engine: exact, patterns, separators, plurals, whitespace", () => {
@@ -259,6 +262,47 @@ await test("trucking tab: pick a trucking and a status, containers show in a 40'
   assert.ok(html.includes("FULLDKN0001") && html.includes("VIDCTSA0001"), "searching CTSA also finds DKN containers");
   I.setLang("fr");
   state.truckingGroup = ""; state.truckingStatus = "tout"; state.search = "";
+});
+
+await test("first-login guide: opens once per account, steps through each role's screen, is fully French, can be reopened from Èd", () => {
+  const login = (role, extra) => { base(); state.tour = null; state.tourFor = ""; Object.assign(state, { authRole: role, unlocked: role === "admin", depotUnlocked: role === "depot", drUnlocked: role === "daily", tab: "dashboard" }, extra || {}); localStorage.removeItem(T.tourKey()); };
+  ["admin", "depot", "chofe", "daily"].forEach((role) => {
+    I.setLang("fr");
+    login(role);
+    render();
+    let html = root.innerHTML;
+    assert.ok(html.includes('data-action="tour-next"'), role + ": the guide opens on the first login");
+    assert.ok(html.includes("1 / "), role + ": shows the step counter");
+    let guard = 0;
+    while (state.tour !== null && guard++ < 20) {
+      assert.deepStrictEqual(leftovers(root.innerHTML), [], role + ": no Kreyòl left in step " + state.tour);
+      T.tourNext();
+      render();
+    }
+    assert.strictEqual(state.tour, null, role + ": the last step closes the guide");
+    assert.ok(!root.innerHTML.includes('data-action="tour-next"'), role + ": gone after the last step");
+    render();
+    assert.ok(!root.innerHTML.includes('data-action="tour-next"'), role + ": does not come back on the next screen");
+    // same account signing in again later: not shown again
+    state.tourFor = ""; state.tour = null; render();
+    assert.ok(!root.innerHTML.includes('data-action="tour-next"'), role + ": not shown again for the same account");
+  });
+  // skipping also counts as seen, going back works
+  I.setLang("ht");
+  login("chofe"); render();
+  T.tourNext(); T.tourNext(); T.tourPrev(); assert.strictEqual(state.tour, 1);
+  T.finishTour(); render();
+  assert.ok(!root.innerHTML.includes('data-action="tour-next"') && localStorage.getItem(T.tourKey()));
+  // not while the password screen or loading is on
+  login("admin", { needs: { password: true } }); render();
+  assert.ok(!root.innerHTML.includes('data-action="tour-next"'), "not on top of the account screen");
+  // reopen from the help page
+  login("admin"); state.tour = null; state.tourFor = "x"; state.help = true; render();
+  assert.ok(root.innerHTML.includes('data-action="tour-start"'), "Èd offers to replay the guide");
+  T.startTour(); render();
+  assert.ok(root.innerHTML.includes('data-action="tour-next"') && state.tour === 0 && state.help === false, "replay opens the first step");
+  state.tour = null; state.help = false;
+  I.setLang("fr");
 });
 
 await test("products tab: one dashboard-style card per product; tapping a card shows its containers", () => {

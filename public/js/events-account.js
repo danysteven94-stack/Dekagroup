@@ -4,6 +4,7 @@ import {
   showToast
 } from "./api.js";
 import { render } from "./render.js";
+import { finishTour, startTour, tourNext, tourPrev } from "./views/tour.js";
 import { state } from "./state.js";
 import { roleLabel } from "./utils.js";
 import {
@@ -191,6 +192,18 @@ document.addEventListener("click", function (event) {
     render();
   } else if (a === "open-help") {
     state.help = true;
+    render();
+  } else if (a === "tour-start") {
+    startTour();
+    render();
+  } else if (a === "tour-next") {
+    tourNext();
+    render();
+  } else if (a === "tour-prev") {
+    tourPrev();
+    render();
+  } else if (a === "tour-skip") {
+    finishTour();
     render();
   } else if (a === "close-help") {
     state.help = false;

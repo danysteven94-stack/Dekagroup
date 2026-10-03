@@ -5,6 +5,8 @@ import { storageGet } from "./utils.js";
 export const state = {
   online: typeof navigator === "undefined" || navigator.onLine !== false,
   help: false,
+  tour: null,
+  tourFor: "",
   unlocked: false,
   depotUnlocked: false,
   authRole: null,

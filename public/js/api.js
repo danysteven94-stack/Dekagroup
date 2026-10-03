@@ -361,6 +361,8 @@ function sessionExpired() {
   state.sessionRole = null;
   state.authRole = null;
   state.username = "";
+  state.tour = null;
+  state.tourFor = "";
   state.unlocked = false;
   state.depotUnlocked = false;
   state.drUnlocked = false;
