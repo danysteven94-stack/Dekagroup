@@ -9,6 +9,7 @@ import {
   createStockEntry,
   finishInvoice,
   loadData,
+  loadContainerHistory,
   loadGoodsIncidents,
   loadInvoices,
   loadStockEntries,
@@ -31,6 +32,8 @@ import {
   toggleContainerTaken,
   toggleSelectAllEmpty,
   openVerifyModal,
+  startDebarquement,
+  undoDebarquement,
   submitModal,
   syncBillCompletion,
   toggleInventoryCheck,
@@ -357,8 +360,9 @@ document.addEventListener("click", function (event) {
     } else if (i === "correct-date") {
       openCorrectDateModal(o);
     } else if (i === "container-info") {
-      state.modal = { mode: "container-info", id: o };
+      state.modal = { mode: "container-info", id: o, history: null, historyErr: "" };
       render();
+      loadContainerHistory(o);
     } else if (i === "edit-container") {
       openEditContainerModal(o);
     } else if (i === "close-modal") {
@@ -443,8 +447,12 @@ document.addEventListener("click", function (event) {
       toggleContainerTaken(o);
     } else if (i === "driver-confirm") {
       confirmDeparture();
-    } else if (i === "mark-empty") {
+    } else if (i === "mark-empty" || i === "pointeur-vid") {
       markContainerEmpty(o);
+    } else if (i === "pointeur-debarq") {
+      startDebarquement(o);
+    } else if (i === "pointeur-undo") {
+      undoDebarquement(o);
     } else if (i === "undo-empty") {
       undoContainerEmpty(o);
     } else if (i === "mark-left") {
@@ -670,6 +678,17 @@ document.addEventListener("input", function (event) {
       var i = n.value;
       n.value = "";
       n.value = i;
+    }
+  }
+  if (event.target && event.target.id === "f-pointeur-search") {
+    state.pointeurSearch = event.target.value;
+    render();
+    var ps = document.getElementById("f-pointeur-search");
+    if (ps) {
+      ps.focus();
+      var pv = ps.value;
+      ps.value = "";
+      ps.value = pv;
     }
   }
   if (event.target && event.target.id === "f-inv-search") {

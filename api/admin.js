@@ -71,7 +71,22 @@ async function backup(req, res, session) {
   });
 }
 
-const handlers = { audit: audit, health: health, backup: backup };
+// Container history: GET /api/history?id=<container id> -> newest event first.
+async function history(req, res, session) {
+  if (req.method !== "GET") {
+    res.setHeader("Allow", "GET");
+    res.status(405).json({ error: "Method not allowed" });
+    return;
+  }
+  const id = req.query && req.query.id;
+  if (typeof id !== "string" || !/^[A-Za-z0-9_-]{1,64}$/.test(id)) {
+    res.status(400).json({ error: "Id kontenè a pa valid.", code: "invalid" });
+    return;
+  }
+  res.status(200).json({ events: await require("./_lib/history").list(id, session.pool) });
+}
+
+const handlers = { audit: audit, health: health, backup: backup, history: history };
 
 module.exports = async function handler(req, res) {
   try {

@@ -9,6 +9,7 @@ import { adminContent } from "./views/admin.js";
 import { dailyReportView } from "./views/daily.js";
 import { depotView } from "./views/depot.js";
 import { driverView } from "./views/driver.js";
+import { pointeurView } from "./views/pointeur.js";
 import {
   loadErrorView,
   loadingView,
@@ -56,6 +57,14 @@ export function render() {
       html = loadErrorView();
     } else {
       html = dailyReportView();
+    }
+  } else if (state.authRole === "pointeur") {
+    if (state.loadingData) {
+      html = loadingView();
+    } else if (state.loadError) {
+      html = loadErrorView();
+    } else {
+      html = pointeurView();
     }
   } else if (state.authRole === "chofe") {
     if (state.loadingData) {

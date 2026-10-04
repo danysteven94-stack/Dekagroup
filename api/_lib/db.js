@@ -84,7 +84,7 @@ function configuredPools() {
 }
 
 // Portable DDL (same statements run on PostgreSQL in production and on SQLite in the tests).
-const SCHEMA_VERSION = 10;
+const SCHEMA_VERSION = 11;
 const DDL = [
   "CREATE TABLE IF NOT EXISTS meta (name TEXT PRIMARY KEY, value BIGINT NOT NULL)",
   "CREATE TABLE IF NOT EXISTS bills (" +
@@ -121,6 +121,8 @@ const DDL = [
   "ALTER TABLE users ADD COLUMN IF NOT EXISTS plate TEXT",
   // Trucking company a driver works for (CFC, CTSA, MAD, DKN 001...); stamped onto every container he takes or sends out.
   "ALTER TABLE users ADD COLUMN IF NOT EXISTS trucking TEXT",
+  // Pointeur accounts belong to one depot account (its username); null for every other role.
+  "ALTER TABLE users ADD COLUMN IF NOT EXISTS depot_of TEXT",
   // Stock entries ("Antre Estòk"): goods registered into the depot, always tied to a Bill.
   "CREATE TABLE IF NOT EXISTS stock_entries (" +
     "id TEXT PRIMARY KEY, bill_id TEXT NOT NULL, entry_date TEXT NOT NULL, description TEXT NOT NULL, " +
@@ -143,6 +145,11 @@ const DDL = [
     "registered_by TEXT, created_at TEXT NOT NULL)",
   "CREATE INDEX IF NOT EXISTS goods_incidents_bill_idx ON goods_incidents (bill_id)",
   "CREATE INDEX IF NOT EXISTS goods_incidents_kind_idx ON goods_incidents (kind)",
+  // Container history ("Istorik"): who did what to each container and when (see _lib/history.js).
+  "CREATE TABLE IF NOT EXISTS container_history (" +
+    "id TEXT PRIMARY KEY, container_id TEXT NOT NULL, numewo TEXT, ts TEXT NOT NULL, kind TEXT NOT NULL, " +
+    "info TEXT, actor TEXT, actor_name TEXT, role TEXT)",
+  "CREATE INDEX IF NOT EXISTS container_history_cid_idx ON container_history (container_id, ts)",
   "INSERT INTO meta (name, value) VALUES ('rev', 0) ON CONFLICT (name) DO NOTHING",
   "INSERT INTO meta (name, value) VALUES ('migrated', 0) ON CONFLICT (name) DO NOTHING",
 ];

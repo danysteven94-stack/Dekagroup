@@ -398,7 +398,7 @@ export function submitModal() {
 }
 
 export function markContainerEmpty(id) {
-  if (state.authRole === "depot") {
+  if (state.authRole === "depot" || state.authRole === "pointeur") {
     state.confirmModal = null;
     apiAct({
       action: "markEmpty",
@@ -522,6 +522,34 @@ export function confirmDeparture() {
     showToast(`${ n.length } kontenè konfime kite ak ${ e }.`);
     render();
   }
+}
+
+// A pointeur starts unloading a Full container: the server stamps his name and the administrator sees it at once.
+export function startDebarquement(id) {
+  var c = state.containers.find(function (x) {
+    return x.id === id;
+  });
+  if (!c || state.authRole !== "pointeur") {
+    render();
+    return;
+  }
+  apiAct({ action: "debarq", id: id }, function () {
+    showToast(`Debarkman kontenè ${ c.numewo } make. Administratè a wè l kounye a.`);
+  });
+}
+
+// A pointeur takes back a debarquement he started by mistake (only his own).
+export function undoDebarquement(id) {
+  var c = state.containers.find(function (x) {
+    return x.id === id;
+  });
+  if (!c || state.authRole !== "pointeur") {
+    render();
+    return;
+  }
+  apiAct({ action: "undoDebarq", id: id }, function () {
+    showToast(`Debarkman kontenè ${ c.numewo } anile.`);
+  });
 }
 
 // A driver ticks (or un-ticks) a container that is still on its way, to say he took it.

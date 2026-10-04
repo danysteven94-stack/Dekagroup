@@ -49,7 +49,7 @@ async function handleVerify(req, res, session) {
     }, { cid: session.username, pool: session.pool });
 
     if (out.changed) {
-      await S2.afterCommit(out.prev, out.blob, req);
+      await S2.afterCommit(out.prev, out.blob, req, session);
       await A.audit(req, "verify", { numewo: out.info.verified }, session);
     }
     const body2 = { ok: true, container: out.info.container };
@@ -92,7 +92,7 @@ async function handleLeave(req, res, session) {
     }, { cid: session.username, pool: session.pool });
 
     if (out.changed) {
-      await S2.afterCommit(out.prev, out.blob, req);
+      await S2.afterCommit(out.prev, out.blob, req, session);
       await A.audit(req, "container_left", { numewo: out.info.left }, session);
     }
     const body2 = { ok: true, container: out.info.container };

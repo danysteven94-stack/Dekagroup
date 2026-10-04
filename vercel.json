@@ -18,6 +18,10 @@
       "destination": "/api/admin?action=backup"
     },
     {
+      "source": "/api/history",
+      "destination": "/api/admin?action=history"
+    },
+    {
       "source": "/api/verify",
       "destination": "/api/daily?action=verify"
     },

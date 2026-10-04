@@ -7,7 +7,7 @@ const { ApiError } = require("./_lib/errors");
 module.exports = async function handler(req, res) {
   try {
     if (req.method === "GET") {
-      const session = await A.requireAuth(req, res, ["admin", "depot", "daily", "chofe"]);
+      const session = await A.requireAuth(req, res, ["admin", "depot", "daily", "chofe", "pointeur"]);
       if (!session) return;
       const r = await repo.readAll(session.pool);
       res.status(200).json(Object.assign({}, S.viewFor(session, r.view || r.blob), { rev: r.rev }));
@@ -46,7 +46,7 @@ module.exports = async function handler(req, res) {
       }
 
       if (out.changed) {
-        await S.afterCommit(out.prev, out.blob, req);
+        await S.afterCommit(out.prev, out.blob, req, session);
         await A.audit(req, "data_write", { containers: clean.containers.length, bills: clean.bills.length, before: out.prev.containers.length }, session);
       }
       res.status(200).json({ ok: true, rev: out.rev === undefined ? null : out.rev, hashes: out.hashes || null });

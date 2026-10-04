@@ -5,6 +5,7 @@ const A = require("./_lib/auth");
 const S = require("./_lib/store");
 const Users = require("./_lib/users");
 const repo = require("./_lib/repo");
+const Div = require("./_lib/divisions");
 const { ApiError } = require("./_lib/errors");
 
 class ActionError extends Error {
@@ -19,15 +20,67 @@ function text(v, max) {
   return typeof v === "string" ? v.trim().slice(0, max) : "";
 }
 
+// A pointeur only works on containers of the divisions his depot account was given (same rule as the depot screen).
+function assertDivision(session, c) {
+  const visible = Div.visibleDivisions(session.src, session.divisions);
+  if (visible && (!c.division || visible.indexOf(c.division) === -1)) throw new ActionError(403, "Ou pa gen aksè ak divizyon konteneur sa a.", "forbidden_division");
+}
+
 const ACTIONS = {
-  // Depot (or admin): a Full container is now empty.
-  markEmpty: { roles: ["depot", "admin"], run: function (data, body) {
+  // Depot (or admin, or the pointeur who unloaded it): a Full container is now empty.
+  // A pointeur can only empty a container he started unloading himself ("debarq"); his name stays on the container
+  // (debarqName) so the history says who unloaded it and who emptied it.
+  markEmpty: { roles: ["depot", "admin", "pointeur"], run: function (data, body, ctx) {
     const c = data.containers.find(function (x) { return x.id === body.id; });
     if (!c) throw new ActionError(404, "Pa jwenn konteneur la.", "not_found");
     if (S.statusOf(c) !== "full") throw new ActionError(409, "Konteneur sa a pa Full ankò. Done yo rafrechi.", "wrong_status");
+    const isPointeur = ctx && ctx.session && ctx.session.role === "pointeur";
+    if (isPointeur) {
+      assertDivision(ctx.session, c);
+      if (!c.dateDebarq) throw new ActionError(409, "Fè debarkman an anvan w make konteneur la vid.", "not_unloading");
+      if (c.debarqBy !== ctx.session.username) throw new ActionError(403, "Se yon lòt pointeur ki ap debake konteneur sa a.", "not_yours");
+    }
     const bill = data.bills.find(function (b) { return b.id === c.billId; });
     data.containers = data.containers.map(function (x) { return x.id === c.id ? Object.assign({}, x, { dateEmpty: S.today() }) : x; });
-    S.addNotification(data, bill ? bill.numewo : "", "Konten\u00E8 " + c.numewo + " vid kounye a" + (bill ? " (Bill " + bill.numewo + ")" : "") + ".");
+    const by = c.debarqName ? " \u2014 debake pa pointeur " + c.debarqName : "";
+    S.addNotification(data, bill ? bill.numewo : "", "Konten\u00E8 " + c.numewo + " vid kounye a" + (bill ? " (Bill " + bill.numewo + ")" : "") + by + ".");
+    return { id: c.id };
+  } },
+
+  // Pointeur: started unloading a Full container. Shows up at once for the administrator (notification + "ap debake" badge)
+  // and in the history. The pointeur's own name is stamped automatically; he never types it.
+  debarq: { roles: ["pointeur"], run: function (data, body, ctx) {
+    const c = data.containers.find(function (x) { return x.id === body.id; });
+    if (!c) throw new ActionError(404, "Pa jwenn konteneur la.", "not_found");
+    if (S.statusOf(c) !== "full") throw new ActionError(409, "Konteneur sa a pa Full ankò. Done yo rafrechi.", "wrong_status");
+    assertDivision(ctx.session, c);
+    const me = ctx.session.username;
+    if (c.dateDebarq && c.debarqBy && c.debarqBy !== me) throw new ActionError(409, "Yon lòt pointeur deja ap debake konteneur sa a.", "already_taken");
+    if (c.dateDebarq && c.debarqBy === me) return { id: c.id, already: true };
+    const name = (ctx.pointeur && ctx.pointeur.name) || ctx.session.name || me;
+    const depot = ctx.owner && ctx.owner.name ? " (depo: " + ctx.owner.name + ")" : "";
+    const bill = data.bills.find(function (b) { return b.id === c.billId; });
+    data.containers = data.containers.map(function (x) {
+      return x.id === c.id ? Object.assign({}, x, { dateDebarq: S.today(), debarqBy: me, debarqName: name }) : x;
+    });
+    S.addNotification(data, bill ? bill.numewo : "", "Konten\u00E8 " + c.numewo + " ap debake pa pointeur " + name + depot + ".");
+    return { id: c.id };
+  } },
+
+  // Pointeur: un-tick a debarquement he started by mistake (only his own, only while the container is still Full).
+  undoDebarq: { roles: ["pointeur"], run: function (data, body, ctx) {
+    const c = data.containers.find(function (x) { return x.id === body.id; });
+    if (!c) throw new ActionError(404, "Pa jwenn konteneur la.", "not_found");
+    if (!c.dateDebarq) return { id: c.id, already: true };
+    if (S.statusOf(c) !== "full") throw new ActionError(409, "Konteneur sa a pa Full ankò. Done yo rafrechi.", "wrong_status");
+    if (c.debarqBy !== ctx.session.username) throw new ActionError(403, "Se yon lòt pointeur ki ap debake konteneur sa a.", "not_yours");
+    data.containers = data.containers.map(function (x) {
+      if (x.id !== c.id) return x;
+      const y = Object.assign({}, x);
+      delete y.dateDebarq; delete y.debarqBy; delete y.debarqName;
+      return y;
+    });
+    S.addNotification(data, "", "Pointeur " + (c.debarqName || ctx.session.username) + " anile debarkman konteneur " + c.numewo + ".");
     return { id: c.id };
   } },
 
@@ -127,7 +180,7 @@ module.exports = async function handler(req, res) {
       res.status(405).json({ error: "Method not allowed" });
       return;
     }
-    const session = await A.requireAuth(req, res, ["admin", "depot", "chofe"]);
+    const session = await A.requireAuth(req, res, ["admin", "depot", "chofe", "pointeur"]);
     if (!session) return;
 
     const body = A.parseBody(req);
@@ -143,10 +196,17 @@ module.exports = async function handler(req, res) {
     if ((body.action === "depart" || body.action === "pran") && session.role === "chofe") {
       driver = await Users.get(session.username);
     }
+    // a pointeur works for one depot account: its name goes on the notification
+    let pointeur = null;
+    let owner = null;
+    if (session.role === "pointeur") {
+      pointeur = await Users.get(session.username);
+      owner = pointeur && pointeur.depotOf ? await Users.get(pointeur.depotOf) : null;
+    }
     const out = await repo.mutate(async function (data) {
-      return def.run(data, body, { session: session, driver: driver });
+      return def.run(data, body, { session: session, driver: driver, pointeur: pointeur, owner: owner });
     }, { cid: session.username, pool: session.pool });
-    if (out.changed) await S.afterCommit(out.prev, out.blob, req);
+    if (out.changed) await S.afterCommit(out.prev, out.blob, req, session);
 
     await A.audit(req, "act_" + body.action, out.info, session);
     res.status(200).json({ ok: true, result: out.info, data: Object.assign({}, S.viewFor(session, out.view || out.blob), { rev: out.rev }) });

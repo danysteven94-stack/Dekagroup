@@ -34,6 +34,12 @@ const GUIDES = {
     ["Vide yon kontenè", "Lè yon kontenè vide, klike sou li epi make «Vid». Li ap parèt pou chofè yo ka vin pran l."],
     ["Transfere Depo", "Si yon kontenè chanje kote li ye, ouvri l epi chwazi nouvo depo a (ak trucking si genyen)."]
   ],
+  pointeur: [
+    ["Kontenè pou debake", "Ou wè kontenè Full ki nan depo ou a. Se sa ou ap debake yo."],
+    ["Debarquement", "Lè w kòmanse debake yon kontenè, peze «Debarquement». Administratè Lojistik la wè sa menm lè a, ak non ou."],
+    ["Mete Vid", "Lè kontenè a fin vid, peze «Mete Vid». Non ou rete nan istorik kontenè a kòm moun ki debake l epi ki vide l."],
+    ["Anile", "Si w peze «Debarquement» pa erè, peze «Anile» pou reprann li (sèlman sou kontenè pa w)."]
+  ],
   chofe: [
     ["Chwazi Trucking ou", "Anlè paj la, chwazi non trucking ou (oswa nimewo li) anvan w kontinye. Si administratè a deja mete trucking ou sou kont ou, l ap parèt la otomatikman."],
     ["Chwazi Kontenè yo", "Kontenè ki vid epi ki disponib pou pran yo parèt anba a. Koche tout kontenè w ap pran yo."],

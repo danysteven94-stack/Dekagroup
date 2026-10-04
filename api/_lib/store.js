@@ -57,6 +57,11 @@ function addNotification(data, billNumewo, message) {
   data.notifications = [{ id: newId(), billNumewo: billNumewo || "", date: today(), message: message }].concat(data.notifications).slice(0, 200);
 }
 
+// A Full container a pointeur has started unloading ("debarquement") and has not emptied yet.
+function isUnloading(c) {
+  return !!c.dateDebarq && statusOf(c) === "full";
+}
+
 // Same rule as the app: a bill is completed when every container has left.
 function recomputeBills(data) {
   data.bills = data.bills.map(function (b) {
@@ -133,10 +138,12 @@ function sanitizeState(body) {
     const cid = id(c.id, "id konteneur");
     if (seenC[cid]) throw new ValidationError("id konteneur double");
     seenC[cid] = true;
-    const known = ["id", "numewo", "billId", "size", "division", "dateEntered", "dateExpected", "dateVerified", "depo", "trucking", "chofer", "plak", "dateEmpty", "dateLeft", "datePran", "pranBy"];
+    const known = ["id", "numewo", "billId", "size", "division", "dateEntered", "dateExpected", "dateVerified", "depo", "trucking", "chofer", "plak", "dateEmpty", "dateLeft", "datePran", "pranBy", "dateDebarq", "debarqBy", "debarqName"];
     // "Pran" = a driver confirmed he took this not-yet-entered container (see act.js "pran"); only kept when set.
     const pran = {};
     if (c.datePran) { pran.datePran = dateOrNull(c.datePran, "datePran"); pran.pranBy = str(c.pranBy, 60, "pranBy"); }
+    // "Debarquement" = a pointeur started unloading this Full container (see act.js "debarq"); only kept when set.
+    if (c.dateDebarq) { pran.dateDebarq = dateOrNull(c.dateDebarq, "dateDebarq"); pran.debarqBy = str(c.debarqBy, 60, "debarqBy"); pran.debarqName = str(c.debarqName, 80, "debarqName"); }
     return withHint(c, extras(c, known, Object.assign(pran, {
       id: cid,
       numewo: str(c.numewo, 40, "numewo", true),
@@ -208,8 +215,9 @@ async function snapshotIfDue(prev) {
 }
 
 // After a successful save: keep a rolling backup and push/email the notifications that did not exist before.
-async function afterCommit(prev, next, req) {
+async function afterCommit(prev, next, req, session) {
   await snapshotIfDue(prev);
+  if (session) await require("./history").recordDiff(prev, next, session);
   try {
     await notifyNew(prev, next, { host: req.headers.host, deviceId: (req.headers || {})["x-device-id"] });
   } catch (e) {
@@ -229,6 +237,12 @@ function viewFor(session, d) {
   if (role === "admin") return d;
   const out = { containers: d.containers, bills: d.bills, notifications: d.notifications, inventoryChecks: {} };
   let narrowed = false;
+  if (role === "pointeur") {
+    // A pointeur only works on the Full containers of the depot account he belongs to (same divisions, see below).
+    out.containers = out.containers.filter(function (c) { return statusOf(c) === "full"; });
+    out.notifications = [];
+    narrowed = true;
+  }
   if (role === "chofe") {
     // A driver sees the empty containers to take, plus the ones still coming (not entered yet) so he can tick the ones he took.
     out.containers = out.containers.filter(function (c) { const st = statusOf(c); return st === "vid" || st === "disponib" || st === "pran"; });
@@ -237,7 +251,7 @@ function viewFor(session, d) {
   }
   // Only the depot interface is split by division. Logistic admin, driver and Daily Report accounts
   // always see every container, whatever divisions their account happens to list.
-  const visible = role === "depot" ? Div.visibleDivisions(session.src, session.divisions) : null;
+  const visible = role === "depot" || role === "pointeur" ? Div.visibleDivisions(session.src, session.divisions) : null;
   if (visible) {
     const allowed = {};
     visible.forEach(function (dv) { allowed[dv] = true; });
@@ -253,6 +267,6 @@ function viewFor(session, d) {
 }
 
 module.exports = {
-  BACKUP_KEY, ValidationError, today, newId, emptyData, statusOf, billState, addNotification, recomputeBills,
+  BACKUP_KEY, ValidationError, today, newId, emptyData, statusOf, isUnloading, billState, addNotification, recomputeBills,
   sanitizeState, snapshotIfDue, afterCommit, viewFor, audit,
 };

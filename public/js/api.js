@@ -426,11 +426,31 @@ function applyActLocally(b) {
   };
   if (b.action === "markEmpty") {
     var c = find(b.id);
-    if (c && statusOf(c) === "full") {
+    if (c && statusOf(c) === "full" && (state.authRole !== "pointeur" || (c.dateDebarq && c.debarqBy === state.username))) {
       state.containers = state.containers.map(function (x) {
         return x.id === c.id ? Object.assign({}, x, { dateEmpty: t }) : x;
       });
       note("Kontenè " + c.numewo + " vid kounye a.");
+    }
+  } else if (b.action === "debarq") {
+    var dc = find(b.id);
+    if (dc && statusOf(dc) === "full" && !dc.dateDebarq) {
+      var dn = state.sessionName || state.name || state.username;
+      state.containers = state.containers.map(function (x) {
+        return x.id === dc.id ? Object.assign({}, x, { dateDebarq: t, debarqBy: state.username, debarqName: dn }) : x;
+      });
+    }
+  } else if (b.action === "undoDebarq") {
+    var ud = find(b.id);
+    if (ud && statusOf(ud) === "full" && ud.debarqBy === state.username) {
+      state.containers = state.containers.map(function (x) {
+        if (x.id !== ud.id) return x;
+        var y = Object.assign({}, x);
+        delete y.dateDebarq;
+        delete y.debarqBy;
+        delete y.debarqName;
+        return y;
+      });
     }
   } else if (b.action === "transfer") {
     var d = find(b.id);
@@ -477,6 +497,12 @@ function actLabel(b) {
   if (b.action === "markEmpty") {
     return "Vid: " + (c ? c.numewo : "");
   }
+  if (b.action === "debarq") {
+    return "Debarkman: " + (c ? c.numewo : "");
+  }
+  if (b.action === "undoDebarq") {
+    return "Anile debarkman: " + (c ? c.numewo : "");
+  }
   if (b.action === "transfer") {
     return "Transfè: " + (c ? c.numewo : "") + " \u2192 " + b.depo;
   }
@@ -504,7 +530,7 @@ export function queueRequest(kind, url, body, label, maybeDone, quiet) {
 function queueAct(body, onOk, maybeDone) {
   applyActLocally(body);
   queueRequest("act", "/api/act", body, actLabel(body), maybeDone);
-  if (onOk && (body.action === "depart" || body.action === "pran" || body.action === "defePran")) {
+  if (onOk && (body.action === "depart" || body.action === "pran" || body.action === "defePran" || body.action === "debarq" || body.action === "undoDebarq")) {
     onOk({ queued: true, result: { left: (body.ids || []).length } });
   }
   render();
@@ -878,5 +904,25 @@ export function apiGet(url) {
       }
       return d;
     });
+  });
+}
+
+// History of one container (administrator only): shown at the bottom of the container detail window.
+export function loadContainerHistory(id) {
+  if (state.authRole !== "admin") {
+    return;
+  }
+  apiGet("/api/history?id=" + encodeURIComponent(id)).then(function (d) {
+    if (state.modal && state.modal.mode === "container-info" && state.modal.id === id) {
+      state.modal.history = Array.isArray(d.events) ? d.events : [];
+      state.modal.historyErr = "";
+      render();
+    }
+  }).catch(function (e) {
+    if (state.modal && state.modal.mode === "container-info" && state.modal.id === id) {
+      state.modal.history = [];
+      state.modal.historyErr = e && e.message ? e.message : "Erè";
+      render();
+    }
   });
 }

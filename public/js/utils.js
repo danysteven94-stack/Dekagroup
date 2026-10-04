@@ -164,7 +164,8 @@ export function roleLabel(role) {
     admin: "Administratè Lojistik",
     depot: "Depo",
     daily: "Daily Report",
-    chofe: "Chofè"
+    chofe: "Chofè",
+    pointeur: "Pointeur"
   }[role] || role;
 }
 

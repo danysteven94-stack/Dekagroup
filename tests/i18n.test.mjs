@@ -61,7 +61,7 @@ const base = () => {
 };
 const T = await import("../public/js/views/tour.js");
 // the first-login tour is switched off for every screen test below (it has its own test)
-const seenAll = () => ["admin", "depot", "chofe", "daily"].forEach((r) => localStorage.setItem("deka_tour_seen:" + r + ":", "1"));
+const seenAll = () => ["admin", "depot", "chofe", "daily", "pointeur"].forEach((r) => localStorage.setItem("deka_tour_seen:" + r + ":", "1"));
 const show = (setup) => { base(); seenAll(); state.tour = null; state.tourFor = ""; setup(); render(); return root.innerHTML; };
 const admin = (tab, extra) => show(() => { state.authRole = "admin"; state.unlocked = true; state.tab = tab; if (extra) extra(); });
 
@@ -126,6 +126,17 @@ const SCREENS = {
   "depot list": () => show(() => { state.authRole = "depot"; state.depotUnlocked = true; state.depotTab = "list"; }),
   "depot division": () => show(() => { state.authRole = "depot"; state.depotUnlocked = true; state.depotTab = "dashboard"; state.depotDivision = "ACS"; }),
   "driver": () => show(() => { state.authRole = "chofe"; state.role = "chofe"; }),
+  "pointeur": () => show(() => { state.authRole = "pointeur"; state.username = "poin.un"; state.sessionName = "Jean Pointeur"; }),
+  "pointeur (debarquement)": () => show(() => {
+    state.authRole = "pointeur"; state.username = "poin.un"; state.sessionName = "Jean Pointeur";
+    state.containers = state.containers.concat([
+      { id: "d1", numewo: "FULL0000010", billId: "b1", size: "40", division: "ACS", dateEntered: "2026-09-01", dateVerified: "2026-09-02", depo: "Depo A", trucking: "CFC", dateEmpty: null, dateLeft: null, dateDebarq: "2026-10-01", debarqBy: "poin.un", debarqName: "Jean Pointeur" },
+      { id: "d2", numewo: "FULL0000011", billId: "b1", size: "20", division: "ACS", dateEntered: "2026-09-01", dateVerified: "2026-09-02", depo: "Depo A", trucking: "CFC", dateEmpty: null, dateLeft: null, dateDebarq: "2026-10-01", debarqBy: "poin.de", debarqName: "Paul Pointeur" },
+    ]);
+  }),
+  "pointeur (search none)": () => show(() => { state.authRole = "pointeur"; state.username = "poin.un"; state.pointeurSearch = "zzz"; }),
+  "pointeur (nothing to unload)": () => show(() => { state.authRole = "pointeur"; state.username = "poin.un"; state.containers = []; }),
+  "pointeur help": () => show(() => { state.authRole = "pointeur"; state.help = true; }),
   "driver (containers taken)": () => show(() => {
     state.authRole = "chofe"; state.role = "chofe"; state.username = "me"; state.driverTrucking = "CFC";
     state.containers = state.containers.concat([
@@ -262,6 +273,32 @@ await test("trucking tab: pick a trucking and a status, containers show in a 40'
   assert.ok(html.includes("FULLDKN0001") && html.includes("VIDCTSA0001"), "searching CTSA also finds DKN containers");
   I.setLang("fr");
   state.truckingGroup = ""; state.truckingStatus = "tout"; state.search = "";
+});
+
+await test("container detail (admin): history timeline shows what happened, who did it and when; fully French", () => {
+  const ev = (kind, info, actor, ts) => ({ id: kind + ts, kind, info, actor, actorName: "", ts });
+  const open = (history, err) => () => { state.authRole = "admin"; state.unlocked = true; state.tab = "containers"; state.modal = { mode: "container-info", id: "c1", history, historyErr: err || "" }; };
+  I.setLang("fr");
+  let html = show(open(null));
+  assert.ok(html.includes("Ap chaje..."), "loading state");
+  html = show(open([
+    ev("left", "CTSA \u00B7 Jan Batis (CC-9999)", "logistic", "2026-09-10T14:05:00.000Z"),
+    ev("transfer", "Depo A \u2192 Depo B", "depotnord", "2026-09-08T09:00:00.000Z"),
+    ev("verified", "2026-09-02 \u00B7 Depo A", "logisticdepot", "2026-09-02T08:00:00.000Z"),
+    ev("created", "ACS \u00B7 40'", "logistic", "2026-09-01T07:00:00.000Z"),
+  ]));
+  assert.ok(html.includes("depotnord") && html.includes("Depo A \u2192 Depo B") && html.includes("CC-9999"), "who, what and details");
+  assert.ok(html.indexOf("Kontenè kite") < html.indexOf("Kontenè anrejistre"), "newest first");
+  assert.deepStrictEqual(leftovers(html), [], "no Kreyòl left in French mode");
+  assert.ok(I.t("Kontenè kite") === "Conteneur sorti" && I.t("Kontenè verifye") === "Conteneur vérifié");
+  html = show(open([]));
+  assert.ok(html.includes("Pa gen istorik"), "empty state");
+  html = show(open([], "boom"));
+  assert.ok(html.includes("Pa ka chaje istorik"), "error state");
+  // the history is for the administrator only
+  html = show(() => { state.authRole = "depot"; state.depotUnlocked = true; state.modal = { mode: "container-info", id: "c1", history: [ev("created", "", "x", "2026-09-01T07:00:00.000Z")] }; });
+  assert.ok(!html.includes("Istorik") && !html.includes("Historique"), "not shown outside the admin screens");
+  state.modal = null;
 });
 
 await test("first-login guide: opens once per account, steps through each role's screen, is fully French, can be reopened from Èd", () => {

@@ -133,10 +133,12 @@ document.addEventListener("submit", function (event) {
     fm.role = document.getElementById("usr-role").value;
     fm.plate = document.getElementById("usr-plate").value.trim();
     fm.trucking = document.getElementById("usr-trucking").value;
+    var depotSel = document.getElementById("usr-depotof");
+    fm.depotOf = depotSel ? depotSel.value : "";
     fm.divisions = Array.prototype.map.call(document.querySelectorAll(".usr-create-division:checked"), function (el) { return el.value; });
     fm.err = "";
     // same rules as the server, so the message shows right away
-    var missing = !fm.username ? "Non itilizatè a obligatwa." : !fm.name ? "Non konplè a obligatwa." : !fm.role ? "Wòl la obligatwa." : fm.role === "chofe" && !fm.plate ? "Plak kamyon an obligatwa pou yon chofè." : "";
+    var missing = !fm.username ? "Non itilizatè a obligatwa." : !fm.name ? "Non konplè a obligatwa." : !fm.role ? "Wòl la obligatwa." : fm.role === "chofe" && !fm.plate ? "Plak kamyon an obligatwa pou yon chofè." : fm.role === "pointeur" && !fm.depotOf ? "Chwazi depo pointeur la." : "";
     if (missing) {
       fm.err = missing;
       render();
@@ -150,6 +152,7 @@ document.addEventListener("submit", function (event) {
       role: fm.role,
       plate: fm.plate,
       trucking: fm.role === "chofe" ? fm.trucking : "",
+      depotOf: fm.role === "pointeur" ? fm.depotOf : "",
       divisions: fm.divisions
     }).then(function (d) {
       U.temp = {
@@ -163,6 +166,7 @@ document.addEventListener("submit", function (event) {
         role: fm.role,
         plate: "",
         trucking: "",
+        depotOf: fm.depotOf,
         divisions: [],
         err: ""
       };
@@ -365,6 +369,18 @@ document.addEventListener("change", function (event) {
       username: el.getAttribute("data-user"),
       trucking: el.value
     });
+    return;
+  }
+  if (el && el.classList && el.classList.contains("usr-depotof-select")) {
+    if (el.value) {
+      userAction({
+        action: "set_depot_of",
+        username: el.getAttribute("data-user"),
+        depotOf: el.value
+      });
+    } else {
+      loadUsers();
+    }
     return;
   }
   if (el && el.classList && el.classList.contains("usr-role-select")) {

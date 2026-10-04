@@ -19,6 +19,10 @@ const runs = [
   ["offline (browser logic)", "offline.client.test.mjs", {}],
   ["offline (server, Redis)", "offline.server.test.js", {}],
   ["offline (server, PostgreSQL layer)", "offline.server.test.js", { TEST_BACKEND: "pg" }],
+  ["container history (Redis)", "history.test.js", {}],
+  ["container history (PostgreSQL layer)", "history.test.js", { TEST_BACKEND: "pg" }],
+  ["pointeur (Redis)", "pointeur.test.js", {}],
+  ["pointeur (PostgreSQL layer)", "pointeur.test.js", { TEST_BACKEND: "pg" }],
   ["translations (French)", "i18n.test.mjs", {}],
 ];
 let bad = 0;

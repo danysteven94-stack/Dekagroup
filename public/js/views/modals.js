@@ -24,6 +24,54 @@ export function confirmModalView() {
   return `<div class="modal-overlay"><div class="modal-card" style="text-align:center"><div style="width:44px;height:44px;border-radius:999px;background:${ COLORS.urgent }1A;display:flex;align-items:center;justify-content:center;margin:0 auto 14px">${ icon("alert", 20, COLORS.urgent) }</div><div class="h3" style="margin-bottom:10px">Konfime Aksyon</div><div style="font-size:13px;color:var(--muted);margin-bottom:22px">${ escapeHtml(e.message) }</div><div style="display:flex;gap:8px;justify-content:center"><button class="btn ghost" data-action="close-confirm">Anile</button><button class="btn danger" style="background:${ COLORS.urgent };color:#fff;border-color:${ COLORS.urgent }" data-action="execute-confirm">Wi, Efase</button></div></div></div>`;
 }
 
+const HISTORY_LABEL = {
+  created: "Kontenè anrejistre",
+  expected: "Dat espere mete",
+  entered: "Antre nan depo",
+  verified: "Kontenè verifye",
+  debarq: "Debarkman kòmanse (pointeur)",
+  debarq_undo: "Pointeur anile debarkman",
+  empty: "Kontenè vid",
+  pran: "Chofè make l kòm pran",
+  pran_undo: "Chofè retire l nan sa li te pran",
+  left: "Kontenè kite",
+  reopened: "Remèt nan depo",
+  transfer: "Transfere",
+  edited: "Modifye",
+  corrected: "Korije",
+  deleted: "Efase"
+};
+
+function historyStamp(ts) {
+  var m = /^(\d{4})-(\d\d)-(\d\d)T(\d\d):(\d\d)/.exec(String(ts || ""));
+  if (!m) {
+    return "";
+  }
+  var d = new Date(ts);
+  var pad = function (n) { return n < 10 ? "0" + n : "" + n; };
+  return isNaN(d.getTime()) ? m[3] + "/" + m[2] + "/" + m[1] : pad(d.getDate()) + "/" + pad(d.getMonth() + 1) + "/" + d.getFullYear() + " " + pad(d.getHours()) + ":" + pad(d.getMinutes());
+}
+
+// Timeline of a container (administrator): what happened, who did it and when, newest first.
+function historyBlock(e) {
+  var title = `<div style="font-weight:700;color:var(--navy);font-size:13px;margin:16px 0 6px">Istorik</div>`;
+  if (e.history === null || e.history === undefined) {
+    return title + `<p style="font-size:12.5px;color:var(--muted);margin:0">Ap chaje...</p>`;
+  }
+  if (e.historyErr) {
+    return title + `<p style="font-size:12.5px;color:var(--muted);margin:0">Pa ka chaje istorik la kounye a.</p>`;
+  }
+  if (e.history.length === 0) {
+    return title + `<p style="font-size:12.5px;color:var(--muted);margin:0">Pa gen istorik anrejistre pou kontenè sa a ankò. Chanjman ki fèt apre jodi a ap parèt isit la.</p>`;
+  }
+  var rows = e.history.map(function (h) {
+    var who = (h.actorName || h.actor) + (h.role === "pointeur" ? " (Pointeur)" : "");
+    var line = historyStamp(h.ts) + (who ? " \u00B7 " + who : "");
+    return `<div style="display:flex;gap:10px;padding:7px 0;border-bottom:1px solid var(--line,#E2E8F0)"><span style="width:8px;height:8px;border-radius:50%;background:var(--navy);margin-top:6px;flex:none"></span><div style="min-width:0"><div style="font-size:13px;font-weight:600">${ escapeHtml(HISTORY_LABEL[h.kind] || h.kind) }</div>${ h.info ? `<div style="font-size:12.5px;color:var(--ink);overflow-wrap:anywhere">${ escapeHtml(h.info) }</div>` : "" }<div style="font-size:11.5px;color:var(--muted)">${ escapeHtml(line) }</div></div></div>`;
+  }).join("");
+  return title + `<div>${ rows }</div>`;
+}
+
 export function modalView() {
   if (!state.modal) {
     return "";
@@ -47,8 +95,9 @@ export function modalView() {
     var crow = function (label, value) {
       return `<div style="display:flex;justify-content:space-between;gap:12px;padding:8px 0;border-bottom:1px solid var(--line,#E2E8F0);font-size:13.5px"><span style="color:var(--muted)">${ label }</span><strong style="text-align:right">${ value ? escapeHtml(value) : "\u2014" }</strong></div>`;
     };
-    var cWho = ci.chofer || ci.plak ? crow(statusOf(ci) === "pran" ? "Pran pa chof\u00E8" : "Chof\u00E8", ci.chofer) + crow("Plak", ci.plak) : `<p style="font-size:12.5px;color:var(--muted);margin:10px 0 0">Pa gen chof\u00E8 ni plak anrejistre pou kontenè sa a.</p>`;
-    return `<div class="modal-overlay"><div class="modal-card"><div class="h3" style="margin-bottom:12px">${ escapeHtml(ci.numewo) }</div>${ crow("Bill", cb && cb.numewo) }${ crow("Trucking", ci.trucking) }${ crow("Depo", ci.depo) }${ cWho }<div style="display:flex;justify-content:flex-end;margin-top:20px"><button class="btn ghost" data-action="close-modal">F\u00E8men</button></div></div></div>`;
+    var cDebarq = ci.dateDebarq ? crow("Pointeur (debarkman)", ci.debarqName || ci.debarqBy) : "";
+    var cWho = cDebarq + (ci.chofer || ci.plak ? crow(statusOf(ci) === "pran" ? "Pran pa chof\u00E8" : "Chof\u00E8", ci.chofer) + crow("Plak", ci.plak) : `<p style="font-size:12.5px;color:var(--muted);margin:10px 0 0">Pa gen chof\u00E8 ni plak anrejistre pou kontenè sa a.</p>`);
+    return `<div class="modal-overlay"><div class="modal-card" style="max-height:calc(100vh - 40px);overflow-y:auto"><div class="h3" style="margin-bottom:12px">${ escapeHtml(ci.numewo) }</div>${ crow("Bill", cb && cb.numewo) }${ crow("Trucking", ci.trucking) }${ crow("Depo", ci.depo) }${ cWho }${ state.authRole === "admin" ? historyBlock(e) : "" }<div style="display:flex;justify-content:flex-end;margin-top:20px"><button class="btn ghost" data-action="close-modal">F\u00E8men</button></div></div></div>`;
   }
   if (e.mode === "correct") {
     return `<div class="modal-overlay"><div class="modal-card"><div class="h3" style="margin-bottom:16px">Korije Dat Antre</div><p style="font-size:12.5px;color:var(--muted);margin-top:-8px;margin-bottom:16px">Chanje dat antre a si te gen yon erè. Sa ap rekalkile jou Full otomatikman.</p><div><span class="field-label">Dat Antre</span><input class="input" type="date" id="modal-correct-date" value="${ escapeHtml(e.date) }" /></div><div style="display:flex;gap:8px;justify-content:flex-end;margin-top:22px"><button class="btn ghost" data-action="close-modal">Anile</button><button class="btn teal" data-action="submit-modal">Konfime</button></div></div></div>`;

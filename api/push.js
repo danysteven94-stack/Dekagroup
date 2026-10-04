@@ -11,7 +11,7 @@ module.exports = async function handler(req, res) {
     }
 
     if (req.method === "POST") {
-      const session = await A.requireAuth(req, res, ["admin", "depot", "daily", "chofe"]);
+      const session = await A.requireAuth(req, res, ["admin", "depot", "daily", "chofe", "pointeur"]);
       if (!session) return;
       const body = A.parseBody(req);
 

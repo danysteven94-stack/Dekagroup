@@ -16,7 +16,7 @@ const TOURS = {
     ["Byenvini nan Deka Log", WELCOME],
     ["Meni an", "Peze bouton meni an (twa ba) anlè a pou chanje tab: Tablo Kontwòl, Ajoute, Kontenè, Trucking, Pwodwi, Envantè, Bills, Rapò ak lòt yo."],
     ["Tablo Kontwòl", "Se premye ekran ou wè a. Kat yo montre konbyen kontenè ki Full, Vid ak Sorti, konbyen ki poko verifye, epi konbyen ki ijan (plis pase 5 jou)."],
-    ["Ajoute ak jere kontenè", "Tab «Ajoute» sèvi pou antre yon kontenè ak bill li. Nan tab «Kontenè», chèche yon kontenè pa nimewo, bill, pwodwi, trucking, chofè oswa plak. Peze «Detay» pou wè ki chofè ak ki plak ki te vini avè l, oswa «Modifye» pou korije l."],
+    ["Ajoute ak jere kontenè", "Tab «Ajoute» sèvi pou antre yon kontenè ak bill li. Nan tab «Kontenè», chèche yon kontenè pa nimewo, bill, pwodwi, trucking, chofè oswa plak. Peze «Detay» pou wè ki chofè ak ki plak ki te vini avè l, ak istorik kontenè a (kiyès ki fè kisa, ak kilè). Peze «Modifye» pou korije l."],
     ["Trucking ak Pwodwi", "Tab Trucking ak tab Pwodwi montre yon kat pou chak trucking ak chak pwodwi. Peze yon kat pou wè kontenè li yo. DKN konte ansanm ak CTSA, paske se menm konpayi."],
     ["Envantè, Bills ak Rapò", "Chak jou, kòche kontenè yo nan Envantè pou konfime yo toujou la. Bills montre estati chak bill. Rapò telechaje rapò PDF oswa yon fichye Excel."],
     ["Kont ak sekirite", "Nan Itilizatè ou kreye yon kont pou chak moun. Sekirite montre ki moun ki konekte. Bouton «Kont mwen» sèvi pou chanje modpas ou, epi «Èd» la louvri gid sa a ankò."]
@@ -26,6 +26,13 @@ const TOURS = {
     ["Chwazi yon divizyon", "Kontenè yo separe pa divizyon. Chwazi yon divizyon pou wè kontenè li yo."],
     ["Vide yon kontenè", "Lè yon kontenè vide, peze sou li epi make «Vid». Apre sa li parèt pou chofè yo ka vin pran l."],
     ["Transfere depo", "Si yon kontenè chanje kote li ye, ouvri l epi chwazi nouvo depo a (ak trucking si gen youn)."],
+    ["Èd ak kont ou", "Bouton «Èd» la louvri gid sa a ankò. Bouton «Kont mwen» sèvi pou chanje modpas ou."]
+  ],
+  pointeur: [
+    ["Byenvini nan Deka Log", WELCOME],
+    ["Kontenè pou debake", "Ou wè kontenè Full ki nan depo ou a. Chèche youn ak nimewo li, bill la oswa pwodwi a."],
+    ["Debarquement", "Lè w kòmanse debake yon kontenè, peze «Debarquement». Administratè a wè l sou-le-champ, ak non ou."],
+    ["Mete Vid", "Lè kontenè a fin vid, peze «Mete Vid». Non ou antre nan istorik la kòm moun ki debake l epi vide l."],
     ["Èd ak kont ou", "Bouton «Èd» la louvri gid sa a ankò. Bouton «Kont mwen» sèvi pou chanje modpas ou."]
   ],
   chofe: [
@@ -57,7 +64,7 @@ export function maybeStartTour() {
   if (state.tour !== null && state.tour !== undefined) {
     return;
   }
-  var onMain = state.unlocked || state.depotUnlocked || state.drUnlocked || state.authRole === "chofe";
+  var onMain = state.unlocked || state.depotUnlocked || state.drUnlocked || state.authRole === "chofe" || state.authRole === "pointeur";
   if (!state.authRole || !onMain || state.needs || state.acct || state.help || state.authChecking || state.loadingData || state.loadError) {
     return;
   }

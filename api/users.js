@@ -10,7 +10,7 @@ const { ApiError } = require("./_lib/errors");
 function safe(u) {
   return {
     username: u.username, name: u.name, role: u.role, active: u.active, mustChange: u.mustChange, totpEnabled: u.totpEnabled,
-    email: u.email || null, plate: u.plate || null, trucking: u.trucking || null, principal: u.username === A.principalUsername(), divisions: u.divisions || [],
+    email: u.email || null, plate: u.plate || null, trucking: u.trucking || null, depotOf: u.depotOf || null, principal: u.username === A.principalUsername(), divisions: u.divisions || [],
     lastLoginAt: u.lastLoginAt, createdAt: u.createdAt, createdBy: u.createdBy, passChangedAt: u.passChangedAt,
   };
 }
@@ -51,6 +51,14 @@ function cleanPlate(v) {
 function cleanTrucking(v) {
   const s = typeof v === "string" ? v.trim().toUpperCase().replace(/\s+/g, " ").slice(0, 40) : "";
   return /^[A-Z0-9 ._-]*$/.test(s) ? s : "";
+}
+
+// A pointeur (the person who unloads containers at a depot) always belongs to one personal, active depot account.
+async function depotOwner(username) {
+  const name = typeof username === "string" ? username.trim().toLowerCase() : "";
+  const owner = name ? await Users.get(name) : null;
+  if (!owner || owner.role !== "depot" || !owner.active) throw new ApiError(400, "invalid_depot", "Chwazi yon kont Depo ki aktif pou pointeur la.");
+  return owner;
 }
 
 // Refuse a change that would leave nobody able to administer the app.
@@ -114,9 +122,11 @@ module.exports = async function handler(req, res) {
       if (role === "chofe" && !plate) throw new ApiError(400, "plate_required", "Plak kamyon an obligatwa pou yon chofè.");
       if (body.trucking && !cleanTrucking(body.trucking)) throw new ApiError(400, "invalid_trucking", "Trucking la pa valid.");
       const trucking = role === "chofe" ? cleanTrucking(body.trucking) : "";
+      // A pointeur is attached to a depot account and sees exactly what that depot account sees (same divisions).
+      const owner = role === "pointeur" ? await depotOwner(body.depotOf) : null;
       const temp = Users.tempPassword();
-      const u = await Users.create({ username: target, name: name, role: role, email: email || null, plate: plate || null, trucking: trucking || null, passHash: await A.hashPassword(temp), mustChange: true, divisions: divisions, createdBy: session.username });
-      await A.audit(req, "user_create", { username: target, role: role, divisions: divisions, trucking: trucking || null }, session);
+      const u = await Users.create({ username: target, name: name, role: role, email: email || null, plate: plate || null, trucking: trucking || null, depotOf: owner ? owner.username : null, passHash: await A.hashPassword(temp), mustChange: true, divisions: owner ? owner.divisions || [] : divisions, createdBy: session.username });
+      await A.audit(req, "user_create", { username: target, role: role, divisions: u.divisions, trucking: trucking || null, depotOf: u.depotOf }, session);
       res.status(200).json({ ok: true, user: safe(u), tempPassword: temp });
       return;
     }
@@ -154,9 +164,21 @@ module.exports = async function handler(req, res) {
       if (user.username === A.principalUsername() && role !== "admin") throw new ApiError(400, "principal", "Ou pa ka retire wòl administratè kont prensipal la.");
       if (role === "admin" && !Secret.available()) throw new ApiError(503, "no_app_secret", "APP_SECRET dwe konfigire pou fè yon administratè (2FA obligatwa).");
       if (user.role === "admin" && role !== "admin" && (await wouldLockOut(user.username, user.active, role))) throw new ApiError(409, "last_admin", "Sa ta kite pa gen okenn administratè aktif.");
-      await Users.update(user.username, { role: role });
+      const patch = { role: role };
+      if (role === "pointeur") {
+        const owner = await depotOwner(body.depotOf);
+        patch.depotOf = owner.username;
+        patch.divisions = owner.divisions || [];
+      } else if (user.role === "pointeur") {
+        patch.depotOf = null;
+      }
+      if (user.role === "depot" && role !== "depot") {
+        const all = await Users.list();
+        if (all.some(function (x) { return x.role === "pointeur" && x.depotOf === user.username; })) throw new ApiError(409, "has_pointeurs", "Kont Depo sa a gen pointeur ki rantre ladan. Deplase yo anvan.");
+      }
+      await Users.update(user.username, patch);
       await A.killUserSessions(user.username);
-      await A.audit(req, "user_set_role", { username: user.username, from: user.role, to: role }, session);
+      await A.audit(req, "user_set_role", { username: user.username, from: user.role, to: role, depotOf: patch.depotOf || null }, session);
       res.status(200).json({ ok: true });
       return;
     }
@@ -197,9 +219,30 @@ module.exports = async function handler(req, res) {
       return;
     }
 
+    if (action === "set_depot_of") {
+      if (user.role !== "pointeur") throw new ApiError(400, "not_pointeur", "Se sèlman yon pointeur ki gen yon depo.");
+      const owner = await depotOwner(body.depotOf);
+      await Users.update(user.username, { depotOf: owner.username, divisions: owner.divisions || [] });
+      await A.killUserSessions(user.username);
+      await A.audit(req, "user_set_depot_of", { username: user.username, depotOf: owner.username }, session);
+      res.status(200).json({ ok: true, depotOf: owner.username });
+      return;
+    }
+
     if (action === "set_divisions") {
+      if (user.role === "pointeur") throw new ApiError(400, "inherited", "Divizyon yon pointeur se sa kont Depo li an gen.");
       const divisions = cleanDivisions(body.divisions);
       await Users.update(user.username, { divisions: divisions });
+      if (user.role === "depot") {
+        // the pointeurs of this depot account follow its divisions
+        const all = await Users.list();
+        for (const x of all) {
+          if (x.role === "pointeur" && x.depotOf === user.username) {
+            await Users.update(x.username, { divisions: divisions });
+            await A.killUserSessions(x.username);
+          }
+        }
+      }
       await A.audit(req, "user_set_divisions", { username: user.username, divisions: divisions }, session);
       res.status(200).json({ ok: true, divisions: divisions });
       return;
