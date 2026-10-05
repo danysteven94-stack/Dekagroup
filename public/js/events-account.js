@@ -131,6 +131,11 @@ document.addEventListener("submit", function (event) {
     fm.name = document.getElementById("usr-name").value.trim();
     fm.email = document.getElementById("usr-email").value.trim();
     fm.role = document.getElementById("usr-role").value;
+    var ipSel = document.getElementById("usr-ispointeur");
+    fm.isPointeur = fm.role === "depot" && !!ipSel && ipSel.value === "1";
+    if (fm.isPointeur) {
+      fm.role = "pointeur";
+    }
     fm.plate = document.getElementById("usr-plate").value.trim();
     fm.trucking = document.getElementById("usr-trucking").value;
     var depotSel = document.getElementById("usr-depotof");
@@ -163,7 +168,8 @@ document.addEventListener("submit", function (event) {
         username: "",
         name: "",
         email: "",
-        role: fm.role,
+        role: fm.role === "pointeur" ? "depot" : fm.role,
+        isPointeur: fm.role === "pointeur",
         plate: "",
         trucking: "",
         depotOf: fm.depotOf,
@@ -351,6 +357,25 @@ document.addEventListener("click", function (event) {
 });
 
 document.addEventListener("change", function (event) {
+  var chg = event.target;
+  if (chg && (chg.id === "usr-role" || chg.id === "usr-ispointeur") && state.usr) {
+    // the "Èske se yon pointeur?" question depends on the role: keep what was typed and redraw the form
+    var uf = state.usr.form = state.usr.form || {};
+    uf.username = (document.getElementById("usr-username") || {}).value || "";
+    uf.name = (document.getElementById("usr-name") || {}).value || "";
+    uf.email = (document.getElementById("usr-email") || {}).value || "";
+    uf.plate = (document.getElementById("usr-plate") || {}).value || "";
+    uf.trucking = (document.getElementById("usr-trucking") || {}).value || "";
+    uf.divisions = Array.prototype.map.call(document.querySelectorAll(".usr-create-division:checked"), function (el) { return el.value; });
+    uf.role = (document.getElementById("usr-role") || {}).value || uf.role;
+    var ip = document.getElementById("usr-ispointeur");
+    uf.isPointeur = uf.role === "depot" && !!ip && ip.value === "1";
+    var ds = document.getElementById("usr-depotof");
+    uf.depotOf = ds ? ds.value : uf.depotOf || "";
+    uf.err = "";
+    render();
+    return;
+  }
   var el = event.target;
   if (el && el.classList && el.classList.contains("usr-edit-division")) {
     var sel = state.usr.divEditSel = state.usr.divEditSel || [];
