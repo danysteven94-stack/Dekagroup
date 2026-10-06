@@ -7,6 +7,7 @@ import {
 import { state } from "./state.js";
 import {
   daysBetween,
+  dknAllContainers,
   dknContainers,
   dknLeftContainers,
   formatDateShort,
@@ -309,21 +310,30 @@ export function downloadReport(status, group) {
   }, 4000);
 }
 
-// DKN trucking report: every container on a DKN trucking that has not left, with its entry date, driver name and truck plate.
+// One DKN report line: entry date only (never an exit date), depot, driver name and truck plate.
+function dknRow(c) {
+  return {
+    cells: [
+      c.numewo,
+      c.trucking || "\u2014",
+      PDF_STATUS_LABELS[statusOf(c)] || "",
+      formatDateShort(c.dateEntered),
+      c.depo || "\u2014",
+      c.chofer || "\u2014",
+      c.plak || "\u2014"
+    ]
+  };
+}
+
+// DKN trucking report: only the containers on a DKN trucking that have not left yet.
 export function dknReportRows(containers) {
-  return dknContainers(containers).map(function (c) {
-    return {
-      cells: [
-        c.numewo,
-        c.trucking || "\u2014",
-        PDF_STATUS_LABELS[statusOf(c)] || "",
-        formatDateShort(c.dateEntered),
-        c.depo || "\u2014",
-        c.chofer || "\u2014",
-        c.plak || "\u2014"
-      ]
-    };
-  });
+  return dknContainers(containers).map(dknRow);
+}
+
+// Full DKN report: every DKN container since it entered, the ones still here and the ones that left.
+// Entry date only, no exit date.
+export function dknAllReportRows(containers) {
+  return dknAllContainers(containers).map(dknRow);
 }
 
 // DKN exit report: every DKN container that already left, with the date, the driver name and the truck plate.
@@ -379,6 +389,29 @@ export function downloadDknReport() {
   var a = document.createElement("a");
   a.href = url;
   a.download = "deka-log-rapo-dkn-" + today() + ".pdf";
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(function () {
+    URL.revokeObjectURL(url);
+  }, 4000);
+}
+
+export function downloadDknAllReport() {
+  var bytes = buildTablePdf(dknAllReportRows(state.containers), "RAPPORT COMPLET DKN", [
+    "#",
+    "Conteneur",
+    "Trucking",
+    "Statut",
+    "Date d\u2019entr\u00E9e",
+    "D\u00E9p\u00F4t",
+    "Chauffeur",
+    "Plaque"
+  ], [3, 12, 9, 17, 11, 7, 24, 9]);
+  var url = URL.createObjectURL(new Blob([bytes], { type: "application/pdf" }));
+  var a = document.createElement("a");
+  a.href = url;
+  a.download = "deka-log-rapo-tout-dkn-" + today() + ".pdf";
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);

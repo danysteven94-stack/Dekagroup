@@ -136,6 +136,23 @@ await test("DKN report: only DKN trucking not yet left, with driver + plate, val
   require_fs_write(join(tmpdir(), "dnk-test.pdf"), bytes);
 });
 
+await test("DKN full report: DKN containers still here + already left, entry date only, no exit date", async () => {
+  const P = await import("../public/js/pdf.js");
+  reset();
+  const mk = (id, numewo, trucking, extra) => Object.assign({ id, numewo, billId: null, size: "40", division: "ACS", dateEntered: "2026-09-01", dateVerified: "2026-09-02", depo: "Depo A", trucking, dateEmpty: null, dateLeft: null }, extra || {});
+  state.containers = [
+    mk("a", "AAAA0000001", "DKN 002"),
+    mk("b", "BBBB0000002", "DKN 001"),
+    mk("c", "CCCC0000003", "CFC"),
+    mk("d", "DDDD0000004", "DKN 003", { dateLeft: "2026-09-10", dateEmpty: "2026-09-05", chofer: "Paul", plak: "AB 1" }),
+  ];
+  assert.deepStrictEqual(P.dknReportRows(state.containers).map((r) => r.cells[0]), ["BBBB0000002", "AAAA0000001"], "trucking report: only the ones still here");
+  const rows = P.dknAllReportRows(state.containers);
+  assert.deepStrictEqual(rows.map((r) => r.cells[0]), ["BBBB0000002", "AAAA0000001", "DDDD0000004"], "full report: here + left, non-DKN excluded");
+  assert.deepStrictEqual(rows[2].cells.slice(2, 4), ["Sorti", "01/09/2026"]);
+  assert.ok(!rows.some((r) => r.cells.includes("10/09/2026")), "no exit date");
+});
+
 await test("DKN exit report: only DKN containers that left, newest first, with driver + plate", async () => {
   const P = await import("../public/js/pdf.js");
   reset();

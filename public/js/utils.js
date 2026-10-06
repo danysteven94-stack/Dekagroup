@@ -99,6 +99,15 @@ export function dknContainers(containers) {
   });
 }
 
+// Every DKN container since it entered: the ones still here and the ones that already left (full DKN report).
+export function dknAllContainers(containers) {
+  return containers.filter(function (container) {
+    return isDknTrucking(container.trucking);
+  }).sort(function (a, b) {
+    return (a.trucking || "").localeCompare(b.trucking || "") || (a.numewo < b.numewo ? -1 : 1);
+  });
+}
+
 export function isDknTrucking(trucking) {
   return /^(DKN|DNK)\s?\d+/i.test(trucking || "");
 }

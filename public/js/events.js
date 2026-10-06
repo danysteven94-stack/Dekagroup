@@ -47,6 +47,7 @@ import {
   downloadDeliveryReport,
   downloadDeliverySlip,
   downloadDknReport,
+  downloadDknAllReport,
   downloadDknLeftReport,
   downloadGoodsReport,
   downloadInvoice,
@@ -374,6 +375,8 @@ document.addEventListener("click", function (event) {
       downloadReport(n.getAttribute("data-status"), n.getAttribute("data-group"));
     } else if (i === "print-dkn") {
       downloadDknReport();
+    } else if (i === "print-dkn-all") {
+      downloadDknAllReport();
     } else if (i === "print-dkn-left") {
       downloadDknLeftReport();
     } else if (i === "download-landing-sheet") {
