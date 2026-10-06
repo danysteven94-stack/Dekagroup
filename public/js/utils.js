@@ -99,6 +99,19 @@ export function dknContainers(containers) {
   });
 }
 
+export function isDknTrucking(trucking) {
+  return /^(DKN|DNK)\s?\d+/i.test(trucking || "");
+}
+
+// DKN containers that already left (kite), most recent first: the "sòti" report.
+export function dknLeftContainers(containers) {
+  return containers.filter(function (container) {
+    return isDknTrucking(container.trucking) && statusOf(container) === "kite";
+  }).sort(function (a, b) {
+    return (b.dateLeft || "").localeCompare(a.dateLeft || "") || (a.numewo < b.numewo ? -1 : 1);
+  });
+}
+
 export function storageGet(key) {
   try {
     return localStorage.getItem(key);

@@ -23,6 +23,7 @@ import {
   formatLongDate,
   formatTime,
   getDeviceId,
+  isDknTrucking,
   statusOf,
   today,
   truckingSearchText
@@ -326,22 +327,40 @@ export function verifyFromDaily(id) {
   });
 }
 
-export function leaveFromDaily(id) {
+// DKN containers: the "Kite Jodi a" button opens the driver + plate form first (see submitModal), then calls this.
+export function leaveFromDaily(id, driver) {
   var cc = state.containers.find(function (container) {
     return container.id === id;
   });
   if (!cc || statusOf(cc) !== "vid" || state.dr.leaving) {
     return;
   }
-  if (!window.confirm(`Kontenè ${ cc.numewo } kite jodi a ?\n\nChanjman sa a ap sove nan Lojistik tou.`)) {
+  var trucking = effectiveDailyValues(cc).trucking || "";
+  var dkn = isDknTrucking(trucking);
+  if (dkn && !driver) {
+    state.modal = { mode: "dkn-left", via: "daily", id: id, chofer: cc.chofer || "", plak: cc.plak || "", err: "" };
+    render();
     return;
+  }
+  if (!dkn && !window.confirm(`Kontenè ${ cc.numewo } kite jodi a ?\n\nChanjman sa a ap sove nan Lojistik tou.`)) {
+    return;
+  }
+  var payload = { id: id };
+  var patch = { dateLeft: today() };
+  if (dkn && driver) {
+    payload.trucking = trucking;
+    payload.chofer = driver.chofer;
+    payload.plak = driver.plak;
+    patch.trucking = trucking;
+    patch.chofer = driver.chofer;
+    patch.plak = driver.plak;
   }
   function leaveOnDevice(maybeDone) {
     state.dr.leaving = false;
     state.containers = state.containers.map(function (container) {
-      return container.id === id ? Object.assign({}, container, { dateLeft: today() }) : container;
+      return container.id === id ? Object.assign({}, container, patch) : container;
     });
-    queueRequest("leave", "/api/leave", { id: id }, "Kite: " + cc.numewo, maybeDone, true);
+    queueRequest("leave", "/api/leave", payload, "Kite: " + cc.numewo, maybeDone, true);
     showDailyNotice(`${ cc.numewo } make kite sou aparèy la. L ap sove nan Lojistik lè entènèt la tounen.`, true);
   }
   if (!state.online || state.pendingCount > 0) {
@@ -355,7 +374,7 @@ export function leaveFromDaily(id) {
       "Content-Type": "application/json",
       "X-Device-Id": getDeviceId()
     },
-    body: JSON.stringify({ id: id })
+    body: JSON.stringify(payload)
   }).then(function (r) {
     return r.json().catch(function () {
       return {};
@@ -367,7 +386,7 @@ export function leaveFromDaily(id) {
     });
   }).then(function (d) {
     state.dr.leaving = false;
-    var nc = d.container || { dateLeft: today() };
+    var nc = d.container || patch;
     state.containers = state.containers.map(function (container) {
       return container.id === id ? Object.assign({}, container, nc) : container;
     });

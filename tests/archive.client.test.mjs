@@ -136,6 +136,21 @@ await test("DKN report: only DKN trucking not yet left, with driver + plate, val
   require_fs_write(join(tmpdir(), "dnk-test.pdf"), bytes);
 });
 
+await test("DKN exit report: only DKN containers that left, newest first, with driver + plate", async () => {
+  const P = await import("../public/js/pdf.js");
+  reset();
+  const mk = (id, numewo, trucking, extra) => Object.assign({ id, numewo, billId: null, size: "40", division: "ACS", dateEntered: "2026-09-01", dateVerified: "2026-09-02", depo: "Depo A", trucking, dateEmpty: "2026-09-04", dateLeft: null }, extra || {});
+  state.containers = [
+    mk("a", "AAAA0000001", "DKN 002", { dateLeft: "2026-09-10", chofer: "Jean Pierre", plak: "AA 1234" }),
+    mk("b", "BBBB0000002", "DKN 001", { dateLeft: "2026-09-12", chofer: "Paul Louis", plak: "AB 5678" }),
+    mk("c", "CCCC0000003", "CFC", { dateLeft: "2026-09-11", chofer: "X", plak: "Y" }),
+    mk("d", "DDDD0000004", "DKN 003"),
+  ];
+  const rows = P.dknLeftReportRows(state.containers);
+  assert.deepStrictEqual(rows.map((r) => r.cells[0]), ["BBBB0000002", "AAAA0000001"], "newest first, CFC and not-left excluded");
+  assert.deepStrictEqual(rows[0].cells.slice(3, 5), ["Paul Louis", "AB 5678"]);
+});
+
 let bad = 0;
 results.forEach((r) => { console.log((r[0] ? "  ok    " : "  FAIL  ") + r[1]); if (!r[0]) { bad++; console.log("        " + (r[2] && r[2].stack || r[2]).split("\n").slice(0, 4).join("\n        ")); } });
 console.log(`${results.length - bad}/${results.length} passed`);

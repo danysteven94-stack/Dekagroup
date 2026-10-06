@@ -8,6 +8,7 @@ import { state } from "./state.js";
 import {
   daysBetween,
   dknContainers,
+  dknLeftContainers,
   formatDateShort,
   statusOf,
   today
@@ -295,6 +296,44 @@ export function dknReportRows(containers) {
       ]
     };
   });
+}
+
+// DKN exit report: every DKN container that already left, with the date, the driver name and the truck plate.
+export function dknLeftReportRows(containers) {
+  return dknLeftContainers(containers).map(function (c) {
+    return {
+      cells: [
+        c.numewo,
+        c.trucking || "\u2014",
+        formatDateShort(c.dateLeft),
+        c.chofer || "\u2014",
+        c.plak || "\u2014",
+        c.depo || "\u2014"
+      ]
+    };
+  });
+}
+
+export function downloadDknLeftReport() {
+  var bytes = buildTablePdf(dknLeftReportRows(state.containers), "RAPPORT SORTIE DKN", [
+    "#",
+    "Conteneur",
+    "Trucking",
+    "Date de sortie",
+    "Chauffeur",
+    "Plaque",
+    "D\u00E9p\u00F4t"
+  ]);
+  var url = URL.createObjectURL(new Blob([bytes], { type: "application/pdf" }));
+  var a = document.createElement("a");
+  a.href = url;
+  a.download = "deka-log-rapo-sorti-dkn-" + today() + ".pdf";
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(function () {
+    URL.revokeObjectURL(url);
+  }, 4000);
 }
 
 export function downloadDknReport() {

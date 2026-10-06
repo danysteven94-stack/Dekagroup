@@ -203,6 +203,22 @@ async function run() {
     assert.strictEqual((await chofe.call(act, { method: "POST", body: { action: "depart", ids: ["c2"], trucking: "<b>" } })).statusCode, 400);
   });
 
+  await test("daily report: a DKN container cannot leave without driver + plate; they get saved", async () => {
+    const sd = seed(); sd.containers[1].trucking = "DKN 004";
+    await H.setData(sd);
+    const dr = await login("logisticdepot", "daily"), leave = H.api("leave");
+    assert.strictEqual((await dr.call(leave, { method: "POST", body: { id: "c2" } })).statusCode, 400, "no driver, no plate");
+    assert.strictEqual((await dr.call(leave, { method: "POST", body: { id: "c2", chofer: "Jean Pierre" } })).statusCode, 400, "no plate");
+    assert.strictEqual((await H.getData()).containers[1].dateLeft, null, "refused: still not left");
+    const ok = await dr.call(leave, { method: "POST", body: { id: "c2", chofer: "  Jean   Pierre ", plak: "aa 1234" } });
+    assert.strictEqual(ok.statusCode, 200);
+    const c = (await H.getData()).containers[1];
+    assert.deepStrictEqual([c.dateLeft, c.chofer, c.plak, c.trucking], [today(), "Jean Pierre", "AA 1234", "DKN 004"]);
+    // a non-DKN container still leaves with a bare id
+    const sd2 = seed(); await H.setData(sd2);
+    assert.strictEqual((await dr.call(leave, { method: "POST", body: { id: "c2" } })).statusCode, 200);
+  });
+
   await test("daily report: only daily/admin; verify touches only that container", async () => {
     await H.setData(seed());
     const dr = await login("logisticdepot", "daily"), depot = await login("depotnord", "depot"), chofe = await login("chofe", "chofe");

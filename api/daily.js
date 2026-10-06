@@ -9,6 +9,7 @@ const { ApiError } = require("./_lib/errors");
 const KEY = "deka-daily-report";
 const ID_RE = /^[A-Za-z0-9_-]{1,64}$/;
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+const DKN_RE = /^(DKN|DNK)\s?\d+/i;
 
 function clean(v, max) {
   return typeof v === "string" ? v.trim().slice(0, max) : null;
@@ -78,12 +79,24 @@ async function handleLeave(req, res, session) {
     const body = A.parseBody(req);
     const id = typeof body.id === "string" ? body.id : "";
     if (!id) { res.status(400).json({ error: "Konteneur pa idantifye." }); return; }
+    const chofer = typeof body.chofer === "string" ? body.chofer.replace(/\s+/g, " ").trim().slice(0, 80) : "";
+    const plak = typeof body.plak === "string" ? body.plak.toUpperCase().replace(/[^A-Z0-9 -]/g, "").replace(/\s+/g, " ").trim().slice(0, 20) : "";
+    const trucking = typeof body.trucking === "string" && body.trucking.trim() ? body.trucking.trim().slice(0, 40) : null;
 
     const out = await repo.mutate(async function (data) {
       const c = data.containers.find(function (x) { return x.id === id; });
       if (!c) throw new ApiError(404, "not_found", "Pa jwenn konteneur la.");
       if (c.dateLeft) return { already: true, container: Object.assign({}, c) }; // already left: untouched
       if (S2.statusOf(c) !== "vid") throw new ApiError(409, "wrong_status", "Konteneur sa a pa nan estati Vid ank\u00F2.");
+      // a DKN container never leaves without saying which driver and which truck plate took it
+      const effTrucking = trucking || c.trucking || "";
+      if (DKN_RE.test(effTrucking)) {
+        if (!chofer) throw new ApiError(400, "chofer_required", "Non ch\u00F2f la obligatwa pou kont\u00E8n\u00E8 DKN.");
+        if (!plak) throw new ApiError(400, "plak_required", "Plak kamyon an obligatwa pou kont\u00E8n\u00E8 DKN.");
+        c.trucking = effTrucking;
+      }
+      if (chofer) c.chofer = chofer;
+      if (plak) c.plak = plak;
       const bill = data.bills.find(function (b) { return b.id === c.billId; });
       c.dateLeft = S2.today();
       S2.addNotification(data, bill ? bill.numewo : "", "Konten\u00E8 " + c.numewo + " kite jodi a.");

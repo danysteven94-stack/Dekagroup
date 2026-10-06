@@ -7,12 +7,15 @@ import {
 import { ALL_DIVISIONS } from "./constants.js";
 import {
   normalizeBill,
-  normalizeContainer
+  normalizeContainer,
+  normalizePlate
 } from "./iso6346.js";
 import { render } from "./render.js";
 import { state } from "./state.js";
+import { leaveFromDaily } from "./views/daily.js";
 import {
   billStatus,
+  isDknTrucking,
   newId,
   statusOf,
   today
@@ -263,6 +266,34 @@ export function closeModal() {
 
 export function submitModal() {
   if (state.modal) {
+    if (state.modal.mode === "dkn-left") {
+      var dkId = state.modal.id;
+      var dkChofer = (document.getElementById("modal-dkn-chofer") || {}).value || "";
+      var dkPlak = normalizePlate((document.getElementById("modal-dkn-plak") || {}).value || "");
+      dkChofer = dkChofer.replace(/\s+/g, " ").trim().slice(0, 80);
+      state.modal.chofer = dkChofer;
+      state.modal.plak = dkPlak;
+      if (!dkChofer || !dkPlak) {
+        state.modal.err = !dkChofer ? "Non chofè a obligatwa." : "Plak kamyon an obligatwa.";
+        render();
+        return;
+      }
+      if (state.modal.via === "daily") {
+        // Daily Report screen: it saves through its own /api/leave call (with an offline queue)
+        state.modal = null;
+        render();
+        leaveFromDaily(dkId, { chofer: dkChofer, plak: dkPlak });
+        return;
+      }
+      state.containers = state.containers.map(function (container) {
+        return container.id === dkId ? Object.assign({}, container, { dateLeft: today(), chofer: dkChofer, plak: dkPlak }) : container;
+      });
+      state.modal = null;
+      syncBillCompletion();
+      saveData();
+      render();
+      return;
+    }
     if (state.modal.mode === "correct") {
       var e = document.getElementById("modal-correct-date");
       var n = e ? e.value : "";
@@ -447,6 +478,21 @@ export function undoContainerEmpty(id) {
 }
 
 export function markContainerLeft(id) {
+  var dk = state.containers.find(function (container) {
+    return container.id === id;
+  });
+  if (dk && isDknTrucking(dk.trucking)) {
+    // a DKN container never leaves without saying which driver and which truck plate took it
+    state.modal = {
+      mode: "dkn-left",
+      id: id,
+      chofer: dk.chofer || "",
+      plak: dk.plak || "",
+      err: ""
+    };
+    render();
+    return;
+  }
   state.containers = state.containers.map(function (container) {
     return container.id === id ? Object.assign({}, container, { dateLeft: today() }) : container;
   });
