@@ -30,6 +30,28 @@ export function truckingGroupOf(value) {
   return v.replace(/[\s._-]*\d+$/, "") || v;
 }
 
+// Empty (vid) containers a driver may take: the ones of his trucking ("mine") and the ones nobody owns yet ("free").
+// No trucking picked -> nothing is shown. CFC 12 counts as CFC, DKN 003 counts as CTSA (see truckingGroupOf).
+export function emptiesForTrucking(containers, trucking) {
+  var out = { mine: [], free: [] };
+  if (!trucking) {
+    return out;
+  }
+  var wanted = truckingGroupOf(trucking);
+  containers.forEach(function (c) {
+    if (statusOf(c) !== "vid") {
+      return;
+    }
+    var g = truckingGroupOf(c.trucking);
+    if (g === wanted) {
+      out.mine.push(c);
+    } else if (g === NONE) {
+      out.free.push(c);
+    }
+  });
+  return out;
+}
+
 function sizeOf(c) {
   return String(c.size) === "40" ? "40" : String(c.size) === "20" ? "20" : "other";
 }

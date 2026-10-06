@@ -619,7 +619,7 @@ document.addEventListener("change", function (event) {
     render();
     return;
   }
-  if (event.target && event.target.id === "driver-trucking-select" && (state.driverTrucking = event.target.value, render()), event.target && event.target.id === "f-billmode") {
+  if (event.target && event.target.id === "driver-trucking-select" && (state.driverTrucking = event.target.value, state.driverSelected = {}, render()), event.target && event.target.id === "f-billmode") {
     var n = document.getElementById("f-numewo") ? document.getElementById("f-numewo").value : "";
     var i = document.getElementById("f-date") ? document.getElementById("f-date").value : "";
     var o = document.getElementById("f-date-expected") ? document.getElementById("f-date-expected").value : "";

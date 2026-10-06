@@ -13,13 +13,13 @@ import {
   statusOf
 } from "../utils.js";
 import { accountButton } from "./account.js";
+import { emptiesForTrucking } from "./trucking.js";
 import { helpButton } from "./help.js";
 
 export function driverView() {
   var mine = state.username;
-  var empty = state.containers.filter(function (container) {
-    return statusOf(container) === "vid";
-  });
+  var emptySplit = emptiesForTrucking(state.containers, state.driverTrucking);
+  var empty = emptySplit.mine.concat(emptySplit.free);
   var up = state.containers.filter(function (container) {
     return statusOf(container) === "disponib";
   }).sort(byExpected);
@@ -75,8 +75,18 @@ export function driverView() {
     var extra = (r.depo ? line("Depo", escapeHtml(r.depo), COLORS.full) : "") + line("Vid Depi", formatDateShort(r.dateEmpty), "var(--ink)");
     return tile(r, { action: "driver-toggle-select", selected: !!state.driverSelected[r.id], color: COLORS.vid, extra: extra });
   }
-  var ev = split(empty);
-  var emptyBlock = `<div class="section-head"><div><div class="eyebrow">${ empty.length } kontenè vid</div><h2 class="h2">Chwazi Kontenè w ap Pran</h2></div></div>` + (empty.length === 0 ? `<div class="empty">${ icon("circle", 22) }<div>Pa gen kontenè vid disponib kounye a.</div></div>` : box("Kontenè Vid 40 pye", ev.s40, COLORS.navy, "Pa gen kontenè vid 40 pye kounye a.", "40", emptyTile) + box("Kontenè Vid 20 pye", ev.s20, COLORS.steel, "Pa gen kontenè vid 20 pye kounye a.", "20", emptyTile) + (ev.other.length ? box("Kontenè Vid san gwosè", ev.other, COLORS.vid, "", "other", emptyTile) : ""));
+  var evMine = split(emptySplit.mine);
+  var evFree = split(emptySplit.free);
+  var emptyHead = `<div class="section-head"><div><div class="eyebrow">${ state.driverTrucking ? emptySplit.mine.length + " kontenè vid pou " + escapeHtml(state.driverTrucking) : "Kontenè vid" }</div><h2 class="h2">Chwazi Kontenè w ap Pran</h2></div></div>`;
+  var emptyBlock;
+  if (!state.driverTrucking) {
+    emptyBlock = emptyHead + `<div class="empty">${ icon("circle", 22) }<div>Chwazi trucking ou anlè a pou w wè kontenè vid ki pou ou yo.</div></div>`;
+  } else {
+    emptyBlock = emptyHead + (emptySplit.mine.length === 0 ? `<div class="empty">${ icon("circle", 22) }<div>Pa gen kontenè vid pou ${ escapeHtml(state.driverTrucking) } kounye a.</div></div>` : box("Kontenè Vid 40 pye", evMine.s40, COLORS.navy, "Pa gen kontenè vid 40 pye kounye a.", "40", emptyTile) + box("Kontenè Vid 20 pye", evMine.s20, COLORS.steel, "Pa gen kontenè vid 20 pye kounye a.", "20", emptyTile) + (evMine.other.length ? box("Kontenè Vid san gwosè", evMine.other, COLORS.vid, "", "other", emptyTile) : ""));
+    if (emptySplit.free.length) {
+      emptyBlock += `<div class="section-head" style="margin-top:20px"><div><div class="eyebrow">${ emptySplit.free.length } kontenè</div><h2 class="h2">Vid san Trucking</h2></div></div><p class="size-hint">Kontenè sa yo poko gen trucking. Nenpòt chofè ka pran yo.</p>` + box("Kontenè Vid 40 pye", evFree.s40, COLORS.navy, "Pa gen kontenè vid 40 pye kounye a.", "", emptyTile) + box("Kontenè Vid 20 pye", evFree.s20, COLORS.steel, "Pa gen kontenè vid 20 pye kounye a.", "", emptyTile) + (evFree.other.length ? box("Kontenè Vid san gwosè", evFree.other, COLORS.vid, "", "", emptyTile) : "");
+    }
+  }
 
   // ---- Disponib (not entered yet, not taken): tap a card to say "I took it" -> it moves to "Pran"
   function availableTile(r) {

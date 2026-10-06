@@ -114,9 +114,17 @@ const ACTIONS = {
     const chofer = driver && driver.name ? driver.name : null;
     const plak = driver && driver.plate ? driver.plate : null;
 
+    // a driver can only take empties of his own trucking (CFC 12 -> CFC, DKN 003 -> CTSA) or empties nobody owns yet
+    const group = function (v) {
+      const t = String(v || "").trim().toUpperCase().replace(/\s+/g, " ");
+      if (!t) return "";
+      if (/^(DKN|DNK)(\s|\d|$)/.test(t)) return "CTSA";
+      return t.replace(/[\s._-]*\d+$/, "") || t;
+    };
     const left = [];
     data.containers = data.containers.map(function (x) {
       if (ids.indexOf(x.id) === -1 || S.statusOf(x) !== "vid") return x;
+      if (driver && x.trucking && group(x.trucking) !== group(trucking)) return x;
       left.push(x.numewo);
       // the container leaves under the trucking that took it (so the Trucking tab counts it in the right place)
       const patch = { dateLeft: S.today(), trucking: trucking };

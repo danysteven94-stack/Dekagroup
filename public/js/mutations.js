@@ -20,6 +20,7 @@ import {
   statusOf,
   today
 } from "./utils.js";
+import { emptiesForTrucking } from "./views/trucking.js";
 
 export function syncBillCompletion() {
   state.bills = state.bills.map(function (bill) {
@@ -534,8 +535,13 @@ export function deleteBillIfUnused(billId) {
 
 export function confirmDeparture() {
   var e = state.driverTrucking;
+  var visibleIds = {};
+  var vis = emptiesForTrucking(state.containers, e);
+  vis.mine.concat(vis.free).forEach(function (c) {
+    visibleIds[c.id] = true;
+  });
   var n = Object.keys(state.driverSelected).filter(function (a) {
-    return state.driverSelected[a];
+    return state.driverSelected[a] && visibleIds[a];
   });
   if (!(!e || n.length === 0)) {
     if (state.authRole === "chofe") {
@@ -628,9 +634,10 @@ export function toggleContainerTaken(id) {
 // "Seleksyone tout" for one size box (40, 20, or containers without a size) of the empty containers.
 // If they are all selected already, it un-selects them instead.
 export function toggleSelectAllEmpty(size) {
-  var list = state.containers.filter(function (c) {
+  var visible = emptiesForTrucking(state.containers, state.driverTrucking);
+  var list = visible.mine.filter(function (c) {
     var sz = String(c.size) === "40" ? "40" : String(c.size) === "20" ? "20" : "other";
-    return statusOf(c) === "vid" && sz === size;
+    return sz === size;
   });
   var all = list.length > 0 && list.every(function (c) {
     return !!state.driverSelected[c.id];
