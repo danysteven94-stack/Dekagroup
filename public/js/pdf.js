@@ -45,7 +45,33 @@ function pdfEscape(text) {
   return n;
 }
 
-export function buildTablePdf(rows, title, headers) {
+// Helvetica glyph widths (1/1000 em) for ASCII 32..126, used to measure text so nothing overlaps a neighbouring column.
+var HELV_W = [278,278,355,556,556,889,667,191,333,333,389,584,278,333,278,278,556,556,556,556,556,556,556,556,556,556,278,278,584,584,584,556,1015,667,667,722,722,667,611,778,722,278,500,667,556,833,722,778,667,778,722,667,611,722,667,944,667,667,611,278,278,278,469,556,333,556,556,500,556,556,278,556,556,222,222,500,222,833,556,556,556,556,333,500,278,556,500,722,500,500,500,334,260,334,584];
+
+function textWidth(text, size, bold) {
+  for (var w = 0, i = 0; i < text.length; i++) {
+    var c = text.charCodeAt(i);
+    w += c >= 32 && c <= 126 ? HELV_W[c - 32] : c === 8212 ? 1000 : 556;
+  }
+  return w * size / 1000 * (bold ? 1.07 : 1);
+}
+
+// Cuts the text with a trailing "." only when it does not fit in maxWidth points.
+function fitText(text, size, bold, maxWidth) {
+  if (textWidth(text, size, bold) <= maxWidth) {
+    return text;
+  }
+  for (var t = text; t.length > 1;) {
+    t = t.slice(0, -1);
+    if (textWidth(t + ".", size, bold) <= maxWidth) {
+      return t.replace(/\s+$/, "") + ".";
+    }
+  }
+  return text.slice(0, 1);
+}
+
+// colWeights (optional): relative width of each column, same length as headers. Default: equal columns.
+export function buildTablePdf(rows, title, headers, colWeights) {
   var o = 842;
   var a = 595;
   var l = 30;
@@ -65,14 +91,17 @@ export function buildTablePdf(rows, title, headers) {
   var d = headers;
   var _nc = d.length;
   var _tw = 812 - l;
+  var _wts = colWeights && colWeights.length === _nc ? colWeights : headers.map(function () { return 1; });
+  var _sum = _wts.reduce(function (a, b) { return a + b; }, 0);
   var u = [];
-  for (var _ci = 0; _ci < _nc; _ci++) {
-    u.push(l + Math.round(_ci * _tw / _nc));
+  for (var _ci = 0, _acc = 0; _ci < _nc; _ci++) {
+    u.push(l + Math.round(_acc * _tw / _sum));
+    _acc += _wts[_ci];
   }
   var E = [];
   for (var _ci2 = 0; _ci2 < _nc; _ci2++) {
     var _cw = (_ci2 < _nc - 1 ? u[_ci2 + 1] : 812) - u[_ci2];
-    E.push(Math.max(4, Math.floor(_cw / 4.7) - 1));
+    E.push(_cw - 10);
   }
   var y = 812 - l;
   var U = Math.max(1, Math.floor(445 / s));
@@ -102,7 +131,7 @@ export function buildTablePdf(rows, title, headers) {
     w += `1 1 1 rg
 `;
     for (var F = 0; F < d.length; F++) {
-      w += f("F2", 9, u[F] + 4, h - 10, d[F]);
+      w += f("F2", 9, u[F] + 4, h - 10, fitText(d[F], 9, true, E[F]));
     }
     h -= 22;
     for (var G = 0; G < k.length; G++) {
@@ -114,9 +143,7 @@ export function buildTablePdf(rows, title, headers) {
 `;
       for (var lt = [String(z + G)].concat(ut.cells), j = 0; j < lt.length; j++) {
         var D = lt[j] || "";
-        if (E[j] && D.length > E[j]) {
-          D = D.slice(0, E[j] - 1) + ".";
-        }
+        D = fitText(D, 9, false, E[j]);
         w += f("F1", 9, u[j] + 4, h - 10, D);
       }
       h -= s;
@@ -282,7 +309,7 @@ export function downloadReport(status, group) {
   }, 4000);
 }
 
-// DKN trucking report: every container on a DKN trucking (also the ones that already left), with driver name and truck plate.
+// DKN trucking report: every container on a DKN trucking that has not left, with its entry date, driver name and truck plate.
 export function dknReportRows(containers) {
   return dknContainers(containers).map(function (c) {
     return {
@@ -290,7 +317,7 @@ export function dknReportRows(containers) {
         c.numewo,
         c.trucking || "\u2014",
         PDF_STATUS_LABELS[statusOf(c)] || "",
-        c.dateLeft ? formatDateShort(c.dateLeft) : "\u2014",
+        formatDateShort(c.dateEntered),
         c.depo || "\u2014",
         c.chofer || "\u2014",
         c.plak || "\u2014"
@@ -343,11 +370,11 @@ export function downloadDknReport() {
     "Conteneur",
     "Trucking",
     "Statut",
-    "Date de sortie",
+    "Date d\u2019entr\u00E9e",
     "D\u00E9p\u00F4t",
     "Chauffeur",
     "Plaque"
-  ]);
+  ], [3, 12, 9, 17, 11, 7, 24, 9]);
   var url = URL.createObjectURL(new Blob([bytes], { type: "application/pdf" }));
   var a = document.createElement("a");
   a.href = url;

@@ -115,7 +115,7 @@ await test("search filters by plate and bill", () => {
   assert.ok(V.archiveView().includes("2 rezilta"));
 });
 
-await test("DKN report: all DKN trucking (left ones stay, listed after), with driver + plate, valid PDF bytes", async () => {
+await test("DKN report: only DKN trucking not yet left, with driver + plate, valid PDF bytes", async () => {
   const P = await import("../public/js/pdf.js");
   reset();
   const mk = (id, numewo, trucking, extra) => Object.assign({ id, numewo, billId: null, size: "40", division: "ACS", dateEntered: "2026-09-01", dateVerified: "2026-09-02", depo: "Depo A", trucking, dateEmpty: null, dateLeft: null }, extra || {});
@@ -126,11 +126,10 @@ await test("DKN report: all DKN trucking (left ones stay, listed after), with dr
     mk("d", "DDDD0000004", "DKN 003", { dateLeft: "2026-09-10", dateEmpty: "2026-09-05" }),
   ];
   const rows = P.dknReportRows(state.containers);
-  assert.deepStrictEqual(rows.map((r) => r.cells[0]), ["BBBB0000002", "AAAA0000001", "DDDD0000004"], "not-left first (by trucking), then left ones stay; non-DKN excluded");
-  assert.deepStrictEqual(rows[1].cells.slice(5), ["Jean Pierre", "AA 1234"]);
-  assert.deepStrictEqual(rows[0].cells.slice(5), ["\u2014", "\u2014"]);
-  assert.notStrictEqual(rows[2].cells[4], "\u2014", "left container keeps its exit date in the report");
-  const bytes = P.buildTablePdf(rows, "RAPO TRUCKING DKN", ["#", "Container", "Trucking", "Status", "Sortie", "Depot", "Chof\u00e8", "Plak"]);
+  assert.deepStrictEqual(rows.map((r) => r.cells[0]), ["BBBB0000002", "AAAA0000001"], "sorted by trucking, kite + non-DKN excluded");
+  assert.deepStrictEqual(rows[1].cells.slice(3), ["01/09/2026", "Depo A", "Jean Pierre", "AA 1234"], "entry date, no exit date");
+  assert.deepStrictEqual(rows[0].cells.slice(4), ["Depo A", "\u2014", "\u2014"]);
+  const bytes = P.buildTablePdf(rows, "RAPO TRUCKING DKN", ["#", "Container", "Trucking", "Status", "Dat antre", "Depot", "Chof\u00e8", "Plak"], [3, 12, 9, 17, 11, 7, 24, 9]);
   const txt = Buffer.from(bytes).toString("latin1");
   assert.ok(txt.startsWith("%PDF-1.4") && txt.trim().endsWith("%%EOF"));
   assert.ok(txt.includes("(AA 1234)") && txt.includes("(Jean Pierre)") && txt.includes("(Plak)"));
