@@ -89,13 +89,17 @@ export function billStatus(bill, containers) {
   }) ? "fini" : "aktif";
 }
 
-// Containers assigned to a DKN trucking (DKN 001...) that have not left yet, grouped by trucking then number.
+// Every container ever assigned to a DKN trucking (DKN 001...), INCLUDING the ones that already left (kite):
+// once a container is in the DKN report it stays there so it can always be found again.
+// Order: not left first, then left; grouped by trucking then number.
 // Also matches the earlier "DNK" spelling so older records already saved that way still show up.
 export function dknContainers(containers) {
   return containers.filter(function (container) {
-    return /^(DKN|DNK)\s?\d+/i.test(container.trucking || "") && statusOf(container) !== "kite";
+    return /^(DKN|DNK)\s?\d+/i.test(container.trucking || "");
   }).sort(function (a, b) {
-    return (a.trucking || "").localeCompare(b.trucking || "") || (a.numewo < b.numewo ? -1 : 1);
+    var aLeft = statusOf(a) === "kite" ? 1 : 0;
+    var bLeft = statusOf(b) === "kite" ? 1 : 0;
+    return aLeft - bLeft || (a.trucking || "").localeCompare(b.trucking || "") || (a.numewo < b.numewo ? -1 : 1);
   });
 }
 

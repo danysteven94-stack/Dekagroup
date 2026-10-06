@@ -282,7 +282,7 @@ export function downloadReport(status, group) {
   }, 4000);
 }
 
-// DKN trucking report: every container on a DKN trucking that has not left, with driver name and truck plate.
+// DKN trucking report: every container on a DKN trucking (also the ones that already left), with driver name and truck plate.
 export function dknReportRows(containers) {
   return dknContainers(containers).map(function (c) {
     return {
@@ -290,6 +290,7 @@ export function dknReportRows(containers) {
         c.numewo,
         c.trucking || "\u2014",
         PDF_STATUS_LABELS[statusOf(c)] || "",
+        c.dateLeft ? formatDateShort(c.dateLeft) : "\u2014",
         c.depo || "\u2014",
         c.chofer || "\u2014",
         c.plak || "\u2014"
@@ -342,6 +343,7 @@ export function downloadDknReport() {
     "Conteneur",
     "Trucking",
     "Statut",
+    "Date de sortie",
     "D\u00E9p\u00F4t",
     "Chauffeur",
     "Plaque"
