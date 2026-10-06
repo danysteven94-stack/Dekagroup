@@ -91,10 +91,40 @@ export function billStatus(bill, containers) {
 
 // Containers assigned to a DKN trucking (DKN 001...) that have not left yet, most recent entry first.
 // Also matches the earlier "DNK" spelling so older records already saved that way still show up.
-export function dknContainers(containers) {
+export function dknContainers(containers, month) {
   return containers.filter(function (container) {
-    return /^(DKN|DNK)\s?\d+/i.test(container.trucking || "") && statusOf(container) !== "kite";
+    return /^(DKN|DNK)\s?\d+/i.test(container.trucking || "") && statusOf(container) !== "kite" && inMonth(container.dateEntered, month);
   }).sort(byEntryDateDesc);
+}
+
+// Monthly DKN reports: month is "YYYY-MM"; an empty month means the complete report (no filter).
+function inMonth(isoDate, month) {
+  return !month || (isoDate || "").slice(0, 7) === month;
+}
+
+// The months that have at least one DKN container, newest first. kind: "trucking" | "all" (by entry date), "left" (by exit date).
+export function dknMonthOptions(containers, kind) {
+  var seen = {};
+  containers.forEach(function (c) {
+    if (!isDknTrucking(c.trucking)) {
+      return;
+    }
+    var left = statusOf(c) === "kite";
+    if (kind === "left" ? !left : kind === "trucking" && left) {
+      return;
+    }
+    var key = ((kind === "left" ? c.dateLeft : c.dateEntered) || "").slice(0, 7);
+    if (/^\d{4}-\d{2}$/.test(key)) {
+      seen[key] = true;
+    }
+  });
+  return Object.keys(seen).sort().reverse();
+}
+
+export function dknMonthLabel(key) {
+  var p = (key || "").split("-");
+  var i = parseInt(p[1], 10) - 1;
+  return i >= 0 && i < 12 ? monthName(i, MONTHS[i]) + " " + p[0] : "";
 }
 
 // Most recent entry first, down to the container that has been there the longest; ties by trucking then number.
@@ -103,9 +133,9 @@ function byEntryDateDesc(a, b) {
 }
 
 // Every DKN container since it entered: the ones still here and the ones that already left (full DKN report).
-export function dknAllContainers(containers) {
+export function dknAllContainers(containers, month) {
   return containers.filter(function (container) {
-    return isDknTrucking(container.trucking);
+    return isDknTrucking(container.trucking) && inMonth(container.dateEntered, month);
   }).sort(byEntryDateDesc);
 }
 
@@ -114,9 +144,9 @@ export function isDknTrucking(trucking) {
 }
 
 // DKN containers that already left (kite), most recent first: the "sòti" report.
-export function dknLeftContainers(containers) {
+export function dknLeftContainers(containers, month) {
   return containers.filter(function (container) {
-    return isDknTrucking(container.trucking) && statusOf(container) === "kite";
+    return isDknTrucking(container.trucking) && statusOf(container) === "kite" && inMonth(container.dateLeft, month);
   }).sort(function (a, b) {
     return (b.dateLeft || "").localeCompare(a.dateLeft || "") || (a.numewo < b.numewo ? -1 : 1);
   });

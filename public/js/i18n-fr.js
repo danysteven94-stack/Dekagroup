@@ -851,6 +851,7 @@ export const EXACT = {
   "Konfime Kite": "Confirmer la sortie",
   "Non chofè a obligatwa.": "Le nom du chauffeur est obligatoire.",
   "Plak kamyon an obligatwa.": "La plaque du camion est obligatoire.",
+  "Konplè \u2014 tout mwa yo": "Complet \u2014 tous les mois",
   "Rapò Tout DKN": "Rapport complet DKN",
   "Tout kontenè DKN depi yo antre: sa ki la a ak sa ki deja kite. PDF la gen sèlman dat antre, pa gen dat sòti.": "Tous les conteneurs DKN depuis leur entrée : ceux qui sont encore là et ceux qui sont déjà sortis. Le PDF contient seulement la date d’entrée, pas de date de sortie.",
   "Poko gen kontenè DKN.": "Aucun conteneur DKN pour le moment.",

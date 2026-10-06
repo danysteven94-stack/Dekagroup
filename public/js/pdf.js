@@ -310,6 +310,15 @@ export function downloadReport(status, group) {
   }, 4000);
 }
 
+var PDF_MONTHS_FR = ["janvier", "f\u00E9vrier", "mars", "avril", "mai", "juin", "juillet", "ao\u00FBt", "septembre", "octobre", "novembre", "d\u00E9cembre"];
+
+// "RAPPORT COMPLET DKN" or, for a monthly report, "RAPPORT COMPLET DKN \u2014 SEPTEMBRE 2026" (PDFs are always French).
+function dknTitle(title, month) {
+  var p = (month || "").split("-");
+  var i = parseInt(p[1], 10) - 1;
+  return i >= 0 && i < 12 ? title + " \u2014 " + PDF_MONTHS_FR[i].toUpperCase() + " " + p[0] : title;
+}
+
 // One DKN report line: entry date only (never an exit date), depot, driver name and truck plate.
 function dknRow(c) {
   return {
@@ -326,19 +335,19 @@ function dknRow(c) {
 }
 
 // DKN trucking report: only the containers on a DKN trucking that have not left yet.
-export function dknReportRows(containers) {
-  return dknContainers(containers).map(dknRow);
+export function dknReportRows(containers, month) {
+  return dknContainers(containers, month).map(dknRow);
 }
 
 // Full DKN report: every DKN container since it entered, the ones still here and the ones that left.
 // Entry date only, no exit date.
-export function dknAllReportRows(containers) {
-  return dknAllContainers(containers).map(dknRow);
+export function dknAllReportRows(containers, month) {
+  return dknAllContainers(containers, month).map(dknRow);
 }
 
 // DKN exit report: every DKN container that already left, with the date, the driver name and the truck plate.
-export function dknLeftReportRows(containers) {
-  return dknLeftContainers(containers).map(function (c) {
+export function dknLeftReportRows(containers, month) {
+  return dknLeftContainers(containers, month).map(function (c) {
     return {
       cells: [
         c.numewo,
@@ -353,7 +362,7 @@ export function dknLeftReportRows(containers) {
 }
 
 export function downloadDknLeftReport() {
-  var bytes = buildTablePdf(dknLeftReportRows(state.containers), "RAPPORT SORTIE DKN", [
+  var bytes = buildTablePdf(dknLeftReportRows(state.containers, state.dknMonth.left), dknTitle("RAPPORT SORTIE DKN", state.dknMonth.left), [
     "#",
     "Conteneur",
     "Trucking",
@@ -365,7 +374,7 @@ export function downloadDknLeftReport() {
   var url = URL.createObjectURL(new Blob([bytes], { type: "application/pdf" }));
   var a = document.createElement("a");
   a.href = url;
-  a.download = "deka-log-rapo-sorti-dkn-" + today() + ".pdf";
+  a.download = "deka-log-rapo-sorti-dkn-" + (state.dknMonth.left || today()) + ".pdf";
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
@@ -375,7 +384,7 @@ export function downloadDknLeftReport() {
 }
 
 export function downloadDknReport() {
-  var bytes = buildTablePdf(dknReportRows(state.containers), "RAPPORT TRUCKING DKN", [
+  var bytes = buildTablePdf(dknReportRows(state.containers, state.dknMonth.trucking), dknTitle("RAPPORT TRUCKING DKN", state.dknMonth.trucking), [
     "#",
     "Conteneur",
     "Trucking",
@@ -388,7 +397,7 @@ export function downloadDknReport() {
   var url = URL.createObjectURL(new Blob([bytes], { type: "application/pdf" }));
   var a = document.createElement("a");
   a.href = url;
-  a.download = "deka-log-rapo-dkn-" + today() + ".pdf";
+  a.download = "deka-log-rapo-dkn-" + (state.dknMonth.trucking || today()) + ".pdf";
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
@@ -398,7 +407,7 @@ export function downloadDknReport() {
 }
 
 export function downloadDknAllReport() {
-  var bytes = buildTablePdf(dknAllReportRows(state.containers), "RAPPORT COMPLET DKN", [
+  var bytes = buildTablePdf(dknAllReportRows(state.containers, state.dknMonth.all), dknTitle("RAPPORT COMPLET DKN", state.dknMonth.all), [
     "#",
     "Conteneur",
     "Trucking",
@@ -411,7 +420,7 @@ export function downloadDknAllReport() {
   var url = URL.createObjectURL(new Blob([bytes], { type: "application/pdf" }));
   var a = document.createElement("a");
   a.href = url;
-  a.download = "deka-log-rapo-tout-dkn-" + today() + ".pdf";
+  a.download = "deka-log-rapo-tout-dkn-" + (state.dknMonth.all || today()) + ".pdf";
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);

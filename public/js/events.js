@@ -499,6 +499,11 @@ document.addEventListener("click", function (event) {
 });
 
 document.addEventListener("change", function (event) {
+  if (event.target && event.target.classList && event.target.classList.contains("dkn-month-select")) {
+    state.dknMonth[event.target.getAttribute("data-kind")] = event.target.value;
+    render();
+    return;
+  }
   if (event.target && event.target.id === "stock-filter-bill") {
     state.stockFilterBill = event.target.value;
     render();
