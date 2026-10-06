@@ -153,6 +153,19 @@ await test("DKN full report: DKN containers still here + already left, entry dat
   assert.ok(!rows.some((r) => r.cells.includes("10/09/2026")), "no exit date");
 });
 
+await test("DKN reports are ordered from the most recent entry to the oldest", async () => {
+  const P = await import("../public/js/pdf.js");
+  reset();
+  const mk = (id, numewo, trucking, dateEntered, extra) => Object.assign({ id, numewo, billId: null, size: "40", division: "ACS", dateEntered, dateVerified: dateEntered, depo: "Depo A", trucking, dateEmpty: null, dateLeft: null }, extra || {});
+  state.containers = [
+    mk("a", "AAAA0000001", "DKN 001", "2026-09-01"),
+    mk("b", "BBBB0000002", "DKN 002", "2026-09-20"),
+    mk("c", "CCCC0000003", "DKN 003", "2026-09-10", { dateLeft: "2026-09-25", dateEmpty: "2026-09-12" }),
+  ];
+  assert.deepStrictEqual(P.dknReportRows(state.containers).map((r) => r.cells[0]), ["BBBB0000002", "AAAA0000001"]);
+  assert.deepStrictEqual(P.dknAllReportRows(state.containers).map((r) => r.cells[0]), ["BBBB0000002", "CCCC0000003", "AAAA0000001"]);
+});
+
 await test("DKN exit report: only DKN containers that left, newest first, with driver + plate", async () => {
   const P = await import("../public/js/pdf.js");
   reset();

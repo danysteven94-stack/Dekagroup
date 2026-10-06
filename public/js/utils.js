@@ -89,23 +89,24 @@ export function billStatus(bill, containers) {
   }) ? "fini" : "aktif";
 }
 
-// Containers assigned to a DKN trucking (DKN 001...) that have not left yet, grouped by trucking then number.
+// Containers assigned to a DKN trucking (DKN 001...) that have not left yet, most recent entry first.
 // Also matches the earlier "DNK" spelling so older records already saved that way still show up.
 export function dknContainers(containers) {
   return containers.filter(function (container) {
     return /^(DKN|DNK)\s?\d+/i.test(container.trucking || "") && statusOf(container) !== "kite";
-  }).sort(function (a, b) {
-    return (a.trucking || "").localeCompare(b.trucking || "") || (a.numewo < b.numewo ? -1 : 1);
-  });
+  }).sort(byEntryDateDesc);
+}
+
+// Most recent entry first, down to the container that has been there the longest; ties by trucking then number.
+function byEntryDateDesc(a, b) {
+  return (b.dateEntered || "").localeCompare(a.dateEntered || "") || (a.trucking || "").localeCompare(b.trucking || "") || (a.numewo < b.numewo ? -1 : 1);
 }
 
 // Every DKN container since it entered: the ones still here and the ones that already left (full DKN report).
 export function dknAllContainers(containers) {
   return containers.filter(function (container) {
     return isDknTrucking(container.trucking);
-  }).sort(function (a, b) {
-    return (a.trucking || "").localeCompare(b.trucking || "") || (a.numewo < b.numewo ? -1 : 1);
-  });
+  }).sort(byEntryDateDesc);
 }
 
 export function isDknTrucking(trucking) {
