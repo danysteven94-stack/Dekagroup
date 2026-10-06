@@ -219,7 +219,8 @@ export function downloadReport(status, group) {
         return bill.id === u.billId;
       });
       var pr = bl && bl.product ? bl.product : "\u2014";
-      var dstr = u.dateEntered ? o(u.dateEntered) + (y ? " (URGENT)" : "") : "\u2014";
+      // "(URGENT)" is shown in the JOURS column only, never next to the entry date
+      var dstr = u.dateEntered ? o(u.dateEntered) : "\u2014";
       return {
         cells: [
           u.numewo,
