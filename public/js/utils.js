@@ -227,3 +227,15 @@ export function truckingSearchText(value) {
   var v = String(value || "");
   return /^\s*(CTSA|DKN|DNK)/i.test(v) ? v + " CTSA DKN" : v;
 }
+
+// "CFC 12" -> "CFC", "DKN 003" (or the old "DNK" spelling) -> "CTSA" (DKN is the same company as CTSA), nothing -> "__none".
+export function truckingGroupOf(value) {
+  var v = String(value || "").trim().toUpperCase().replace(/\s+/g, " ");
+  if (!v) {
+    return "__none";
+  }
+  if (/^(DKN|DNK)(\s|\d|$)/.test(v)) {
+    return "CTSA";
+  }
+  return v.replace(/[\s._-]*\d+$/, "") || v;
+}

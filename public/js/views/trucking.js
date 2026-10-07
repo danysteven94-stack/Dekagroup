@@ -12,23 +12,14 @@ import {
   escapeHtml,
   formatDateShort,
   statusOf,
+  truckingGroupOf,
   truckingSearchText
 } from "../utils.js";
 
 var NONE = "__none";
 var COUNTED = ["full", "vid", "pran", "pokoverifye"];
 
-// "CFC 12" -> "CFC", "DKN 003" (or the old "DNK" spelling) -> "CTSA" (DKN is the same company as CTSA), nothing -> NONE.
-export function truckingGroupOf(value) {
-  var v = String(value || "").trim().toUpperCase().replace(/\s+/g, " ");
-  if (!v) {
-    return NONE;
-  }
-  if (/^(DKN|DNK)(\s|\d|$)/.test(v)) {
-    return "CTSA";
-  }
-  return v.replace(/[\s._-]*\d+$/, "") || v;
-}
+export { truckingGroupOf };
 
 // Empty (vid) containers a driver may take: the ones of his trucking ("mine") and the ones nobody owns yet ("free").
 // No trucking picked -> nothing is shown. CFC 12 counts as CFC, DKN 003 counts as CTSA (see truckingGroupOf).

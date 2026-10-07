@@ -40,6 +40,7 @@ export const state = {
   truckingGroup: "",
   productGroup: "",
   truckingStatus: "tout",
+  vidTrucking: "",
   dknMonth: { trucking: "", all: "", left: "" },
   driverSelected: {},
   containers: [],

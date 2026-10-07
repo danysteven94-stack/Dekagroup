@@ -3,6 +3,7 @@ import {
   ADMIN_TABS,
   ALL_DIVISIONS,
   COLORS,
+  DAILY_TRUCKING_BASE,
   DIVISIONS_GROUP_1,
   DIVISIONS_GROUP_2,
   LOGO_URL,
@@ -33,6 +34,7 @@ import {
   statusOf,
   today,
   truckingOptionsHtml,
+  truckingGroupOf,
   truckingSearchText
 } from "../utils.js";
 import { accountButton } from "./account.js";
@@ -481,13 +483,17 @@ function reportsView() {
   var n = state.containers.filter(function (container) {
     return (statusOf(container) === "full" || statusOf(container) === "pokoverifye") && DIVISIONS_GROUP_2.indexOf(container.division) !== -1;
   }).length;
+  var vt = state.vidTrucking || "";
   var i = state.containers.filter(function (container) {
-    return statusOf(container) === "vid";
+    return statusOf(container) === "vid" && (!vt || truckingGroupOf(container.trucking) === vt);
   }).length;
-  function o(a, l, s, f, g, v) {
-    return `<div class="card" style="display:flex;flex-direction:column;gap:14px"><div style="display:flex;align-items:center;gap:12px"><div style="width:40px;height:40px;border-radius:9px;background:${ f }16;display:flex;align-items:center;justify-content:center;flex-shrink:0">${ icon("filetext", 19, f) }</div><div><div class="h3">${ a }</div><div style="font-size:12px;color:var(--muted)">${ l }</div></div></div><div style="font-family:var(--font-mono);font-weight:800;font-size:26px;color:var(--ink)">${ s } <span style="font-size:12px;font-weight:600;color:var(--muted-light)">kontenè</span></div><button class="btn teal" data-action="print-report" data-status="${ g }"${ v ? ` data-group="${ v }"` : "" } style="align-self:flex-start">${ icon("download", 15, "#fff") } Telechaje PDF</button></div>`;
+  var vidSelect = `<select class="input" id="vid-trucking-select" style="padding:8px 10px;font-size:13px;width:auto;min-width:150px"><option value=""${ vt ? "" : " selected" }>Tout trucking</option>${ DAILY_TRUCKING_BASE.map(function (tk) {
+    return `<option value="${ tk }"${ tk === vt ? " selected" : "" }>${ tk }</option>`;
+  }).join("") }</select>`;
+  function o(a, l, s, f, g, v, extra, tk) {
+    return `<div class="card" style="display:flex;flex-direction:column;gap:14px"><div style="display:flex;align-items:center;gap:12px"><div style="width:40px;height:40px;border-radius:9px;background:${ f }16;display:flex;align-items:center;justify-content:center;flex-shrink:0">${ icon("filetext", 19, f) }</div><div><div class="h3">${ a }</div><div style="font-size:12px;color:var(--muted)">${ l }</div></div></div><div style="font-family:var(--font-mono);font-weight:800;font-size:26px;color:var(--ink)">${ s } <span style="font-size:12px;font-weight:600;color:var(--muted-light)">kontenè</span></div>${ extra || "" }<button class="btn teal" data-action="print-report" data-status="${ g }"${ v ? ` data-group="${ v }"` : "" }${ tk ? ` data-trucking="${ tk }"` : "" } style="align-self:flex-start">${ icon("download", 15, "#fff") } Telechaje PDF</button></div>`;
   }
-  return `<div class="section-head"><div><div class="eyebrow">Dokiman</div><h2 class="h2">Rapò Kontenè</h2></div></div><p style="font-size:12.5px;color:var(--muted-light);margin-top:-10px;margin-bottom:20px">Klike "Telechaje PDF" pou telechaje fichye a dirèkteman sou aparèy ou.</p><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px">${ o("Rapò Full \u2014 Gwoup 1", "CRISTO AL, CRISTO COMM, CONFIDEKA, DEKAV", e, COLORS.rust, "full", "1") }${ o("Rapò Full \u2014 Gwoup 2", "ACS, MIKADO, LA COLLECTION, DEKA TIRES", n, COLORS.rust, "full", "2") }${ o("Rapò Kontenè Vid", "Tout kontenè ki vide men poko kite", i, COLORS.vid, "vid", null) }<div class="card" style="display:flex;flex-direction:column;gap:14px"><div style="display:flex;align-items:center;gap:12px"><div style="width:40px;height:40px;border-radius:9px;background:${ COLORS.green }16;display:flex;align-items:center;justify-content:center;flex-shrink:0">${ icon("filetext", 19, COLORS.green) }</div><div><div class="h3">Rejis Konplè — Excel</div><div style="font-size:12px;color:var(--muted)">Tout kontenè yo, yon fichye .csv ki louvri nan Excel</div></div></div><div style="font-family:var(--font-mono);font-weight:800;font-size:26px;color:var(--ink)">${ state.containers.length } <span style="font-size:12px;font-weight:600;color:var(--muted-light)">kontenè</span></div><button class="btn teal" data-action="export-containers-csv" style="align-self:flex-start">${ icon("download", 15, "#fff") } Telechaje CSV</button></div></div>${ dknReportSection() }${ dknAllSection() }${ dknLeftSection() }`;
+  return `<div class="section-head"><div><div class="eyebrow">Dokiman</div><h2 class="h2">Rapò Kontenè</h2></div></div><p style="font-size:12.5px;color:var(--muted-light);margin-top:-10px;margin-bottom:20px">Klike "Telechaje PDF" pou telechaje fichye a dirèkteman sou aparèy ou.</p><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px">${ o("Rapò Full \u2014 Gwoup 1", "CRISTO AL, CRISTO COMM, CONFIDEKA, DEKAV", e, COLORS.rust, "full", "1") }${ o("Rapò Full \u2014 Gwoup 2", "ACS, MIKADO, LA COLLECTION, DEKA TIRES", n, COLORS.rust, "full", "2") }${ o("Rapò Kontenè Vid", "Tout kontenè ki vide men poko kite", i, COLORS.vid, "vid", null, vidSelect, vt) }<div class="card" style="display:flex;flex-direction:column;gap:14px"><div style="display:flex;align-items:center;gap:12px"><div style="width:40px;height:40px;border-radius:9px;background:${ COLORS.green }16;display:flex;align-items:center;justify-content:center;flex-shrink:0">${ icon("filetext", 19, COLORS.green) }</div><div><div class="h3">Rejis Konplè — Excel</div><div style="font-size:12px;color:var(--muted)">Tout kontenè yo, yon fichye .csv ki louvri nan Excel</div></div></div><div style="font-family:var(--font-mono);font-weight:800;font-size:26px;color:var(--ink)">${ state.containers.length } <span style="font-size:12px;font-weight:600;color:var(--muted-light)">kontenè</span></div><button class="btn teal" data-action="export-containers-csv" style="align-self:flex-start">${ icon("download", 15, "#fff") } Telechaje CSV</button></div></div>${ dknReportSection() }${ dknAllSection() }${ dknLeftSection() }`;
 }
 
 function notificationsView() {

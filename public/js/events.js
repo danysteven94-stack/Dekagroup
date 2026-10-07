@@ -372,7 +372,7 @@ document.addEventListener("click", function (event) {
     } else if (i === "submit-modal") {
       submitModal();
     } else if (i === "print-report") {
-      downloadReport(n.getAttribute("data-status"), n.getAttribute("data-group"));
+      downloadReport(n.getAttribute("data-status"), n.getAttribute("data-group"), n.getAttribute("data-trucking") || "");
     } else if (i === "print-dkn") {
       downloadDknReport();
     } else if (i === "print-dkn-all") {
@@ -499,6 +499,11 @@ document.addEventListener("click", function (event) {
 });
 
 document.addEventListener("change", function (event) {
+  if (event.target && event.target.id === "vid-trucking-select") {
+    state.vidTrucking = event.target.value;
+    render();
+    return;
+  }
   if (event.target && event.target.classList && event.target.classList.contains("dkn-month-select")) {
     state.dknMonth[event.target.getAttribute("data-kind")] = event.target.value;
     render();

@@ -1,5 +1,6 @@
 // PDF report generation (hand-written PDF writer, no library).
 import {
+  DAILY_TRUCKING_BASE,
   DIVISIONS_GROUP_1,
   DIVISIONS_GROUP_2,
   URGENT_AFTER_DAYS
@@ -12,7 +13,8 @@ import {
   dknLeftContainers,
   formatDateShort,
   statusOf,
-  today
+  today,
+  truckingGroupOf
 } from "./utils.js";
 import {
   downloadDailyDeliveryRows,
@@ -211,7 +213,7 @@ export function buildTablePdf(rows, title, headers, colWeights) {
   return B;
 }
 
-export function downloadReport(status, group) {
+export function downloadReport(status, group, trucking) {
   var i = [
     "JANVIER",
     "FÉVRIER",
@@ -233,6 +235,9 @@ export function downloadReport(status, group) {
   var a = group === "1" ? DIVISIONS_GROUP_1 : group === "2" ? DIVISIONS_GROUP_2 : null;
   var l = state.containers.filter(function (container) {
     var E = status === "full" ? statusOf(container) === "full" || statusOf(container) === "pokoverifye" : statusOf(container) === status;
+    if (E && status === "vid" && trucking && DAILY_TRUCKING_BASE.indexOf(trucking) !== -1) {
+      E = truckingGroupOf(container.trucking) === trucking;
+    }
     return !(!E || a && a.indexOf(container.division) === -1);
   });
   var s;
@@ -285,7 +290,7 @@ export function downloadReport(status, group) {
         ]
       };
     });
-    s = buildTablePdf(v, "DAILY REPORT - LOGISTIQUE", [
+    s = buildTablePdf(v, "DAILY REPORT - LOGISTIQUE" + (trucking ? " - " + trucking : ""), [
       "#",
       "Conteneur",
       "D\u00E9p\u00F4t",
@@ -295,7 +300,7 @@ export function downloadReport(status, group) {
       "Taille",
       "Statut"
     ]);
-    f = `deka-log-rapo-vid-${ today() }.pdf`;
+    f = `deka-log-rapo-vid-${ trucking ? trucking.toLowerCase() + "-" : "" }${ today() }.pdf`;
   }
   var A = new Blob([s], { type: "application/pdf" });
   var r = URL.createObjectURL(A);
