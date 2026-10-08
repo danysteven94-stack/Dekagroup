@@ -18,5 +18,5 @@ Administratè a kreye kont lan nan «Itilizatè» epi chwazi wòl «Logistique D
 - **Sèl** wòl «Logistique Deka» ka wè ak modifye done sa yo (menm administratè a pa ka: li jis jere kont yo). Wòl sa a pa ka wè kontenè yo non plis (`/api/data` fèmen pou li).
 - Chak bill swiv 4 etap: **Pa peye → Chèk resevwa → Peye → Peman konfime**. Chak dat antre men. Yon sèl peman ka kouvri plizyè bill, chak ak montan pa li.
 - Done yo kenbe nan pwòp tab pa yo `lg_bills` (kreye otomatikman, san lyen ak lòt tab yo).
-- Paj la: `public/js/views/logistique.js` (+ `payments.js`, `events-logistique.js`) · API: `api/payments.js`, estokaj: `api/_lib/lgbills.js`
+- Paj la: `public/js/views/logistique.js` (+ `payments.js`, `events-logistique.js`) · API: `api/_lib/lgpayments.js` (rele via `/api/payments`, ki pataje fonksyon `api/daily.js` pou rete nan limit 12 fonksyon Vercel Hobby), estokaj: `api/_lib/lgbills.js`
 - Tès: `tests/payments.test.js`, `tests/payments.client.test.mjs`

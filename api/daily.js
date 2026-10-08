@@ -124,6 +124,11 @@ async function handleLeave(req, res, session) {
 
 module.exports = async function handler(req, res) {
   try {
+    // Logistique Deka (/api/payments) shares this function to stay within the 12-function limit of the Vercel Hobby plan.
+    // It has its own role check (logistique only) and its own data: nothing of Daily Report is used.
+    if (req.query && req.query.action === "payments") {
+      return require("./_lib/lgpayments")(req, res);
+    }
     const session = await A.requireAuth(req, res, ["daily", "admin"]);
     if (!session) return;
 
