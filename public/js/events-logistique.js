@@ -50,6 +50,18 @@ document.addEventListener("click", function (event) {
     P.amounts = {};
     afterSelectionChange([id]);
     if (typeof window !== "undefined" && window.scrollTo) window.scrollTo(0, 0);
+  } else if (a === "pay-confirm") {
+    // confirm the payment of THIS bill only: the form opens for it alone, with today's date ready in "Dat ou konfime"
+    P.sel = {};
+    P.sel[id] = true;
+    P.amounts = {};
+    P.form = prefillForm([id]);
+    if (!P.form.confirmedDate) P.form.confirmedDate = today();
+    render();
+    if (typeof window !== "undefined" && window.scrollTo) window.scrollTo(0, 0);
+  } else if (a === "pay-filter-overdue") {
+    P.filterOverdue = !P.filterOverdue;
+    render();
   } else if (a === "pay-select-all") {
     filteredBills().forEach(function (b) {
       var rec = b;
@@ -80,7 +92,7 @@ document.addEventListener("click", function (event) {
   } else if (a === "pay-retry") {
     loadPayments();
   } else if (a === "pay-new-open") {
-    P.newForm = { division: P.filterDivision || "", numewo: "", product: "", amount: "", currency: "HTG", err: "" };
+    P.newForm = { division: P.filterDivision || "", numewo: "", product: "", amount: "", checkDate: "", currency: "HTG", err: "" };
     render();
   } else if (a === "pay-new-cancel") {
     P.newForm = null;

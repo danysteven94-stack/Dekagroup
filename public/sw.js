@@ -1,5 +1,5 @@
 // v14: the whole app (page, styles and every module) is stored at install, so it opens without network.
-var CACHE_NAME = "deka-log-shell-v24";
+var CACHE_NAME = "deka-log-shell-v25";
 var SHELL_FILES = [
   "/",
   "/index.html",

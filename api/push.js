@@ -1,4 +1,4 @@
-const { redis, getVapid, saveSubscription, removeSubscription, sendToAll } = require("./_lib/push");
+const { redis, getVapid, saveSubscription, removeSubscription, sendToAll, sendToRole } = require("./_lib/push");
 const A = require("./_lib/auth");
 
 module.exports = async function handler(req, res) {
@@ -11,12 +11,12 @@ module.exports = async function handler(req, res) {
     }
 
     if (req.method === "POST") {
-      const session = await A.requireAuth(req, res, ["admin", "depot", "daily", "chofe", "pointeur"]);
+      const session = await A.requireAuth(req, res, ["admin", "depot", "daily", "chofe", "pointeur", "logistique"]);
       if (!session) return;
       const body = A.parseBody(req);
 
       if (body.action === "subscribe") {
-        await saveSubscription(body.subscription, body.deviceId, req.headers["user-agent"]);
+        await saveSubscription(body.subscription, body.deviceId, req.headers["user-agent"], session.role);
         res.status(200).json({ ok: true });
         return;
       }
@@ -28,22 +28,24 @@ module.exports = async function handler(req, res) {
       }
 
       if (body.action === "test") {
-        if (session.role !== "admin") {
+        const lg = session.role === "logistique";
+        if (session.role !== "admin" && !lg) {
           res.status(403).json({ error: "Ou pa gen dwa pou aksyon sa a.", code: "forbidden" });
           return;
         }
         // small lock so the test button can't be used to spam devices
-        const free = await redis.set("deka-log-push-test-lock", "1", { nx: true, ex: 15 });
+        const free = await redis.set("deka-log-push-test-lock" + (lg ? "-lg" : ""), "1", { nx: true, ex: 15 });
         if (!free) {
           res.status(429).json({ error: "Tann kek segond anvan w eseye ank\u00f2." });
           return;
         }
-        const result = await sendToAll(req.headers.host, [{
+        const msg = [{
           title: "DEKA LOG",
           body: "T\u00e8s notifikasyon \u2014 tout bagay ap mache \u2713",
           tag: "deka-test-" + Date.now(),
-          url: "/?tab=notifs",
-        }]);
+          url: lg ? "/" : "/?tab=notifs",
+        }];
+        const result = lg ? await sendToRole(req.headers.host, "logistique", msg) : await sendToAll(req.headers.host, msg);
         res.status(200).json(Object.assign({ ok: true }, result));
         return;
       }

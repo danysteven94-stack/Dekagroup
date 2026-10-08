@@ -25,7 +25,7 @@ async function getVapid() {
   return keys;
 }
 
-async function saveSubscription(sub, deviceId, userAgent) {
+async function saveSubscription(sub, deviceId, userAgent, role) {
   if (
     !sub || typeof sub.endpoint !== "string" || !/^https:\/\//.test(sub.endpoint) || sub.endpoint.length > 1000 ||
     !sub.keys || typeof sub.keys.p256dh !== "string" || typeof sub.keys.auth !== "string" ||
@@ -53,6 +53,7 @@ async function saveSubscription(sub, deviceId, userAgent) {
     [id]: {
       subscription: { endpoint: sub.endpoint, keys: { p256dh: sub.keys.p256dh, auth: sub.keys.auth } },
       deviceId: device,
+      role: role === "logistique" ? "logistique" : "",
       ua: String(userAgent || "").slice(0, 200),
       updatedAt: new Date().toISOString(),
     },
@@ -65,11 +66,12 @@ async function removeSubscription(endpoint) {
 }
 
 // messages: [{ title, body, tag, url }]. Skips the device that triggered the change (it already sees a toast).
-async function sendToAll(host, messages, opts) {
+// The devices of Logistique Deka accounts never receive these (the container activity is not theirs): they have sendToRole.
+async function sendTo(host, messages, filter, opts) {
   const skipDeviceId = opts && opts.skipDeviceId;
   const all = (await redis.hgetall(SUBS_KEY)) || {};
   const entries = Object.entries(all).filter(
-    ([, v]) => v && v.subscription && !(skipDeviceId && v.deviceId === skipDeviceId)
+    ([, v]) => v && v.subscription && filter(v) && !(skipDeviceId && v.deviceId === skipDeviceId)
   );
   if (!entries.length || !messages.length) return { sent: 0, failed: 0, removed: 0 };
 
@@ -104,6 +106,15 @@ async function sendToAll(host, messages, opts) {
   return { sent, failed, removed: dead.length };
 }
 
+function sendToAll(host, messages, opts) {
+  return sendTo(host, messages, (v) => v.role !== "logistique", opts);
+}
+
+// Only the devices subscribed by accounts of this role (today: "logistique").
+function sendToRole(host, role, messages, opts) {
+  return sendTo(host, messages, (v) => v.role === role, opts);
+}
+
 // Compare what was stored with what is being saved and push only the notifications that are new.
 async function notifyNew(prev, next, ctx) {
   const prevIds = new Set(((prev && prev.notifications) || []).map((n) => n && n.id));
@@ -130,4 +141,4 @@ async function notifyNew(prev, next, ctx) {
   return sendToAll(ctx && ctx.host, messages, { skipDeviceId: ctx && ctx.deviceId });
 }
 
-module.exports = { redis, getVapid, saveSubscription, removeSubscription, sendToAll, notifyNew };
+module.exports = { redis, getVapid, saveSubscription, removeSubscription, sendToAll, sendToRole, notifyNew };

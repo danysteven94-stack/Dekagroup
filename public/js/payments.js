@@ -102,7 +102,7 @@ export function createLgBill() {
   state.paymentsBusy = true;
   f.err = "";
   render();
-  apiJson("/api/payments", { action: "create", division: f.division, numewo: f.numewo, product: f.product, amount: f.amount, currency: f.currency }).then(function (d) {
+  apiJson("/api/payments", Object.assign({ action: "create", division: f.division, numewo: f.numewo, product: f.product, amount: f.amount, currency: f.currency }, f.checkDate ? { checkDate: f.checkDate } : {})).then(function (d) {
     state.paymentsBusy = false;
     merge(d.bills || []);
     state.pay.newForm = null;

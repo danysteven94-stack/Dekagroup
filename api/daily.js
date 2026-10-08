@@ -129,6 +129,10 @@ module.exports = async function handler(req, res) {
     if (req.query && req.query.action === "payments") {
       return require("./_lib/lgpayments")(req, res);
     }
+    // Daily reminder of the late Logistique Deka bills (called by the Vercel cron; same function, same reason).
+    if (req.query && req.query.action === "reminders") {
+      return require("./_lib/lgreminders").handler(req, res);
+    }
     const session = await A.requireAuth(req, res, ["daily", "admin"]);
     if (!session) return;
 

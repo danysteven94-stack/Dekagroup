@@ -99,5 +99,11 @@
     "api/scan.js": {
       "maxDuration": 60
     }
-  }
+  },
+  "crons": [
+    {
+      "path": "/api/daily?action=reminders",
+      "schedule": "0 13 * * *"
+    }
+  ]
 }

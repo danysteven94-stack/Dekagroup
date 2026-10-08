@@ -209,12 +209,18 @@ export function pushCard() {
     txt = "Navigatè sa a pa sipòte notifikasyon push. Eseye Chrome, Edge, Firefox oswa Safari.";
   } else if (s.perm === "denied") {
     txt = "Notifikasyon yo bloke sou aparèy sa a. Ale nan paramèt sit la nan navigatè a (ikòn kadna a bò adrès la) pou w otorize yo, epi rechaje paj la.";
+  } else if (s.subscribed && state.logistiqueUnlocked) {
+    ok = true;
+    txt = `<strong style="color:${ COLORS.green }">Aktif.</strong> W ap resevwa yon notifikasyon sou aparèy sa a lè yon bill gen 3 jou depi chèk la rive san konfimasyon peman, menm lè app la fèmen.`;
+    btns = `<button class="btn small ghost" data-push="test"${ s.busy ? " disabled" : "" }>Voye yon tès</button><button class="btn small ghost" data-push="disable"${ s.busy ? " disabled" : "" }>Dezaktive</button>`;
   } else if (s.subscribed) {
     ok = true;
     txt = `<strong style="color:${ COLORS.green }">Aktif.</strong> W ap resevwa yon notifikasyon sou aparèy sa a chak fwa gen yon nouvo aktivite (konteynè vid, bill fini, transfè depo, chofè kite), menm lè app la fèmen.`;
     btns = `<button class="btn small ghost" data-push="test"${ s.busy ? " disabled" : "" }>Voye yon tès</button><button class="btn small ghost" data-push="disable"${ s.busy ? " disabled" : "" }>Dezaktive</button>`;
   } else {
-    txt = "Aktive notifikasyon pou w resevwa yon mesaj sou telefòn oswa laptòp ou chak fwa gen yon nouvo aktivite. Fè sa sou chak aparèy ou vle resevwa yo.";
+    txt = state.logistiqueUnlocked
+      ? "Aktive notifikasyon pou w resevwa yon mesaj sou telefòn oswa laptòp ou lè yon bill gen 3 jou depi chèk la rive san konfimasyon peman. Fè sa sou chak aparèy ou vle resevwa yo."
+      : "Aktive notifikasyon pou w resevwa yon mesaj sou telefòn oswa laptòp ou chak fwa gen yon nouvo aktivite. Fè sa sou chak aparèy ou vle resevwa yo.";
     btns = `<button class="btn small teal" data-push="enable"${ s.busy ? " disabled" : "" }>${ s.busy ? "Tann..." : "Aktive notifikasyon" }</button>`;
   }
   return `<div class="card" style="margin-bottom:18px"><div style="display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap"><div style="width:40px;height:40px;border-radius:9px;background:${ COLORS.teal }1A;display:flex;align-items:center;justify-content:center;flex-shrink:0">${ icon("bell", 19, COLORS.teal) }</div><div style="flex:1;min-width:220px"><div class="h3" style="margin-bottom:4px">Notifikasyon sou aparèy ou</div><div style="font-size:12.5px;color:var(--muted);line-height:1.5">${ txt }</div>${ s.msg ? `<div style="font-size:12.5px;color:${ ok ? COLORS.green : COLORS.rust };margin-top:8px;font-weight:600">${ escapeHtml(s.msg) }</div>` : "" }</div>${ btns ? `<div style="display:flex;gap:8px;flex-wrap:wrap">${ btns }</div>` : "" }</div></div>`;

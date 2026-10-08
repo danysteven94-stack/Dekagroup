@@ -15,6 +15,7 @@
 const A = require("./auth");
 const Div = require("./divisions");
 const Lg = require("./lgbills");
+const Reminders = require("./lgreminders");
 const { ApiError } = require("./errors");
 
 const ID_RE = /^[A-Za-z0-9_-]{1,64}$/;
@@ -64,7 +65,10 @@ module.exports = async function handler(req, res) {
     if (req.method === "GET") {
       const session = await A.requireAuth(req, res, ROLES);
       if (!session) return;
-      res.status(200).json({ bills: await Lg.list() });
+      const bills = await Lg.list();
+      // safety net for the daily cron: the first visit of the day sends the reminder of the late bills (once a day)
+      try { await Reminders.run(req.headers.host, bills); } catch (e) { console.error("reminder error:", e && e.message); }
+      res.status(200).json({ bills: bills });
       return;
     }
 
@@ -91,9 +95,11 @@ module.exports = async function handler(req, res) {
           if (CURRENCIES.indexOf(body.currency) === -1) return bad(res, "Lajan an pa valid (HTG oswa USD).");
           currency = body.currency;
         }
+        const check0 = dateField(body, "checkDate", "Chèk resevwa");
+        if (check0.error) return bad(res, check0.error);
         const rec = {
           id: Lg.newId(), division: division, numewo: numewo, product: product || null, amount: amount.none ? null : amount.value, currency: currency,
-          checkDate: null, paidDate: null, confirmedDate: null, broker: null, reference: null, notes: null, batchId: null,
+          checkDate: check0.sent ? check0.value : null, paidDate: null, confirmedDate: null, broker: null, reference: null, notes: null, batchId: null,
           createdBy: session.username, createdAt: now, updatedBy: session.username, updatedAt: now,
         };
         await Lg.insert(rec);

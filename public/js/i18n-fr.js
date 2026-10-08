@@ -1,6 +1,14 @@
 // French translations of the app's Kreyòl text. EXACT: whole text -> French. PATTERNS: texts with numbers/names inside.
 // Business words kept as people use them at the terminal: Bill, Trucking, Daily Report, DKN, CFC.
 export const EXACT = {
+  // ---- Logistique Deka: late bills (3 days after the check) + one-bill confirmation + notifications
+  "Konfime peman bill sa a sèlman": "Confirmer le paiement de ce Bill uniquement",
+  "Dat chèk la rive": "Date de réception du chèque",
+  "Dat peman konfime": "Date de confirmation du paiement",
+  "Wè yo sèlman": "Voir ceux-là seulement",
+  "Wè tout bill yo": "Voir tous les Bills",
+  "W ap resevwa yon notifikasyon sou aparèy sa a lè yon bill gen 3 jou depi chèk la rive san konfimasyon peman, menm lè app la fèmen.": "Vous recevrez une notification sur cet appareil lorsqu’un Bill a 3 jours ou plus depuis la réception du chèque sans confirmation du paiement, même quand l’app est fermée.",
+  "Aktive notifikasyon pou w resevwa yon mesaj sou telefòn oswa laptòp ou lè yon bill gen 3 jou depi chèk la rive san konfimasyon peman. Fè sa sou chak aparèy ou vle resevwa yo.": "Activez les notifications pour recevoir un message sur votre téléphone ou ordinateur lorsqu’un Bill a 3 jours depuis la réception du chèque sans confirmation du paiement. Faites-le sur chaque appareil où vous voulez les recevoir.",
   // ---- administrator: Trucking tab + driver accounts tied to a trucking
   "Pou chak trucking (CFC, CTSA, MAD) wè konbyen kontenè Full, Vid ak Pran li genyen. DKN se menm bagay ak CTSA, kidonk yo konte ansanm. Peze sou yon trucking pou wè detay kontenè li yo, separe 40 pye ak 20 pye. Non chofè ak plak la parèt sèlman lè w peze sou yon kontenè.": "Pour chaque trucking (CFC, CTSA, MAD), voyez combien de conteneurs Full, Vides et Pris il a. DKN est la même société que CTSA, ils sont donc comptés ensemble. Appuyez sur un trucking pour voir le détail de ses conteneurs, séparés en 40 pieds et 20 pieds. Le nom du chauffeur et la plaque n'apparaissent que lorsque vous appuyez sur un conteneur.",
   "Kontenè pa Trucking": "Conteneurs par trucking",
@@ -1024,6 +1032,8 @@ export const PATTERNS = [
   [/^(\d+) bill \u00b7 (\d+) kontenè$/, (b, c) => `${ b } Bill${ plural(b, "", "s") } \u00b7 ${ c } conteneur${ plural(c, "", "s") }`],
   [/^(\d+) kontenè kite$/, (n) => `${ n } conteneur${ plural(n, "", "s") } sorti${ plural(n, "", "s") }`],
   [/^(\d+) bill$/, (n) => `${ n } Bill${ plural(n, "", "s") }`],
+  [/^(\d+) jou depi chèk la rive — peman poko konfime$/, (n) => `${ n } jour${ plural(n, "", "s") } depuis la réception du chèque — paiement non confirmé`],
+  [/^(\d+) bill gen 3 jou oswa plis san konfimasyon peman\.$/, (n) => `${ n } Bill${ plural(n, "", "s") } ${ plural(n, "a", "ont") } 3 jours ou plus sans confirmation du paiement.`],
   [/^(\d+) jou$/, (n) => `${ n } jour${ plural(n, "", "s") }`],
   [/^(\d+) notifikasyon$/, (n) => `${ n } notification${ plural(n, "", "s") }`],
   [/^(\d+)\/(\d+) kontenè kite$/, (a, b) => `${ a }/${ b } conteneur${ plural(b, "", "s") } sorti${ plural(a, "", "s") }`],

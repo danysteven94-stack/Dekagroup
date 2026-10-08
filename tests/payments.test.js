@@ -216,6 +216,60 @@ const list = async (b) => (await b.call(A().pay)).body.bills;
     assert.strictEqual((await post(lg, A().pay, { action: "hack" })).statusCode, 400);
   });
 
+  await test("late bills: a check received 3+ days ago and not confirmed -> ONE push a day, only to Logistique Deka devices; the other devices never get it", async () => {
+    const admin = await legacyAdmin();
+    await seed();
+    const lg = await onboard(admin, { username: "log.rappel", role: "logistique", name: "Rappel", divisions: ["DEKAV"] }, "198.51.100.60");
+    const Push = H.api("push");
+    const sub = (n) => ({ action: "subscribe", deviceId: "dev-" + n, subscription: { endpoint: "https://fcm.googleapis.com/fcm/send/" + n, keys: { p256dh: "pk" + n, auth: "au" + n } } });
+    assert.strictEqual((await post(lg, Push, sub("lg"))).statusCode, 200, "a logistique account can subscribe its device");
+    assert.strictEqual((await post(admin, Push, sub("admin"))).statusCode, 200);
+    const late = await mk(lg, "DEKAV", "LATE-1", "Diri");
+    const recent = await mk(lg, "DEKAV", "RECENT-2", "Mayi");
+    const done = await mk(lg, "DEKAV", "DONE-3", "Sik");
+    const none = await mk(lg, "DEKAV", "NOCHECK-4", "Sel");
+    assert.strictEqual((await save(lg, { items: [{ billId: late, amount: 100 }], checkDate: daysAgo(3) })).statusCode, 200);
+    assert.strictEqual((await save(lg, { items: [{ billId: recent, amount: 100 }], checkDate: daysAgo(2) })).statusCode, 200);
+    assert.strictEqual((await save(lg, { items: [{ billId: done, amount: 50 }], checkDate: daysAgo(6), paidDate: daysAgo(5), confirmedDate: daysAgo(4) })).statusCode, 200);
+    const R = require("../api/_lib/lgreminders");
+    const bills = await list(lg);
+    assert.deepStrictEqual(R.overdue(bills, today()).map((b) => b.numewo), ["LATE-1"], "only the unconfirmed bill with a check 3+ days old");
+    // the first visit of the day (the list above) already sent it: the cron of the same day finds the lock taken
+    const P = require("../api/_lib/push");
+    assert.strictEqual((await R.run("app.example.com")).already, true, "the first visit of the day already sent the reminder");
+    // a new day: the reminder reaches the logistique device only (not the administrator's)
+    await P.redis.del("dl:lgremind:" + today());
+    const first = await R.run("app.example.com");
+    assert.strictEqual(first.late, 1);
+    assert.strictEqual(first.sent, 1, "one message, to the logistique device only");
+    const second = await R.run("app.example.com");
+    assert.strictEqual(second.already, true, "once a day");
+    assert.strictEqual(second.sent, 0);
+    // the usual notifications (containers) go to everybody except the logistique devices
+    assert.strictEqual((await P.sendToAll("app.example.com", [{ title: "t", body: "b", tag: "x", url: "/" }])).sent, 1, "only the administrator device");
+    assert.strictEqual((await P.sendToRole("app.example.com", "logistique", [{ title: "t", body: "b", tag: "x", url: "/" }])).sent, 1);
+    // confirming the late bill removes it from the list
+    assert.strictEqual((await save(lg, { items: [{ billId: late }], paidDate: daysAgo(1), confirmedDate: today() })).statusCode, 200);
+    assert.strictEqual(R.overdue(await list(lg), today()).length, 0);
+  });
+
+  await test("daily cron endpoint: refused without the secret, accepted with it", async () => {
+    const R = require("../api/_lib/lgreminders");
+    const call = async (headers) => {
+      const res = { statusCode: 200, headers: {}, setHeader() {}, status(c) { this.statusCode = c; return this; }, json(b) { this.body = b; return this; } };
+      await R.handler({ method: "GET", headers: Object.assign({ host: "app.example.com" }, headers), query: { action: "reminders" } }, res);
+      return res;
+    };
+    process.env.CRON_SECRET = "s3cret-for-cron";
+    try {
+      assert.strictEqual((await call({})).statusCode, 401);
+      assert.strictEqual((await call({ authorization: "Bearer wrong" })).statusCode, 401);
+      const ok = await call({ authorization: "Bearer s3cret-for-cron" });
+      assert.strictEqual(ok.statusCode, 200);
+      assert.strictEqual(ok.body.ok, true);
+    } finally { delete process.env.CRON_SECRET; }
+  });
+
   const failed = results.filter((r) => !r[0]);
   results.forEach((r) => console.log((r[0] ? "  ok    " : "  FAIL  ") + r[1] + (r[0] ? "" : "\n" + (r[2] && r[2].stack ? r[2].stack.split("\n").slice(0, 4).join("\n") : r[2]))));
   console.log(failed.length ? failed.length + " FAILED" : results.length + "/" + results.length + " passed");

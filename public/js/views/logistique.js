@@ -16,6 +16,7 @@ import {
   formatTime,
   today
 } from "../utils.js";
+import { pushCard } from "../push.js";
 import { accountButton } from "./account.js";
 import { helpButton } from "./help.js";
 
@@ -37,6 +38,17 @@ export function stageOf(p) {
   if (p.paidDate) return "peye";
   if (p.checkDate) return "chek";
   return "poko";
+}
+
+// A bill whose check was received 3 days ago (or more) and whose payment is still not confirmed.
+export var OVERDUE_DAYS = 3;
+
+export function daysSince(date) {
+  return Math.floor((Date.parse(today() + "T00:00:00Z") - Date.parse(date + "T00:00:00Z")) / 86400000);
+}
+
+export function isOverdue(rec) {
+  return !!(rec && rec.checkDate && !rec.confirmedDate && daysSince(rec.checkDate) >= OVERDUE_DAYS);
 }
 
 export function stageInfo(id) {
@@ -83,6 +95,7 @@ export function filteredBills() {
   return state.lgBills.filter(function (b) {
     if (P.filterDivision && billDivision(b) !== P.filterDivision) return false;
     if (P.filterStatus && stageOf(paymentOf(b.id)) !== P.filterStatus) return false;
+    if (P.filterOverdue && !isOverdue(paymentOf(b.id))) return false;
     if (q && (String(b.numewo || "") + " " + String(b.product || "")).toLowerCase().indexOf(q) === -1) return false;
     return true;
   }).sort(function (a, b) {
@@ -187,6 +200,7 @@ function newBillFormHtml() {
     </div>
     <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap">
       <div style="flex:1;min-width:150px"><span class="field-label">Montan (si ou konnen l)</span><input class="input" type="number" inputmode="decimal" min="0" step="0.01" data-newf="amount" placeholder="Opsyonèl" value="${ escapeHtml(f.amount || "") }" /></div>
+      <div style="min-width:170px"><span class="field-label">Dat chèk la rive</span><input class="input" type="date" data-newf="checkDate" max="${ today() }" value="${ escapeHtml(f.checkDate || "") }" /></div>
       <select class="input" data-newf="currency" style="max-width:110px"><option value="HTG"${ f.currency === "USD" ? "" : " selected" }>HTG</option><option value="USD"${ f.currency === "USD" ? " selected" : "" }>USD</option></select>
     </div>
     ${ f.err ? `<div class="alert" style="margin:0">${ icon("alert", 14) }${ escapeHtml(f.err) }</div>` : "" }
@@ -202,25 +216,30 @@ function billRowHtml(bill) {
   var checked = !!state.pay.sel[bill.id];
   var divs = billDivisions(bill);
   var dates = [];
-  if (rec && rec.checkDate) dates.push("Chèk: " + formatDateShort(rec.checkDate));
   if (rec && rec.paidDate) dates.push("Peye: " + formatDateShort(rec.paidDate));
-  if (rec && rec.confirmedDate) dates.push("Konfimasyon: " + formatDateShort(rec.confirmedDate));
   var extra = [];
   if (rec && rec.broker) extra.push("Brokè: " + rec.broker);
   if (rec && rec.reference) extra.push("Chèk #: " + rec.reference);
   var last = rec ? (rec.confirmedDate ? "confirmed" : rec.paidDate ? "paid" : rec.checkDate ? "check" : "") : "";
   var undo = last ? `<button class="btn small ghost" data-action="pay-undo" data-id="${ escapeHtml(bill.id) }" data-stage="${ last }" title="Defèt dènye etap la">${ icon("undo", 13, COLORS.urgent) } Defèt</button>` : "";
   var del = rec && rec.confirmedDate ? "" : `<button class="btn small ghost" data-action="pay-delete" data-id="${ escapeHtml(bill.id) }" title="Efase bill la">${ icon("x", 13, COLORS.urgent) } Efase</button>`;
-  return `<div class="row" style="border-left:4px solid ${ st.color };align-items:flex-start">
+  var late = isOverdue(rec);
+  var lateChip = late ? `<div class="row-sub" style="color:${ COLORS.urgent };font-weight:700">${ icon("alert", 12, COLORS.urgent) } ${ daysSince(rec.checkDate) } jou depi chèk la rive — peman poko konfime</div>` : "";
+  var canConfirm = !!(rec && rec.checkDate && !rec.confirmedDate);
+  var confirmBtn = canConfirm ? `<button class="btn small teal" data-action="pay-confirm" data-id="${ escapeHtml(bill.id) }" title="Konfime peman bill sa a sèlman">${ icon("check", 13, "#fff") } Konfime</button>` : "";
+  return `<div class="row" style="border-left:4px solid ${ late ? COLORS.urgent : st.color };align-items:flex-start">
     <label style="display:flex;align-items:center;padding-top:2px;cursor:pointer"><input type="checkbox" data-action="pay-toggle" data-id="${ escapeHtml(bill.id) }"${ checked ? " checked" : "" } style="width:20px;height:20px" aria-label="Chwazi bill la" /></label>
     <div class="row-min" style="flex:1;min-width:190px"><span class="plate" style="border-color:${ st.color }">${ escapeHtml(bill.numewo) }</span>
       <div class="row-sub">Pwodwi: <strong style="color:var(--navy)">${ bill.product ? escapeHtml(bill.product) : "\u2014" }</strong></div>
       <div class="row-sub light">Divizyon: <strong style="color:var(--muted)">${ divs.length ? escapeHtml(divs.join(", ")) : "\u2014" }</strong></div>
+      ${ lateChip }
       ${ dates.length ? `<div class="row-sub light">${ dates.map(escapeHtml).join(" · ") }</div>` : "" }
       ${ extra.length ? `<div class="row-sub light">${ extra.map(escapeHtml).join(" · ") }</div>` : "" }</div>
+    <div class="mini">Dat chèk la rive<strong style="color:var(--navy)">${ rec && rec.checkDate ? escapeHtml(formatDateShort(rec.checkDate)) : "\u2014" }</strong></div>
+    <div class="mini">Dat peman konfime<strong style="color:${ rec && rec.confirmedDate ? COLORS.green : "var(--navy)" }">${ rec && rec.confirmedDate ? escapeHtml(formatDateShort(rec.confirmedDate)) : "\u2014" }</strong></div>
     <div class="mini">Montan<strong style="color:var(--navy)">${ rec && rec.amount > 0 ? escapeHtml(money(rec.amount, rec.currency)) : "Poko mete" }</strong></div>
     <div class="mini">Estati<strong style="color:${ st.color }">${ st.label }</strong></div>
-    <div style="margin-left:auto;display:flex;gap:6px;flex-wrap:wrap"><button class="btn small ${ stageOf(rec) === "konfime" ? "ghost" : "teal" }" data-action="pay-open" data-id="${ escapeHtml(bill.id) }">${ stageOf(rec) === "konfime" ? "Modifye" : "Peman" }</button>${ undo }${ del }</div>
+    <div style="margin-left:auto;display:flex;gap:6px;flex-wrap:wrap">${ confirmBtn }<button class="btn small ${ stageOf(rec) === "konfime" ? "ghost" : canConfirm ? "ghost" : "teal" }" data-action="pay-open" data-id="${ escapeHtml(bill.id) }">${ stageOf(rec) === "konfime" ? "Modifye" : "Peman" }</button>${ undo }${ del }</div>
   </div>`;
 }
 
@@ -249,6 +268,13 @@ function statusOptionsHtml() {
   }).join("");
 }
 
+function overdueBannerHtml() {
+  var n = state.lgBills.filter(function (b) { return isOverdue(b); }).length;
+  if (!n) return "";
+  var on = !!state.pay.filterOverdue;
+  return `<div class="alert" style="margin-bottom:16px;align-items:center">${ icon("alert", 16, COLORS.urgent) }<div style="flex:1;min-width:180px"><strong>${ n } bill gen ${ OVERDUE_DAYS } jou oswa plis san konfimasyon peman.</strong></div><button class="btn small ghost" data-action="pay-filter-overdue">${ on ? "Wè tout bill yo" : "Wè yo sèlman" }</button></div>`;
+}
+
 function billsTabView() {
   var list = filteredBills();
   var ids = selectedIds();
@@ -264,7 +290,7 @@ function billsTabView() {
   }
   var err = state.paymentsErr ? `<div class="alert">${ icon("alert", 14) }<div style="flex:1">${ escapeHtml(state.paymentsErr) }</div><button class="btn small ghost" data-action="pay-retry">Eseye Ankò</button></div>` : "";
   var pending = list.filter(function (b) { return stageOf(paymentOf(b.id)) !== "konfime"; }).length;
-  return `<div class="section-head"><div><div class="eyebrow">${ list.length } bill</div><h2 class="h2">Pèman Bill yo</h2></div><div class="toolbar"><button class="btn teal" data-action="pay-new-open">${ icon("plus", 14, "#fff") } Nouvo bill</button></div></div>${ err }${ newBillFormHtml() }${ kpiRowHtml() }${ paymentFormHtml() }
+  return `<div class="section-head"><div><div class="eyebrow">${ list.length } bill</div><h2 class="h2">Pèman Bill yo</h2></div><div class="toolbar"><button class="btn teal" data-action="pay-new-open">${ icon("plus", 14, "#fff") } Nouvo bill</button></div></div>${ err }${ pushCard() }${ overdueBannerHtml() }${ newBillFormHtml() }${ kpiRowHtml() }${ paymentFormHtml() }
   <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px">
     <input class="input" id="pay-search" placeholder="Chèche bill oswa pwodwi..." value="${ escapeHtml(state.pay.search || "") }" style="flex:1;min-width:160px" />
     <select class="input" id="pay-filter-division" style="width:auto;min-width:140px">${ divisionOptionsHtml() }</select>

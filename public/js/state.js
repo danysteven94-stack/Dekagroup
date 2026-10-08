@@ -123,6 +123,7 @@ export const state = {
     newForm: null,
     filterDivision: "",
     filterStatus: "",
+    filterOverdue: false,
     search: ""
   },
   goodsIncidents: [],
