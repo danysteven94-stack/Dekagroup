@@ -11,7 +11,8 @@ export function loginView() {
     depot: "Depo",
     daily: "Daily Report",
     chofe: "Chofè",
-    pointeur: "Pointeur"
+    pointeur: "Pointeur",
+    logistique: "Logistique Deka"
   }[state.sessionRole] || state.sessionRole) }</button><div style="text-align:center;font-size:12px;color:var(--muted);margin-bottom:14px">oswa konekte ak yon lòt kont:</div>` : `<div style="text-align:center;font-size:13px;color:var(--muted);margin:-6px 0 16px">Konekte pou kontinye</div>` }<span class="field-label">Non Itilizatè</span><input class="input" id="gate-user" autocomplete="username" autocapitalize="none" spellcheck="false" value="${ escapeHtml(state.gateUser) }" style="margin-bottom:12px" /><span class="field-label">Modpass</span><input class="input gate-input" type="password" id="gate-pw" autocomplete="current-password" />${ state.gateError ? `<div class="gate-err">${ escapeHtml(state.gateMsg || "Non itilizatè oswa modpass pa bon. Eseye ankò.") }</div>` : "" }<button type="submit" class="gate-btn" data-fr="${ state.gateBusy ? "Connexion…" : "Se connecter" }"${ state.gateBusy ? " disabled" : "" }>${ state.gateBusy ? "K ap konekte..." : "Antre" }</button><div style="text-align:center;margin-top:14px">${ langButton("var(--muted)") }</div></form></div>`;
 }
 

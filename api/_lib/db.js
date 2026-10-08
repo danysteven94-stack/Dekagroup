@@ -84,7 +84,7 @@ function configuredPools() {
 }
 
 // Portable DDL (same statements run on PostgreSQL in production and on SQLite in the tests).
-const SCHEMA_VERSION = 11;
+const SCHEMA_VERSION = 13;
 const DDL = [
   "CREATE TABLE IF NOT EXISTS meta (name TEXT PRIMARY KEY, value BIGINT NOT NULL)",
   "CREATE TABLE IF NOT EXISTS bills (" +
@@ -137,6 +137,19 @@ const DDL = [
     "finished_by TEXT, finished_at TEXT)",
   "CREATE INDEX IF NOT EXISTS invoices_bill_idx ON invoices (bill_id)",
   "CREATE INDEX IF NOT EXISTS invoices_status_idx ON invoices (status)",
+  // Bill payments ("Pèman Bill", Logistique Deka): one row per Bill with the amount and the three manual dates
+  // (check received, paid by the broker, confirmed). batch_id links the bills that were paid together.
+  "CREATE TABLE IF NOT EXISTS bill_payments (" +
+    "id TEXT PRIMARY KEY, bill_id TEXT NOT NULL, amount TEXT, currency TEXT NOT NULL DEFAULT 'HTG', " +
+    "check_date TEXT, paid_date TEXT, confirmed_date TEXT, broker TEXT, reference TEXT, notes TEXT, batch_id TEXT, " +
+    "updated_by TEXT, updated_at TEXT NOT NULL, created_at TEXT NOT NULL)",
+  "CREATE UNIQUE INDEX IF NOT EXISTS bill_payments_bill_idx ON bill_payments (bill_id)",
+  // Logistique Deka: its own bills + payment steps. No link with containers, bills or any table of the other interfaces.
+  "CREATE TABLE IF NOT EXISTS lg_bills (" +
+    "id TEXT PRIMARY KEY, division TEXT NOT NULL, numewo TEXT NOT NULL, product TEXT, amount TEXT, currency TEXT NOT NULL DEFAULT 'HTG', " +
+    "check_date TEXT, paid_date TEXT, confirmed_date TEXT, broker TEXT, reference TEXT, notes TEXT, batch_id TEXT, " +
+    "created_by TEXT, created_at TEXT NOT NULL, updated_by TEXT, updated_at TEXT NOT NULL)",
+  "CREATE UNIQUE INDEX IF NOT EXISTS lg_bills_key_idx ON lg_bills (division, numewo)",
   // Goods incidents ("Machandiz Retounen" / "Machandiz Avarye" / "Livrezon"): returned goods, damaged goods,
   // or a delivery, tied to a Bill only. container_numewo is a legacy column, no longer written to.
   "CREATE TABLE IF NOT EXISTS goods_incidents (" +

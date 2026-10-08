@@ -7,7 +7,7 @@ const pg = require("./pgrepo");
 const { redis } = require("./redis");
 const { ApiError } = require("./errors");
 
-const ROLES = ["admin", "depot", "daily", "chofe", "pointeur"];
+const ROLES = ["admin", "depot", "daily", "chofe", "pointeur", "logistique"];
 const USERNAME_RE = /^[a-z0-9][a-z0-9._-]{2,31}$/;
 
 const COLS = [

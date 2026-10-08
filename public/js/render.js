@@ -8,6 +8,8 @@ import { maybeStartTour, tourView } from "./views/tour.js";
 import { adminContent } from "./views/admin.js";
 import { dailyReportView } from "./views/daily.js";
 import { depotView } from "./views/depot.js";
+import { logistiqueView } from "./views/logistique.js";
+import { loadPayments } from "./payments.js";
 import { driverView } from "./views/driver.js";
 import { pointeurView } from "./views/pointeur.js";
 import {
@@ -49,6 +51,17 @@ export function render() {
       html = loadErrorView();
     } else {
       html = depotView();
+    }
+  } else if (state.logistiqueUnlocked) {
+    if (state.loadingData) {
+      html = loadingView();
+    } else if (state.loadError) {
+      html = loadErrorView();
+    } else {
+      html = logistiqueView();
+      if (!state.paymentsLoaded && !state.paymentsLoading && !state.paymentsErr) {
+        setTimeout(loadPayments, 0);
+      }
     }
   } else if (state.drUnlocked) {
     if (state.loadingData) {

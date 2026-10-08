@@ -28,6 +28,14 @@ const TOURS = {
     ["Transfere depo", "Si yon kontenè chanje kote li ye, ouvri l epi chwazi nouvo depo a (ak trucking si gen youn)."],
     ["Èd ak kont ou", "Bouton «Èd» la louvri gid sa a ankò. Bouton «Kont mwen» sèvi pou chanje modpas ou."]
   ],
+  logistique: [
+    ["Byenvini nan Deka Log", WELCOME],
+    ["Ajoute yon bill", "Peze «Nouvo bill», chwazi divizyon an, mete nimewo bill la, pwodwi a ak montan an si ou konnen l."],
+    ["Bill yo ak estati yo", "Ou wè tout divizyon yo. Chak bill ou antre gen yon estati: Pa peye, Chèk resevwa, Peye, oswa Konfime. Peze yon kat anlè a pou filtre pa estati."],
+    ["Konfime yon peman", "Peze «Peman» sou yon bill. Mete ki monte li vo, epi dat ou resevwa chèk la, dat li peye (lè brokè a pote l ale), ak dat ou konfime."],
+    ["Plizyè bill yon sèl kou", "Koche plizyè bill epi konfime yon sèl peman pou yo tout. Ou mete montan chak bill separeman."],
+    ["Èd ak kont ou", "Bouton «Èd» la louvri gid sa a ankò. Bouton «Kont mwen» sèvi pou chanje modpas ou."]
+  ],
   pointeur: [
     ["Byenvini nan Deka Log", WELCOME],
     ["Kontenè pou debake", "Ou wè kontenè Full ki nan depo ou a. Chèche youn ak nimewo li, bill la oswa pwodwi a."],
@@ -64,7 +72,7 @@ export function maybeStartTour() {
   if (state.tour !== null && state.tour !== undefined) {
     return;
   }
-  var onMain = state.unlocked || state.depotUnlocked || state.drUnlocked || state.authRole === "chofe" || state.authRole === "pointeur";
+  var onMain = state.unlocked || state.depotUnlocked || state.logistiqueUnlocked || state.drUnlocked || state.authRole === "chofe" || state.authRole === "pointeur";
   if (!state.authRole || !onMain || state.needs || state.acct || state.help || state.authChecking || state.loadingData || state.loadError) {
     return;
   }

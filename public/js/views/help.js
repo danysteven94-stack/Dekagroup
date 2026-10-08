@@ -34,6 +34,14 @@ const GUIDES = {
     ["Vide yon kontenè", "Lè yon kontenè vide, klike sou li epi make «Vid». Li ap parèt pou chofè yo ka vin pran l."],
     ["Transfere Depo", "Si yon kontenè chanje kote li ye, ouvri l epi chwazi nouvo depo a (ak trucking si genyen)."]
   ],
+  logistique: [
+    ["Bill yo", "Ou wè bill yo ou antre yo, divizyon pa divizyon, ak estati peman chak youn: Pa peye, Chèk resevwa, Peye, Konfime. Done sa yo se pa Logistique Deka sèlman: okenn lòt entèfas pa wè yo."],
+    ["Ajoute yon bill", "Peze «Nouvo bill», chwazi divizyon an (ou wè tout divizyon yo), mete nimewo bill la, pwodwi a ak montan an si ou konnen l."],
+    ["Konfime yon peman", "Peze «Peman» sou yon bill. Mete ki monte bill la vo, epi dat chèk la rive, dat li peye (lè brokè a pote l ale), ak dat ou konfime. Ranpli sèlman etap ki fèt yo."],
+    ["Plizyè bill yon sèl kou", "Koche plizyè bill, mete montan chak bill, epi konfime yon sèl peman pou yo tout ansanm."],
+    ["Defèt yon etap", "Si w mete yon dat pa erè, peze «Defèt» sou bill la pou retire dènye etap la."],
+    ["Rezime", "Tab «Rezime pa Divizyon» montre konbyen bill chak divizyon peye, konfime, ak montan yo."]
+  ],
   pointeur: [
     ["Kontenè pou debake", "Ou wè kontenè Full ki nan depo ou a. Se sa ou ap debake yo."],
     ["Debarquement", "Lè w kòmanse debake yon kontenè, peze «Debarquement». Administratè Lojistik la wè sa menm lè a, ak non ou."],

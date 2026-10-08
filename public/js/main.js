@@ -16,8 +16,19 @@ import "./events.js";
 import "./events-account.js";
 import "./events-archive.js";
 import "./events-lang.js";
+import "./events-logistique.js";
+import { loadPayments } from "./payments.js";
 
 setInterval(pollData, 15000);
+
+// Logistique Deka: refresh the payments quietly, unless the person is typing or has a payment form open.
+setInterval(function () {
+  var a = document.activeElement;
+  var typing = a && (a.tagName === "INPUT" || a.tagName === "SELECT" || a.tagName === "TEXTAREA");
+  if (state.logistiqueUnlocked && state.paymentsLoaded && state.online && !typing && !state.pay.form && !state.pay.newForm && !state.modal) {
+    loadPayments(true);
+  }
+}, 30000);
 
 initOffline();
 applyDocumentLang();

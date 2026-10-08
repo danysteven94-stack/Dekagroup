@@ -250,7 +250,7 @@ function viewFor(session, d) {
     narrowed = true;
   }
   // Only the depot interface is split by division. Logistic admin, driver and Daily Report accounts
-  // always see every container, whatever divisions their account happens to list.
+  // (and Logistique Deka, which has its own data and never reaches this view) always see every container, whatever divisions their account happens to list.
   const visible = role === "depot" || role === "pointeur" ? Div.visibleDivisions(session.src, session.divisions) : null;
   if (visible) {
     const allowed = {};

@@ -26,7 +26,7 @@ const scrypt = promisify(crypto.scrypt);
 
 const COOKIE = "__Host-dl_sid";
 const IDLE_SEC = 12 * 3600; // a session dies after 12 h without activity
-const ABS_SEC = { admin: 24 * 3600, depot: 14 * 86400, daily: 14 * 86400, chofe: 14 * 86400, pointeur: 14 * 86400 }; // hard limit per role
+const ABS_SEC = { admin: 24 * 3600, depot: 14 * 86400, daily: 14 * 86400, chofe: 14 * 86400, pointeur: 14 * 86400, logistique: 14 * 86400 }; // hard limit per role
 const REFRESH_MS = 5 * 60 * 1000;
 
 const LOGIN_WINDOW_SEC = 15 * 60;

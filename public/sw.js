@@ -1,5 +1,5 @@
 // v14: the whole app (page, styles and every module) is stored at install, so it opens without network.
-var CACHE_NAME = "deka-log-shell-v22";
+var CACHE_NAME = "deka-log-shell-v24";
 var SHELL_FILES = [
   "/",
   "/index.html",
@@ -20,6 +20,7 @@ var SHELL_FILES = [
   "/js/events-account.js",
   "/js/events-archive.js",
   "/js/events-lang.js",
+  "/js/events-logistique.js",
   "/js/events.js",
   "/js/i18n-fr.js",
   "/js/i18n.js",
@@ -31,6 +32,7 @@ var SHELL_FILES = [
   "/js/offline.js",
   "/js/offlinedb.js",
   "/js/outbox.js",
+  "/js/payments.js",
   "/js/pdf.js",
   "/js/push.js",
   "/js/register-sw.js",
@@ -52,6 +54,7 @@ var SHELL_FILES = [
   "/js/views/help.js",
   "/js/views/tour.js",
   "/js/views/invoices.js",
+  "/js/views/logistique.js",
   "/js/views/modals.js",
   "/js/views/security.js",
   "/js/views/stock.js",

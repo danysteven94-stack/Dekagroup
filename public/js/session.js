@@ -49,6 +49,14 @@ export function switchDivision(pool) {
       state.pool = x.d.pool;
       state.sessionPool = x.d.pool;
       state.rev = undefined;
+      // the payments of the other division's database must not stay on screen
+      state.lgBills = [];
+      state.paymentsLoaded = false;
+      state.paymentsErr = "";
+      state.pay.sel = {};
+      state.pay.amounts = {};
+      state.pay.form = null;
+      state.pay.filterDivision = "";
       loadData();
     } else {
       render();
@@ -119,6 +127,11 @@ export function logout() {
   state.inventoryChecks = {};
   state.unlocked = false;
   state.depotUnlocked = false;
+  state.logistiqueUnlocked = false;
+  state.lgBills = [];
+  state.paymentsLoaded = false;
+  state.paymentsErr = "";
+  state.pay = { tab: "bills", sel: {}, amounts: {}, form: null, newForm: null, filterDivision: "", filterStatus: "", search: "" };
   state.drUnlocked = false;
   state.dr.loaded = false;
   storageRemove(LS_DAILY_UNLOCKED);
@@ -151,6 +164,13 @@ export function applyAuth(role, username, name, needs, personal, divisions, pool
   state.username = username || "";
   state.unlocked = role === "admin";
   state.depotUnlocked = role === "depot";
+  state.logistiqueUnlocked = role === "logistique";
+  if (role === "logistique") {
+    state.lgBills = [];
+    state.paymentsLoaded = false;
+    state.paymentsErr = "";
+    state.pay = { tab: "bills", sel: {}, amounts: {}, form: null, newForm: null, filterDivision: "", filterStatus: "", search: "" };
+  }
   state.drUnlocked = role === "daily";
   state.role = role === "chofe" ? "chofe" : null;
   state.gateError = false;

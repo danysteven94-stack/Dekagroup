@@ -109,6 +109,22 @@ export const state = {
     notes: "",
     items: [{ description: "", qty: "", unitPrice: "" }]
   },
+  lgBills: [],
+  paymentsLoaded: false,
+  paymentsLoading: false,
+  paymentsErr: "",
+  paymentsBusy: false,
+  logistiqueUnlocked: false,
+  pay: {
+    tab: "bills",
+    sel: {},
+    amounts: {},
+    form: null,
+    newForm: null,
+    filterDivision: "",
+    filterStatus: "",
+    search: ""
+  },
   goodsIncidents: [],
   goodsLoaded: false,
   goodsLoading: false,

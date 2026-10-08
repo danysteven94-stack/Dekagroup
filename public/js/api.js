@@ -63,6 +63,13 @@ function restoreSnapshot(snap) {
 }
 
 export function loadData() {
+  // Logistique Deka has its own data (loaded by payments.js): it never reads the containers of the other interfaces.
+  if (state.authRole === "logistique") {
+    state.loadingData = false;
+    state.loadError = false;
+    render();
+    return;
+  }
   state.loadingData = true;
   state.loadError = false;
   state.loadErrorDetail = "";
@@ -303,7 +310,7 @@ export function showToast(message) {
 }
 
 export function pollData() {
-  if (state.online && !state.modal) {
+  if (state.online && !state.modal && state.authRole !== "logistique") {
     var active = document.activeElement;
     if (!(active && (active.tagName === "INPUT" || active.tagName === "SELECT" || active.tagName === "TEXTAREA") || !state.authRole || state.loadingData || state.loadError)) {
       apiFetch("/api/data").then(function (n) {
@@ -365,6 +372,7 @@ function sessionExpired() {
   state.tourFor = "";
   state.unlocked = false;
   state.depotUnlocked = false;
+  state.logistiqueUnlocked = false;
   state.drUnlocked = false;
   state.dr.loaded = false;
   state.role = null;
@@ -401,6 +409,7 @@ function applyData(data, force) {
 }
 
 export function refreshData(force) {
+  if (state.authRole === "logistique") return Promise.resolve();
   return apiFetch("/api/data").then(function (r) {
     if (!r.ok) {
       throw new Error("HTTP " + r.status);

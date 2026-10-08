@@ -58,10 +58,12 @@ const base = () => {
     { id: "n4", billNumewo: "", date: "2026-06-09", message: "Kontenè MSKU0000001 transfere nan depo Depo A (te nan Depo B) — trucking: CFC." },
   ];
   state.inventoryChecks = {};
+  state.logistiqueUnlocked = false; state.lgBills = []; state.paymentsLoaded = false; state.paymentsLoading = false; state.paymentsErr = ""; state.paymentsBusy = false;
+  state.pay = { tab: "bills", sel: {}, amounts: {}, form: null, newForm: null, filterDivision: "", filterStatus: "", search: "" };
 };
 const T = await import("../public/js/views/tour.js");
 // the first-login tour is switched off for every screen test below (it has its own test)
-const seenAll = () => ["admin", "depot", "chofe", "daily", "pointeur"].forEach((r) => localStorage.setItem("deka_tour_seen:" + r + ":", "1"));
+const seenAll = () => ["admin", "depot", "chofe", "daily", "pointeur", "logistique"].forEach((r) => localStorage.setItem("deka_tour_seen:" + r + ":", "1"));
 const show = (setup) => { base(); seenAll(); state.tour = null; state.tourFor = ""; setup(); render(); return root.innerHTML; };
 const admin = (tab, extra) => show(() => { state.authRole = "admin"; state.unlocked = true; state.tab = tab; if (extra) extra(); });
 
@@ -87,6 +89,11 @@ await test("switch persists (localStorage) and updates the page language", () =>
   assert.ok(html.includes('data-action="set-lang"') && html.includes('data-lang="ht"'), "login screen offers Kreyòl");
 });
 
+const LOG_PAYMENTS = () => [
+  { id: "b1", division: "DEKAV", numewo: "LMM0592084", product: "Diri", amount: 1250.5, currency: "USD", checkDate: "2026-10-01", paidDate: "2026-10-02", confirmedDate: null, broker: "Brokè Pierre", reference: "CHK-001", notes: null, batchId: null, updatedBy: "x", updatedAt: "2026-10-02T10:00:00Z", createdAt: "2026-10-01T10:00:00Z" },
+  { id: "b2", division: "ACS", numewo: "CHN3429599", product: "Sik", amount: 300, currency: "HTG", checkDate: "2026-09-01", paidDate: "2026-09-02", confirmedDate: "2026-09-03", broker: null, reference: null, notes: null, batchId: null, updatedBy: "x", updatedAt: "2026-09-03T10:00:00Z", createdAt: "2026-09-01T10:00:00Z" },
+];
+
 const SCREENS = {
   "login": () => show(() => {}),
   "login (resume)": () => show(() => { state.sessionRole = "admin"; state.sessionUser = "logistic"; }),
@@ -109,7 +116,7 @@ const SCREENS = {
   "admin inventory": () => admin("inventory"),
   "admin inventory (all done)": () => admin("inventory", () => { state.inventoryChecks = Object.fromEntries(state.containers.map((c) => [c.id, new Date().toISOString().slice(0, 10)])); state.inventoryShowConfirmed = true; }),
   "admin bills": () => admin("bills"),
-  "admin bills (empty)": () => admin("bills", () => { state.bills = []; state.containers = []; }),
+  "admin bills (empty)": () => admin("bills", () => { state.lgBills = []; }),
   "admin achiv": () => admin("achiv"),
   "admin achiv (empty)": () => admin("achiv", () => { state.containers = []; }),
   "admin rapo": () => admin("rapo"),
@@ -128,6 +135,18 @@ const SCREENS = {
   "depot dashboard": () => show(() => { state.authRole = "depot"; state.depotUnlocked = true; state.depotTab = "dashboard"; }),
   "depot list": () => show(() => { state.authRole = "depot"; state.depotUnlocked = true; state.depotTab = "list"; }),
   "depot division": () => show(() => { state.authRole = "depot"; state.depotUnlocked = true; state.depotTab = "dashboard"; state.depotDivision = "ACS"; }),
+  "logistique": () => show(() => { state.authRole = "logistique"; state.logistiqueUnlocked = true; state.paymentsLoaded = true; state.lgBills = LOG_PAYMENTS(); }),
+  "logistique (loading payments)": () => show(() => { state.authRole = "logistique"; state.logistiqueUnlocked = true; state.paymentsLoading = true; }),
+  "logistique (error)": () => show(() => { state.authRole = "logistique"; state.logistiqueUnlocked = true; state.paymentsLoaded = true; state.paymentsErr = "Ou pa gen entènèt. Eseye ankò lè koneksyon an tounen."; }),
+  "logistique (form, one bill)": () => show(() => { state.authRole = "logistique"; state.logistiqueUnlocked = true; state.paymentsLoaded = true; state.lgBills = LOG_PAYMENTS(); state.pay.sel = { b1: true }; state.pay.form = { currency: "USD", checkDate: "2026-10-01", paidDate: "", confirmedDate: "", broker: "", reference: "", notes: "", err: "" }; }),
+  "logistique (form, several bills, error)": () => show(() => { state.authRole = "logistique"; state.logistiqueUnlocked = true; state.paymentsLoaded = true; state.lgBills = LOG_PAYMENTS(); state.pay.sel = { b1: true, b2: true }; state.pay.form = { currency: "HTG", checkDate: "", paidDate: "", confirmedDate: "", broker: "", reference: "", notes: "", err: "Bill LMM0592084: mete montan bill la anvan w konfime peman an." }; }),
+  "logistique (new bill form)": () => show(() => { state.authRole = "logistique"; state.logistiqueUnlocked = true; state.paymentsLoaded = true; state.lgBills = LOG_PAYMENTS(); state.pay.newForm = { division: "", numewo: "", product: "", amount: "", currency: "HTG", err: "" }; }),
+  "logistique (new bill form, error)": () => show(() => { state.authRole = "logistique"; state.logistiqueUnlocked = true; state.paymentsLoaded = true; state.lgBills = LOG_PAYMENTS(); state.pay.newForm = { division: "ACS", numewo: "CHN3429599", product: "", amount: "", currency: "USD", err: "Bill sa a deja egziste nan divizyon sa a." }; }),
+  "logistique (filtered, none)": () => show(() => { state.authRole = "logistique"; state.logistiqueUnlocked = true; state.paymentsLoaded = true; state.pay.search = "zzz"; }),
+  "logistique (no bills)": () => show(() => { state.authRole = "logistique"; state.logistiqueUnlocked = true; state.paymentsLoaded = true; state.lgBills = []; }),
+  "logistique (summary)": () => show(() => { state.authRole = "logistique"; state.logistiqueUnlocked = true; state.paymentsLoaded = true; state.lgBills = LOG_PAYMENTS(); state.pay.tab = "summary"; }),
+  "logistique (summary, none)": () => show(() => { state.authRole = "logistique"; state.logistiqueUnlocked = true; state.paymentsLoaded = true; state.pay.tab = "summary"; state.lgBills = []; }),
+  "logistique help": () => show(() => { state.authRole = "logistique"; state.help = true; }),
   "driver": () => show(() => { state.authRole = "chofe"; state.role = "chofe"; }),
   "pointeur": () => show(() => { state.authRole = "pointeur"; state.username = "poin.un"; state.sessionName = "Jean Pointeur"; }),
   "pointeur (debarquement)": () => show(() => {
@@ -305,6 +324,21 @@ await test("container detail (admin): history timeline shows what happened, who 
   html = show(() => { state.authRole = "depot"; state.depotUnlocked = true; state.modal = { mode: "container-info", id: "c1", history: [ev("created", "", "x", "2026-09-01T07:00:00.000Z")] }; });
   assert.ok(!html.includes("Istorik") && !html.includes("Historique"), "not shown outside the admin screens");
   state.modal = null;
+});
+
+await test("Logistique Deka: first-login guide steps through the screen and is fully French", () => {
+  I.setLang("fr");
+  base(); state.tour = null; state.tourFor = ""; Object.assign(state, { authRole: "logistique", logistiqueUnlocked: true, paymentsLoaded: true, lgBills: LOG_PAYMENTS() });
+  localStorage.removeItem(T.tourKey());
+  render();
+  assert.ok(root.innerHTML.includes('data-action="tour-next"'), "the guide opens on the first login");
+  let guard = 0;
+  while (state.tour !== null && guard++ < 20) {
+    assert.deepStrictEqual(leftovers(root.innerHTML), [], "no Kreyòl left in step " + state.tour);
+    T.tourNext();
+    render();
+  }
+  assert.strictEqual(state.tour, null);
 });
 
 await test("first-login guide: opens once per account, steps through each role's screen, is fully French, can be reopened from Èd", () => {

@@ -23,6 +23,9 @@ const runs = [
   ["container history (PostgreSQL layer)", "history.test.js", { TEST_BACKEND: "pg" }],
   ["pointeur (Redis)", "pointeur.test.js", {}],
   ["pointeur (PostgreSQL layer)", "pointeur.test.js", { TEST_BACKEND: "pg" }],
+  ["payments (Redis)", "payments.test.js", {}],
+  ["payments (PostgreSQL layer)", "payments.test.js", { TEST_BACKEND: "pg" }],
+  ["payments (browser logic)", "payments.client.test.mjs", {}],
   ["translations (French)", "i18n.test.mjs", {}],
 ];
 let bad = 0;
