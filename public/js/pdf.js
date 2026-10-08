@@ -74,7 +74,7 @@ function fitText(text, size, bold, maxWidth) {
 }
 
 // colWeights (optional): relative width of each column, same length as headers. Default: equal columns.
-export function buildTablePdf(rows, title, headers, colWeights) {
+export function buildTablePdf(rows, title, headers, colWeights, subtitleExtra) {
   var o = 842;
   var a = 595;
   var l = 30;
@@ -90,7 +90,7 @@ export function buildTablePdf(rows, title, headers, colWeights) {
     return `${ h } ${ F } ${ G } rg ${ k } ${ O } ${ z } ${ w } re f\n`;
   }
   var A = today();
-  var r = `Généré le ${ formatDateShort(A) } — Total : ${ rows.length } ligne${ rows.length > 1 ? "s" : "" }`;
+  var r = `Généré le ${ formatDateShort(A) } — Total : ${ rows.length } ligne${ rows.length > 1 ? "s" : "" }${ subtitleExtra ? " — " + subtitleExtra : "" }`;
   var d = headers;
   var _nc = d.length;
   var _tw = 812 - l;

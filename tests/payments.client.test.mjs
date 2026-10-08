@@ -323,6 +323,21 @@ await test("an error creating a bill (duplicate) stays in the form", async () =>
   assert.strictEqual(state.paymentsBusy, false);
 });
 
+await test("PDF of the bills: a real PDF with the bill numbers, the three dates, the step and the totals; follows the filters", async () => {
+  reset();
+  const L = await import("../public/js/lgpdf.js");
+  setPay([pay("b1", { amount: 1500.5, checkDate: "2026-10-01", paidDate: "2026-10-02", confirmedDate: "2026-10-03" }), pay("b2", { amount: 200, currency: "USD", checkDate: "2026-09-01" })]);
+  const text = (u8) => Array.from(u8).map((c) => String.fromCharCode(c)).join("");
+  let pdf = text(L.buildLgBillsPdf());
+  assert.ok(pdf.startsWith("%PDF-1.4") && pdf.includes("%%EOF"), "it is a PDF");
+  assert.ok(pdf.includes("BILL-1") && pdf.includes("BILL-2") && pdf.includes("03/10/2026"), "bills and dates");
+  assert.ok(pdf.includes("1 500,50 HTG") && pdf.includes("Paiement confirm"), "amount and step");
+  assert.ok(pdf.includes("200,00 USD"), "totals line");
+  change("pay-filter-division", "ACS");
+  pdf = text(L.buildLgBillsPdf());
+  assert.ok(!pdf.includes("BILL-1"), "the filters of the screen apply");
+});
+
 let bad = 0;
 results.forEach(([ok, name, e]) => { console.log((ok ? "  PASS  " : "  FAIL  ") + name); if (!ok) { bad++; console.log("        " + (e && e.stack || e)); } });
 console.log("\n" + (results.length - bad) + "/" + results.length + " passed");

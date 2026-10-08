@@ -270,6 +270,32 @@ const list = async (b) => (await b.call(A().pay)).body.bills;
     } finally { delete process.env.CRON_SECRET; }
   });
 
+  await test("photo of the check: small JPEG only, kept per bill, readable later, removed with the bill; other roles cannot reach it", async () => {
+    const admin = await legacyAdmin();
+    await seed();
+    const lg = await onboard(admin, { username: "log.foto", role: "logistique", name: "Foto", divisions: ["MIKADO"] }, "198.51.100.70");
+    const b1 = await mk(lg, "MIKADO", "PH-1", "Diri");
+    const b2 = await mk(lg, "MIKADO", "PH-2", "Mayi");
+    const img = "data:image/jpeg;base64,/9j/" + "A".repeat(400);
+    const photo = (body) => post(lg, A().pay, Object.assign({ action: "photo" }, body));
+    assert.strictEqual((await photo({ billIds: [b1], image: "data:image/png;base64,iVBORw0KGgo" + "A".repeat(200) })).statusCode, 400, "not a JPEG");
+    assert.strictEqual((await photo({ billIds: [b1], image: "data:image/jpeg;base64,/9j/" + "A".repeat(400000) })).statusCode, 400, "too big");
+    assert.strictEqual((await photo({ billIds: [b1], image: "data:image/jpeg;base64,/9j/<script>" + "A".repeat(200) })).statusCode, 400, "not base64");
+    assert.strictEqual((await photo({ billIds: ["nope"], image: img })).statusCode, 404);
+    assert.strictEqual((await photo({ billIds: [b1, b2], image: img })).statusCode, 200, "one photo for several bills");
+    const bills = await list(lg);
+    assert.ok(bills.every((b) => b.hasPhoto === true), "the list tells which bills have a photo");
+    const got = await post(lg, A().pay, { action: "photo-get", billId: b1 });
+    assert.strictEqual(got.statusCode, 200);
+    assert.strictEqual(got.body.image, img);
+    assert.strictEqual((await admin.call(A().pay, { method: "POST", body: { action: "photo-get", billId: b1 } })).statusCode, 403, "not even the administrator");
+    assert.strictEqual((await post(lg, A().pay, { action: "photo-delete", billId: b1 })).statusCode, 200);
+    assert.strictEqual((await post(lg, A().pay, { action: "photo-get", billId: b1 })).statusCode, 404);
+    assert.strictEqual((await list(lg)).find((b) => b.id === b1).hasPhoto, false);
+    assert.strictEqual((await post(lg, A().pay, { action: "delete", billId: b2 })).statusCode, 200);
+    assert.strictEqual(await require("../api/_lib/lgchecks").get(b2), null, "the photo goes with the bill");
+  });
+
   const failed = results.filter((r) => !r[0]);
   results.forEach((r) => console.log((r[0] ? "  ok    " : "  FAIL  ") + r[1] + (r[0] ? "" : "\n" + (r[2] && r[2].stack ? r[2].stack.split("\n").slice(0, 4).join("\n") : r[2]))));
   console.log(failed.length ? failed.length + " FAILED" : results.length + "/" + results.length + " passed");

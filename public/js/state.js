@@ -124,6 +124,9 @@ export const state = {
     filterDivision: "",
     filterStatus: "",
     filterOverdue: false,
+    photoBusy: false,
+    photoMsg: "",
+    photoView: null,
     search: ""
   },
   goodsIncidents: [],

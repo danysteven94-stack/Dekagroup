@@ -3,10 +3,14 @@
 import {
   clearPaymentStage,
   createLgBill,
+  deleteCheckPhoto,
   deleteLgBill,
   loadPayments,
-  savePayments
+  savePayments,
+  uploadCheckPhoto,
+  viewCheckPhoto
 } from "./payments.js";
+import { downloadLgBillsPdf } from "./lgpdf.js";
 import { render } from "./render.js";
 import { state } from "./state.js";
 import { today } from "./utils.js";
@@ -62,6 +66,15 @@ document.addEventListener("click", function (event) {
   } else if (a === "pay-filter-overdue") {
     P.filterOverdue = !P.filterOverdue;
     render();
+  } else if (a === "pay-pdf") {
+    downloadLgBillsPdf();
+  } else if (a === "pay-photo-view") {
+    viewCheckPhoto(id);
+  } else if (a === "pay-photo-close") {
+    P.photoView = null;
+    render();
+  } else if (a === "pay-photo-delete") {
+    if (window.confirm("Efase foto chèk la ?")) deleteCheckPhoto(id);
   } else if (a === "pay-select-all") {
     filteredBills().forEach(function (b) {
       var rec = b;
@@ -153,6 +166,12 @@ document.addEventListener("input", function (event) {
 document.addEventListener("change", function (event) {
   var t = event.target;
   if (!t) return;
+  if (t.id === "pay-photo-input" || t.id === "pay-photo-gallery") {
+    var file = t.files && t.files[0];
+    t.value = "";
+    if (file) uploadCheckPhoto(file);
+    return;
+  }
   var nfc = t.getAttribute && t.getAttribute("data-newf");
   if (nfc && state.pay.newForm) {
     state.pay.newForm[nfc] = t.value;

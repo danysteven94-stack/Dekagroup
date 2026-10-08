@@ -15,6 +15,7 @@
 const A = require("./auth");
 const Lg = require("./lgbills");
 const Reminders = require("./lgreminders");
+const Checks = require("./lgchecks");
 const { ApiError } = require("./errors");
 
 const ID_RE = /^[A-Za-z0-9_-]{1,64}$/;
@@ -67,7 +68,8 @@ module.exports = async function handler(req, res) {
       const bills = await Lg.list();
       // safety net for the daily cron: the first visit of the day sends the reminder of the late bills (once a day)
       try { await Reminders.run(req.headers.host, bills); } catch (e) { console.error("reminder error:", e && e.message); }
-      res.status(200).json({ bills: bills });
+      const has = await Checks.flags();
+      res.status(200).json({ bills: bills.map(function (b) { return Object.assign({}, b, { hasPhoto: !!has[b.id] }); }) });
       return;
     }
 
@@ -142,6 +144,7 @@ module.exports = async function handler(req, res) {
         if (!cur) { res.status(404).json({ error: "Pa jwenn Bill sa a.", code: "not_found" }); return; }
         if (cur.confirmedDate) return bad(res, "Ou pa ka efase yon bill ki gen peman konfime. Defèt konfimasyon an dabò.", "confirmed");
         await Lg.remove(cur.id);
+        await Checks.remove(cur.id);
         await A.audit(req, "lgbill_delete", { numewo: cur.numewo, division: cur.division }, session);
         res.status(200).json({ ok: true, deleted: cur.id });
         return;
@@ -162,6 +165,37 @@ module.exports = async function handler(req, res) {
         await Lg.saveMany([next]);
         await A.audit(req, "payment_clear", { billNumewo: cur.numewo, stage: stage }, session);
         res.status(200).json({ ok: true, bills: [next] });
+        return;
+      }
+
+      // ---- the photo of the check (already shrunk by the browser): save it for one or several bills, read it, remove it
+      if (body.action === "photo" || body.action === "photo-get" || body.action === "photo-delete") {
+        const ids = body.action === "photo" && Array.isArray(body.billIds) ? body.billIds : [body.billId];
+        if (ids.length < 1 || ids.length > MAX_BILLS) return bad(res, "Chwazi omwen yon Bill.");
+        const recs = [];
+        for (const raw of ids) {
+          const id = text(raw, 64);
+          const cur = ID_RE.test(id) ? byId[id] : null;
+          if (!cur) { res.status(404).json({ error: "Pa jwenn Bill sa a.", code: "not_found" }); return; }
+          recs.push(cur);
+        }
+        if (body.action === "photo-get") {
+          const image = await Checks.get(recs[0].id);
+          if (!image) { res.status(404).json({ error: "Pa gen foto pou bill sa a.", code: "no_photo" }); return; }
+          res.status(200).json({ ok: true, image: image });
+          return;
+        }
+        if (body.action === "photo-delete") {
+          await Checks.remove(recs[0].id);
+          await A.audit(req, "lgcheck_photo_delete", { numewo: recs[0].numewo }, session);
+          res.status(200).json({ ok: true, billIds: [recs[0].id] });
+          return;
+        }
+        const image = Checks.clean(body.image);
+        if (!image) return bad(res, "Foto a pa valid oswa twò gwo. Eseye ankò.", "invalid_photo");
+        for (const r of recs) await Checks.put(r.id, image, session.username);
+        await A.audit(req, "lgcheck_photo", { bills: recs.map(function (r) { return r.numewo; }) }, session);
+        res.status(200).json({ ok: true, billIds: recs.map(function (r) { return r.id; }) });
         return;
       }
 

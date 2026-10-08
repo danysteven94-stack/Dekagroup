@@ -4,6 +4,7 @@ import {
   apiJson,
   showToast
 } from "./api.js";
+import { shrinkImage } from "./photo.js";
 import { render } from "./render.js";
 import { state } from "./state.js";
 import { selectedIds } from "./views/logistique.js";
@@ -17,6 +18,10 @@ function message(e) {
 
 function merge(records) {
   var byId = {};
+  var had = {};
+  state.lgBills.forEach(function (o) { had[o.id] = o.hasPhoto; });
+  // the server answers a payment/edit without the "has a photo" flag: keep the one we already know
+  records = records.map(function (r) { return r.hasPhoto === undefined && had[r.id] ? Object.assign({}, r, { hasPhoto: true }) : r; });
   records.forEach(function (r) { byId[r.id] = r; });
   state.lgBills = records.concat(state.lgBills.filter(function (p) { return !byId[p.id]; }));
 }
@@ -128,6 +133,64 @@ export function deleteLgBill(billId) {
     render();
   }).catch(function (e) {
     state.paymentsBusy = false;
+    showToast("Erè: " + message(e));
+    render();
+  });
+}
+
+function setPhotoFlag(ids, value) {
+  state.lgBills = state.lgBills.map(function (b) { return ids.indexOf(b.id) !== -1 ? Object.assign({}, b, { hasPhoto: value }) : b; });
+}
+
+// Photo of the check: shrink it, then keep it for every Bill chosen in the form.
+export function uploadCheckPhoto(file) {
+  var P = state.pay;
+  var ids = selectedIds();
+  if (!ids.length || !file || P.photoBusy) return;
+  P.photoBusy = true;
+  P.photoMsg = "";
+  render();
+  shrinkImage(file).then(function (image) {
+    return apiJson("/api/payments", { action: "photo", billIds: ids, image: image });
+  }).then(function (d) {
+    P.photoBusy = false;
+    setPhotoFlag(d.billIds || ids, true);
+    P.photoMsg = "Foto chèk la anrejistre.";
+    render();
+  }).catch(function (e) {
+    P.photoBusy = false;
+    P.photoMsg = message(e);
+    render();
+  });
+}
+
+export function viewCheckPhoto(billId) {
+  var P = state.pay;
+  P.photoView = { id: billId, src: "", loading: true, err: "" };
+  render();
+  apiJson("/api/payments", { action: "photo-get", billId: billId }).then(function (d) {
+    if (P.photoView && P.photoView.id === billId) { P.photoView.src = d.image; P.photoView.loading = false; }
+    render();
+  }).catch(function (e) {
+    if (P.photoView && P.photoView.id === billId) { P.photoView.loading = false; P.photoView.err = message(e); }
+    render();
+  });
+}
+
+export function deleteCheckPhoto(billId) {
+  var P = state.pay;
+  if (P.photoBusy) return;
+  P.photoBusy = true;
+  render();
+  apiJson("/api/payments", { action: "photo-delete", billId: billId }).then(function () {
+    P.photoBusy = false;
+    P.photoView = null;
+    P.photoMsg = "";
+    setPhotoFlag([billId], false);
+    showToast("Foto a efase.");
+    render();
+  }).catch(function (e) {
+    P.photoBusy = false;
     showToast("Erè: " + message(e));
     render();
   });
