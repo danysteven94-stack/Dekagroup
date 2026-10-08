@@ -53,6 +53,9 @@ export const DIVISIONS_GROUP_2 = [
   "DEKA TIRES"
 ];
 
+// Logistique Deka has its own list of divisions (it is a field of each of its bills, nothing else depends on it).
+export const LOGISTIQUE_DIVISIONS = ["CRISTO S.A", "ACS", "MIKADO", "ENERSOL", "LA COLLECTION", "MOBILITY"];
+
 export const ALL_DIVISIONS = DIVISIONS_GROUP_1.concat(DIVISIONS_GROUP_2);
 
 // Which divisions to show an account in dividion-by-division screens (the Tablo Kontwôl cards, etc.):

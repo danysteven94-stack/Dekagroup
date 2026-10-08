@@ -37,7 +37,7 @@ async function onboard(admin, body, ip) {
   return b;
 }
 const seed = () => H.setData({
-  containers: [{ id: "c1", numewo: "AAAA0000001", billId: "b1", size: "40", division: "DEKAV", dateEntered: "2026-09-01", dateVerified: "2026-09-02", depo: "D", trucking: "CFC", dateEmpty: null, dateLeft: null }],
+  containers: [{ id: "c1", numewo: "AAAA0000001", billId: "b1", size: "40", division: "CRISTO S.A", dateEntered: "2026-09-01", dateVerified: "2026-09-02", depo: "D", trucking: "CFC", dateEmpty: null, dateLeft: null }],
   bills: [{ id: "b1", numewo: "B-1", product: "Diri", completedAt: null }],
   notifications: [], inventoryChecks: {},
 });
@@ -57,14 +57,14 @@ const list = async (b) => (await b.call(A().pay)).body.bills;
     await seed();
     const anon = H.browser();
     assert.strictEqual((await anon.call(A().pay)).statusCode, 401);
-    await onboard(admin, { username: "depo.marie", role: "depot", name: "Marie", divisions: ["DEKAV"] }, "198.51.100.40");
+    await onboard(admin, { username: "depo.marie", role: "depot", name: "Marie", divisions: ["CRISTO S.A"] }, "198.51.100.40");
     const depo = H.browser("198.51.100.40");
     await post(depo, A().login, { username: "depo.marie", password: "Logistique-Strong-Pass-9" });
     assert.strictEqual((await depo.call(A().pay)).statusCode, 403, "a depot account must not see Logistique Deka data");
-    assert.strictEqual((await create(depo, { division: "DEKAV", numewo: "X-1" })).statusCode, 403);
+    assert.strictEqual((await create(depo, { division: "CRISTO S.A", numewo: "X-1" })).statusCode, 403);
     assert.strictEqual((await admin.call(A().pay)).statusCode, 403, "the administrator does not see Logistique Deka data either");
-    assert.strictEqual((await create(admin, { division: "DEKAV", numewo: "X-1" })).statusCode, 403);
-    const lg = await onboard(admin, { username: "log.paul", role: "logistique", name: "Paul Logistique", divisions: ["DEKAV"] }, "198.51.100.41");
+    assert.strictEqual((await create(admin, { division: "CRISTO S.A", numewo: "X-1" })).statusCode, 403);
+    const lg = await onboard(admin, { username: "log.paul", role: "logistique", name: "Paul Logistique", divisions: ["CRISTO S.A"] }, "198.51.100.41");
     assert.strictEqual((await lg.call(A().pay)).statusCode, 200);
     assert.strictEqual((await lg.call(A().data)).statusCode, 403, "Logistique Deka never reads the containers of the other interfaces");
   });
@@ -72,10 +72,10 @@ const list = async (b) => (await b.call(A().pay)).body.bills;
   await test("a logistique account works on EVERY division, whatever divisions its account lists", async () => {
     const admin = await legacyAdmin();
     await seed();
-    const users = (await post(admin, A().users, { action: "create", username: "log.zero", role: "logistique", name: "Zero Div", divisions: ["DEKAV"] })).body;
+    const users = (await post(admin, A().users, { action: "create", username: "log.zero", role: "logistique", name: "Zero Div", divisions: ["CRISTO S.A"] })).body;
     assert.deepStrictEqual(users.user.divisions, [], "no division is assigned to a Logistique Deka account");
     const lg = await onboard(admin, { username: "log.paul", role: "logistique", name: "Paul" }, "198.51.100.42");
-    for (const [dv, n] of [["DEKAV", "B-A"], ["ACS", "B-B"], ["MIKADO", "B-C"], ["DEKA TIRES", "B-D"], ["LA COLLECTION", "B-E"], ["CRISTO AL", "B-F"]]) await mk(lg, dv, n, "Pwodwi");
+    for (const [dv, n] of [["CRISTO S.A", "B-A"], ["ACS", "B-B"], ["MIKADO", "B-C"], ["MOBILITY", "B-D"], ["LA COLLECTION", "B-E"], ["ACS", "B-F"]]) await mk(lg, dv, n, "Pwodwi");
     assert.strictEqual((await list(lg)).length, 6, "all divisions visible");
     // a second logistique account sees the same data (the data belongs to Logistique Deka, not to one person)
     const lg2 = await onboard(admin, { username: "log.marc", role: "logistique", name: "Marc" }, "198.51.100.46");
@@ -88,7 +88,7 @@ const list = async (b) => (await b.call(A().pay)).body.bills;
     const admin = await legacyAdmin();
     await seed();
     const lg = await onboard(admin, { username: "log.paul", role: "logistique", name: "Paul" }, "198.51.100.47");
-    const id = await mk(lg, "DEKAV", "B-1", "Diri"); // same number as a container Bill of the depot data: still independent
+    const id = await mk(lg, "CRISTO S.A", "B-1", "Diri"); // same number as a container Bill of the depot data: still independent
     assert.strictEqual((await list(lg)).length, 1, "the container Bill B-1 of the other interfaces is not listed here");
     assert.strictEqual((await list(lg))[0].id, id);
     const d = (await admin.call(A().data)).body;
@@ -134,7 +134,7 @@ const list = async (b) => (await b.call(A().pay)).body.bills;
     const admin = await legacyAdmin();
     await seed();
     const lg = await onboard(admin, { username: "log.paul", role: "logistique", name: "Paul" }, "198.51.100.43");
-    const b1 = await mk(lg, "DEKAV", "B-1", "Diri");
+    const b1 = await mk(lg, "CRISTO S.A", "B-1", "Diri");
     let r = await save(lg, { items: [{ billId: b1, amount: "1250.50" }], currency: "USD" });
     assert.strictEqual(r.statusCode, 200, JSON.stringify(r.body));
     assert.strictEqual(r.body.bills[0].amount, 1250.5);
@@ -172,7 +172,7 @@ const list = async (b) => (await b.call(A().pay)).body.bills;
     const admin = await legacyAdmin();
     await seed();
     const lg = await onboard(admin, { username: "log.paul", role: "logistique", name: "Paul" }, "198.51.100.44");
-    const b1 = await mk(lg, "DEKAV", "B-1", "Diri");
+    const b1 = await mk(lg, "CRISTO S.A", "B-1", "Diri");
     const b2 = await mk(lg, "ACS", "B-2", "Sik");
     const r = await save(lg, {
       items: [{ billId: b1, amount: 1000 }, { billId: b2, amount: 2500.25 }],
@@ -194,8 +194,8 @@ const list = async (b) => (await b.call(A().pay)).body.bills;
     const admin = await legacyAdmin();
     await seed();
     const lg = await onboard(admin, { username: "log.paul", role: "logistique", name: "Paul" }, "198.51.100.45");
-    const b1 = await mk(lg, "DEKAV", "B-1", "Diri");
-    const b2 = await mk(lg, "DEKAV", "B-2", "Sik");
+    const b1 = await mk(lg, "CRISTO S.A", "B-1", "Diri");
+    const b2 = await mk(lg, "CRISTO S.A", "B-2", "Sik");
     const bad = async (body, what) => assert.strictEqual((await save(lg, body)).statusCode, 400, what);
     await bad({ items: [] }, "no bill");
     await bad({ items: [{ billId: b1, amount: -5 }] }, "negative amount");
@@ -219,15 +219,15 @@ const list = async (b) => (await b.call(A().pay)).body.bills;
   await test("late bills: a check received 3+ days ago and not confirmed -> ONE push a day, only to Logistique Deka devices; the other devices never get it", async () => {
     const admin = await legacyAdmin();
     await seed();
-    const lg = await onboard(admin, { username: "log.rappel", role: "logistique", name: "Rappel", divisions: ["DEKAV"] }, "198.51.100.60");
+    const lg = await onboard(admin, { username: "log.rappel", role: "logistique", name: "Rappel", divisions: ["CRISTO S.A"] }, "198.51.100.60");
     const Push = H.api("push");
     const sub = (n) => ({ action: "subscribe", deviceId: "dev-" + n, subscription: { endpoint: "https://fcm.googleapis.com/fcm/send/" + n, keys: { p256dh: "pk" + n, auth: "au" + n } } });
     assert.strictEqual((await post(lg, Push, sub("lg"))).statusCode, 200, "a logistique account can subscribe its device");
     assert.strictEqual((await post(admin, Push, sub("admin"))).statusCode, 200);
-    const late = await mk(lg, "DEKAV", "LATE-1", "Diri");
-    const recent = await mk(lg, "DEKAV", "RECENT-2", "Mayi");
-    const done = await mk(lg, "DEKAV", "DONE-3", "Sik");
-    const none = await mk(lg, "DEKAV", "NOCHECK-4", "Sel");
+    const late = await mk(lg, "CRISTO S.A", "LATE-1", "Diri");
+    const recent = await mk(lg, "CRISTO S.A", "RECENT-2", "Mayi");
+    const done = await mk(lg, "CRISTO S.A", "DONE-3", "Sik");
+    const none = await mk(lg, "CRISTO S.A", "NOCHECK-4", "Sel");
     assert.strictEqual((await save(lg, { items: [{ billId: late, amount: 100 }], checkDate: daysAgo(3) })).statusCode, 200);
     assert.strictEqual((await save(lg, { items: [{ billId: recent, amount: 100 }], checkDate: daysAgo(2) })).statusCode, 200);
     assert.strictEqual((await save(lg, { items: [{ billId: done, amount: 50 }], checkDate: daysAgo(6), paidDate: daysAgo(5), confirmedDate: daysAgo(4) })).statusCode, 200);

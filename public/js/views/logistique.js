@@ -3,8 +3,8 @@
 // A Bill goes through: Pa peye -> Chèk resevwa (check received) -> Peye (the broker took it and paid it) -> Konfime.
 // Every date is typed in by hand. One payment can cover one Bill or several Bills at once.
 import {
-  ALL_DIVISIONS,
   COLORS,
+  LOGISTIQUE_DIVISIONS,
   LOGO_URL
 } from "../constants.js";
 import { icon } from "../icons.js";
@@ -58,6 +58,15 @@ export function stageInfo(id) {
 // A Logistique Deka bill carries its own payment steps: the record itself is the payment.
 export function paymentOf(billId) {
   return state.lgBills.find(function (p) { return p.id === billId; }) || null;
+}
+
+// The six divisions of Logistique Deka, plus any older division still found on an existing bill (never hidden).
+export function lgDivisions() {
+  var list = LOGISTIQUE_DIVISIONS.slice();
+  state.lgBills.forEach(function (b) {
+    if (b && b.division && list.indexOf(b.division) === -1) list.push(b.division);
+  });
+  return list;
 }
 
 export function billDivisions(bill) {
@@ -188,7 +197,7 @@ function paymentFormHtml() {
 function newBillFormHtml() {
   var f = state.pay.newForm;
   if (!f) return "";
-  var opts = `<option value=""${ f.division ? "" : " selected" }>— Chwazi —</option>` + ALL_DIVISIONS.map(function (d) {
+  var opts = `<option value=""${ f.division ? "" : " selected" }>— Chwazi —</option>` + lgDivisions().map(function (d) {
     return `<option value="${ escapeHtml(d) }"${ f.division === d ? " selected" : "" }>${ escapeHtml(d) }</option>`;
   }).join("");
   return `<form id="pay-new-form" class="card" style="padding:16px;margin-bottom:18px;display:flex;flex-direction:column;gap:12px;border:2px solid ${ COLORS.navy || "#1B2A4A" }">
@@ -256,7 +265,7 @@ function kpiRowHtml() {
 }
 
 function divisionOptionsHtml() {
-  var list = ALL_DIVISIONS.slice();
+  var list = lgDivisions();
   return `<option value=""${ state.pay.filterDivision ? "" : " selected" }>Tout divizyon</option>` + list.map(function (d) {
     return `<option value="${ escapeHtml(d) }"${ state.pay.filterDivision === d ? " selected" : "" }>${ escapeHtml(d) }</option>`;
   }).join("");
@@ -303,7 +312,7 @@ function billsTabView() {
 // ---- summary by division
 
 function summaryTabView() {
-  var names = ALL_DIVISIONS.slice();
+  var names = lgDivisions();
   var cards = names.map(function (dv) {
     var bills = state.lgBills.filter(function (b) { return (billDivision(b) || "") === dv; });
     var counts = { poko: 0, chek: 0, peye: 0, konfime: 0 };

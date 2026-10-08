@@ -12,6 +12,13 @@ const pg = require("./pgrepo");
 const { redis } = require("./redis");
 const { ApiError } = require("./errors");
 
+// The divisions of Logistique Deka (same list as public/js/constants.js LOGISTIQUE_DIVISIONS).
+const DIVISIONS = ["CRISTO S.A", "ACS", "MIKADO", "ENERSOL", "LA COLLECTION", "MOBILITY"];
+
+function isDivision(d) {
+  return DIVISIONS.indexOf(d) !== -1;
+}
+
 const REDIS_KEY = "dl:lgbills";
 const MAX_LEGACY = 20000;
 
@@ -131,4 +138,4 @@ async function remove(id) {
   await redis.set(REDIS_KEY, rows);
 }
 
-module.exports = { newId, stageOf, list, insert, saveMany, remove, sameKey };
+module.exports = { DIVISIONS, isDivision, newId, stageOf, list, insert, saveMany, remove, sameKey };

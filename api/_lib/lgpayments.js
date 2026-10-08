@@ -13,7 +13,6 @@
 //   a field that is left out is kept as it is. Dates are entered by hand (YYYY-MM-DD).
 // POST { action: "clear", billId, stage: "confirmed" | "paid" | "check" } — undo a step entered by mistake.
 const A = require("./auth");
-const Div = require("./divisions");
 const Lg = require("./lgbills");
 const Reminders = require("./lgreminders");
 const { ApiError } = require("./errors");
@@ -86,7 +85,7 @@ module.exports = async function handler(req, res) {
         const division = text(body.division, 40);
         const numewo = text(body.numewo, 60).toUpperCase();
         const product = text(body.product, 120);
-        if (!Div.isValid(division)) return bad(res, "Chwazi yon divizyon valid.", "invalid_division");
+        if (!Lg.isDivision(division)) return bad(res, "Chwazi yon divizyon valid.", "invalid_division");
         if (numewo.length < 2) return bad(res, "Ekri nimewo bill la.", "invalid_numewo");
         const amount = parseAmount(body.amount);
         if (amount.error) return bad(res, "Montan an pa valid.");
@@ -116,7 +115,8 @@ module.exports = async function handler(req, res) {
         const next = Object.assign({}, cur, { updatedBy: session.username, updatedAt: now });
         if (Object.prototype.hasOwnProperty.call(body, "division")) {
           const division = text(body.division, 40);
-          if (!Div.isValid(division)) return bad(res, "Chwazi yon divizyon valid.", "invalid_division");
+          // an old bill may keep the division it already has, even if that division is no longer in the list
+          if (!Lg.isDivision(division) && division !== cur.division) return bad(res, "Chwazi yon divizyon valid.", "invalid_division");
           next.division = division;
         }
         if (Object.prototype.hasOwnProperty.call(body, "numewo")) {
