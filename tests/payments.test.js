@@ -75,11 +75,11 @@ const list = async (b) => (await b.call(A().pay)).body.bills;
     const users = (await post(admin, A().users, { action: "create", username: "log.zero", role: "logistique", name: "Zero Div", divisions: ["DEKAV"] })).body;
     assert.deepStrictEqual(users.user.divisions, [], "no division is assigned to a Logistique Deka account");
     const lg = await onboard(admin, { username: "log.paul", role: "logistique", name: "Paul" }, "198.51.100.42");
-    for (const [dv, n] of [["DEKAV", "B-A"], ["ACS", "B-B"], ["MIKADO", "B-C"], ["DEKA TIRES", "B-D"], ["LA COLLECTION", "B-E"], ["CRISTO AL", "B-F"]]) await mk(lg, dv, n, "Pwodwi");
-    assert.strictEqual((await list(lg)).length, 6, "all divisions visible");
+    for (const [dv, n] of [["DEKAV", "B-A"], ["ACS", "B-B"], ["MIKADO", "B-C"], ["MOBILITY", "B-D"], ["ENERSOL", "B-G"], ["LA COLLECTION", "B-E"], ["CRISTO AL", "B-F"]]) await mk(lg, dv, n, "Pwodwi");
+    assert.strictEqual((await list(lg)).length, 7, "all divisions visible");
     // a second logistique account sees the same data (the data belongs to Logistique Deka, not to one person)
     const lg2 = await onboard(admin, { username: "log.marc", role: "logistique", name: "Marc" }, "198.51.100.46");
-    assert.strictEqual((await list(lg2)).length, 6);
+    assert.strictEqual((await list(lg2)).length, 7);
     // changing the divisions of such an account is refused (it sees everything)
     assert.strictEqual((await post(admin, A().users, { action: "set_divisions", username: "log.paul", divisions: ["ACS"] })).statusCode, 400);
   });

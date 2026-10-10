@@ -19,9 +19,8 @@ const MAX_LEGACY = 20000;
 const MAX_LINES = 30;
 const ID_RE = /^[A-Za-z0-9_-]{1,64}$/;
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
-// The companies printed on the pad (checkboxes at the top of the slip), then the divisions of this app that are not on the pad
-// (ACS, MIKADO, LA COLLECTION, DEKAV): one may be ticked. The pad's own boxes are the first eight.
-const COMPANIES = ["CRISTO AL", "CRISTO PA", "CRISTO COM", "CONFIDEKA", "APOLLO MOTORS", "DEKA TIRES", "PCP", "LA MENAGÈRE", "ACS", "MIKADO", "LA COLLECTION", "DEKAV"];
+// The divisions of the app (same names as _lib/divisions.js): one box may be ticked at the top of the slip.
+const COMPANIES = ["CRISTO AL", "CRISTO COMM", "CONFIDEKA", "DEKAV", "ACS", "MIKADO", "LA COLLECTION", "MOBILITY", "ENERSOL"];
 
 function newId() {
   return crypto.randomBytes(8).toString("hex");

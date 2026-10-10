@@ -15,7 +15,8 @@ const GROUP_2_POOLS = {
   "ACS": "acs",
   "MIKADO": "mikado",
   "LA COLLECTION": "lacollection",
-  "DEKA TIRES": "dekatires",
+  "MOBILITY": "mobility",
+  "ENERSOL": "enersol",
 };
 
 const POOL_OF = {};

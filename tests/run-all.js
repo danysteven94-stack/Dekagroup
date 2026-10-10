@@ -26,6 +26,7 @@ const runs = [
   ["payments (Redis)", "payments.test.js", {}],
   ["payments (PostgreSQL layer)", "payments.test.js", { TEST_BACKEND: "pg" }],
   ["payments (browser logic)", "payments.client.test.mjs", {}],
+  ["division rename (SQL)", "rename.test.js", {}],
   ["delivery slips (Redis)", "slips.test.js", {}],
   ["delivery slips (PostgreSQL layer)", "slips.test.js", { TEST_BACKEND: "pg" }],
   ["inventory (browser logic)", "inventory.client.test.mjs", {}],

@@ -72,10 +72,23 @@ const slip = (o) => Object.assign({ action: "create", clientId: "slipclient0001"
     await bad({ items: [line({ description: "" })] }, 400);
     await bad({ items: [line({ billId: "nope" })] }, 404);
     await bad({ division: "NOT A COMPANY" }, 400);
+    await bad({ division: "CRISTO PA" }, 400);
+    await bad({ division: "PCP" }, 400);
+    await bad({ division: "DEKA TIRES" }, 400);
     await bad({ items: [line({ billId: "nope" })], division: "ACS" }, 404);
     await bad({ items: Array.from({ length: 31 }, () => line()) }, 400);
     const list = await depot.call(slipsApi(), { method: "GET" });
     assert.strictEqual(list.body.slips.length, 0);
+  });
+
+  await test("slip: every division of the app can be ticked (MOBILITY and ENERSOL included)", async () => {
+    const admin = await login("logistic", "admin"); await seed(admin);
+    const depot = await login("depotnord", "depot");
+    const all = ["CRISTO AL", "CRISTO COMM", "CONFIDEKA", "DEKAV", "ACS", "MIKADO", "LA COLLECTION", "MOBILITY", "ENERSOL"];
+    for (let i = 0; i < all.length; i++) {
+      const r = await depot.call(slipsApi(), { method: "POST", body: slip({ clientId: "slipdiv0000" + i, division: all[i] }) });
+      assert.strictEqual(r.statusCode, 200, all[i] + " -> " + JSON.stringify(r.body));
+    }
   });
 
   await test("slip: daily can read but not create; no login is refused", async () => {

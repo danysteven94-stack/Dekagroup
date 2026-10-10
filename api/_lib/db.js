@@ -14,7 +14,9 @@ const POOL_ENV = {
   acs: ["DATABASE_URL_ACS"],
   mikado: ["DATABASE_URL_MIKADO"],
   lacollection: ["DATABASE_URL_LACOLLECTION"],
-  dekatires: ["DATABASE_URL_DEKATIRES"],
+  // MOBILITY replaces DEKA TIRES: it keeps using the database that was configured as DATABASE_URL_DEKATIRES until DATABASE_URL_MOBILITY is set.
+  mobility: ["DATABASE_URL_MOBILITY", "DATABASE_URL_DEKATIRES"],
+  enersol: ["DATABASE_URL_ENERSOL"],
 };
 
 let injected;
@@ -84,7 +86,7 @@ function configuredPools() {
 }
 
 // Portable DDL (same statements run on PostgreSQL in production and on SQLite in the tests).
-const SCHEMA_VERSION = 14;
+const SCHEMA_VERSION = 15;
 const DDL = [
   "CREATE TABLE IF NOT EXISTS meta (name TEXT PRIMARY KEY, value BIGINT NOT NULL)",
   "CREATE TABLE IF NOT EXISTS bills (" +
@@ -175,6 +177,15 @@ const DDL = [
   "CREATE INDEX IF NOT EXISTS container_history_cid_idx ON container_history (container_id, ts)",
   "INSERT INTO meta (name, value) VALUES ('rev', 0) ON CONFLICT (name) DO NOTHING",
   "INSERT INTO meta (name, value) VALUES ('migrated', 0) ON CONFLICT (name) DO NOTHING",
+  // DEKA TIRES was renamed MOBILITY (same company, only the name changes). Rename what is already stored; safe to run again.
+  // Containers: bump the data revision first so open screens pick the new name up, then stamp the renamed rows with it.
+  "UPDATE meta SET value = value + 1 WHERE name = 'rev' AND EXISTS (SELECT 1 FROM containers WHERE division = 'DEKA TIRES')",
+  "UPDATE containers SET division = 'MOBILITY', rev = (SELECT value FROM meta WHERE name = 'rev') WHERE division = 'DEKA TIRES'",
+  // Logistique Deka bills: skip a row only if MOBILITY already has a bill with the same number (the unique key would refuse it).
+  "UPDATE lg_bills SET division = 'MOBILITY' WHERE division = 'DEKA TIRES' AND NOT EXISTS (SELECT 1 FROM lg_bills m WHERE m.division = 'MOBILITY' AND m.numewo = lg_bills.numewo)",
+  "UPDATE delivery_slips SET division = 'MOBILITY' WHERE division = 'DEKA TIRES'",
+  // Personal accounts list their divisions as JSON text.
+  "UPDATE users SET divisions = REPLACE(divisions, '\"DEKA TIRES\"', '\"MOBILITY\"') WHERE divisions LIKE '%\"DEKA TIRES\"%'",
 ];
 
 module.exports = { setDriver, getDriver, configuredPools, DDL, SCHEMA_VERSION };

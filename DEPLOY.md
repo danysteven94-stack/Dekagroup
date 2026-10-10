@@ -49,3 +49,9 @@ npm run test:browser  # tès ak vrè Chrome (bezwen puppeteer)
 npm run smoke -- https://sit-ou.vercel.app   # tcheke yon sit ki deplwaye
 ```
 Kont demo (pataje): `logistic` / `demo-admin-1234`, `depotnord` / `demo-depot-1234`, `logisticdepot` / `demo-daily-1234`, `chofe` / `demo-chofe-1234`. Ou ka kreye kont pèsonèl nan tab Itilizatè (demo a gen deja yon `APP_SECRET`).
+
+## Divizyon ak baz done yo
+
+Divizyon yo: CRISTO AL, CRISTO COMM, CONFIDEKA, DEKAV (menm baz done), epi ACS, MIKADO, LA COLLECTION, MOBILITY, ENERSOL (chak gen pwòp baz done li).
+MOBILITY ranplase DEKA TIRES: li kontinye sèvi ak `DATABASE_URL_DEKATIRES` jiskaske ou mete `DATABASE_URL_MOBILITY`. ENERSOL bezwen pwòp `DATABASE_URL_ENERSOL`.
+Anciens enregistrements «DEKA TIRES» (kontenè, kont itilizatè, bill Logistique Deka, fich livrezon): yo chanje an MOBILITY otomatikman pwochen fwa baz done a louvri (SCHEMA_VERSION 15). Se menm konpayi a, se sèlman non an ki chanje.

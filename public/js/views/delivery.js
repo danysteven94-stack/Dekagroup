@@ -19,8 +19,8 @@ import {
   today
 } from "../utils.js";
 
-// The eight companies printed on the pad, then the divisions of this app that are not on it (same list as the server).
-export var SLIP_COMPANIES = ["CRISTO AL", "CRISTO PA", "CRISTO COM", "CONFIDEKA", "APOLLO MOTORS", "DEKA TIRES", "PCP", "LA MENAG\u00C8RE", "ACS", "MIKADO", "LA COLLECTION", "DEKAV"];
+// The divisions of the app (same list as the server and the PDF slip).
+export var SLIP_COMPANIES = ["CRISTO AL", "CRISTO COMM", "CONFIDEKA", "DEKAV", "ACS", "MIKADO", "LA COLLECTION", "MOBILITY", "ENERSOL"];
 
 export function currentInventory() {
   return computeInventory({

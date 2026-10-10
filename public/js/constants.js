@@ -50,7 +50,8 @@ export const DIVISIONS_GROUP_2 = [
   "ACS",
   "MIKADO",
   "LA COLLECTION",
-  "DEKA TIRES"
+  "MOBILITY",
+  "ENERSOL"
 ];
 
 export const ALL_DIVISIONS = DIVISIONS_GROUP_1.concat(DIVISIONS_GROUP_2);
@@ -77,7 +78,7 @@ export function visibleDivisionsForAccount(personal, divisions) {
 // Group 1 always shares one database; every Group 2 division has its own, separate database.
 export const POOL_OF_DIVISION = {
   "CRISTO AL": "default", "CRISTO COMM": "default", "CONFIDEKA": "default", "DEKAV": "default",
-  "ACS": "acs", "MIKADO": "mikado", "LA COLLECTION": "lacollection", "DEKA TIRES": "dekatires"
+  "ACS": "acs", "MIKADO": "mikado", "LA COLLECTION": "lacollection", "MOBILITY": "mobility", "ENERSOL": "enersol"
 };
 
 // A short label for a pool, built from whichever of the account's own divisions live in it

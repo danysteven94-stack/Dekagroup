@@ -269,7 +269,7 @@ await test("Logistique Deka has its own bills: it never uses the containers/bill
   assert.ok(!h.includes("OTHER-BILL"), "a Bill of the other interfaces never shows here");
   state.pay.tab = "summary";
   h = html();
-  for (const d of ["CRISTO AL", "CRISTO COMM", "CONFIDEKA", "DEKAV", "ACS", "MIKADO", "LA COLLECTION", "DEKA TIRES"]) assert.ok(h.includes(d), d + " is listed");
+  for (const d of ["CRISTO AL", "CRISTO COMM", "CONFIDEKA", "DEKAV", "ACS", "MIKADO", "LA COLLECTION", "MOBILITY", "ENERSOL"]) assert.ok(h.includes(d), d + " is listed");
   setPay([]); state.lgBills = [];
   state.pay.tab = "bills";
   assert.ok(html().includes("Nouvo bill") && html().includes("Poko gen bill."), "empty state invites to add a bill");
@@ -280,7 +280,7 @@ await test("new bill: the form asks division + number, sends them, and the bill 
   click("pay-new-open");
   let h = html();
   assert.ok(h.includes('id="pay-new-form"') && h.includes("Divizyon *") && h.includes("Nimewo bill *"));
-  for (const d of ["CRISTO AL", "ACS", "MIKADO", "DEKA TIRES"]) assert.ok(h.includes('<option value="' + d + '"'), d + " can be chosen");
+  for (const d of ["CRISTO AL", "ACS", "MIKADO", "MOBILITY", "ENERSOL"]) assert.ok(h.includes('<option value="' + d + '"'), d + " can be chosen");
   submit("pay-new-form");
   await tick();
   assert.strictEqual(server.calls.length, 0, "nothing is sent without division and number");

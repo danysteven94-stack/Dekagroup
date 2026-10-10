@@ -1061,10 +1061,7 @@ export function downloadInvoice(invoiceId) {
 // has to look like the pre-printed pad, not like the app's other documents.
 // ============================================================================
 
-var DS_COMPANIES = ["CRISTO AL", "CRISTO PA", "CRISTO COM", "CONFIDEKA", "APOLLO MOTORS", "DEKA TIRES", "PCP", "LA MENAG\u00C8RE"];
-// The pad's company list predates this app and only partly overlaps the divisions it tracks
-// (api/_lib/divisions.js) — this just maps the exact or near-exact names across the two.
-var DS_DIVISION_ALIAS = { "CRISTO COMM": "CRISTO COM" };
+var DS_COMPANIES = ["CRISTO AL", "CRISTO COMM", "CONFIDEKA", "DEKAV", "ACS", "MIKADO", "LA COLLECTION", "MOBILITY", "ENERSOL"];
 
 function dsLine(x1, y1, x2, y2, rgb) {
   var c = rgb || [0.55, 0.6, 0.66];
@@ -1137,11 +1134,12 @@ export function buildDeliverySlipPdf(opts) {
   c += lsText("F2", 9, x0 + 2, top - 27, "DEKA", LS_NAVY);
   c += lsText("F2", 9, x0 + 1, top - 37, "GROUP", LS_NAVY);
 
+  // nine boxes: five on the first row, four on the second
   var chkX = x0 + 56;
-  var cols = [chkX, chkX + 116, chkX + 232, chkX + 335];
+  var colW = 92;
   DS_COMPANIES.forEach(function (name, i) {
-    var row = i < 4 ? 0 : 1;
-    c += dsCheckbox(cols[i % 4], top - 2 - row * 15, name, checkedCompany === name);
+    var row = i < 5 ? 0 : 1;
+    c += dsCheckbox(chkX + (i % 5) * colW, top - 2 - row * 15, name, checkedCompany === name);
   });
 
   var titleStr = "FICHE DE LIVRAISON";
@@ -1250,7 +1248,7 @@ export function downloadDeliverySlip(invoiceId) {
   if (!inv) return;
   var bill = state.bills.find(function (b) { return b.id === inv.billId; });
   var division = bill ? bill.division : null;
-  var checkedCompany = DS_COMPANIES.indexOf(division) !== -1 ? division : (DS_DIVISION_ALIAS[division] || null);
+  var checkedCompany = DS_COMPANIES.indexOf(division) !== -1 ? division : null;
   var rows = (inv.items || []).map(function (it) { return [it.description, dsQty(it.qty)]; });
 
   var bytes = buildDeliverySlipPdf({
