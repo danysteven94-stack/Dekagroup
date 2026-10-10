@@ -4,6 +4,7 @@
 import {
   loadGoodsIncidents,
   loadInvoices,
+  loadSlips,
   loadStockEntries,
   refreshData,
   saveData,
@@ -65,6 +66,9 @@ function reloadAfterFlush(kinds) {
   }
   if (kinds.goods) {
     loadGoodsIncidents();
+  }
+  if (kinds.slip) {
+    loadSlips();
   }
   if (kinds.invoice || kinds["invoice-finish"]) {
     loadInvoices();

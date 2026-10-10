@@ -21,22 +21,11 @@ Administratè a kreye kont lan nan «Itilizatè» epi chwazi wòl «Logistique D
 - Paj la: `public/js/views/logistique.js` (+ `payments.js`, `events-logistique.js`) · API: `api/_lib/lgpayments.js` (rele via `/api/payments`, ki pataje fonksyon `api/daily.js` pou rete nan limit 12 fonksyon Vercel Hobby), estokaj: `api/_lib/lgbills.js`
 - Tès: `tests/payments.test.js`, `tests/payments.client.test.mjs`
 
-### Rapèl 3 jou (notifikasyon) ak konfimasyon pa bill
+## Depo: Fich Livrezon, Rapò Jounalye, Inventè
 
-- Yon bill ki gen **3 jou oswa plis depi dat chèk la rive** epi ki **poko gen konfimasyon peman** voye yon notifikasyon push **sèlman bay aparèy kont Logistique Deka yo** (kont lòt wòl yo pa resevwa l, e kont Logistique pa resevwa notifikasyon kontenè yo). Yon sèl notifikasyon pa jou (lis bill an reta yo), epi li kontinye chak jou jiskaske bill la konfime.
-- Li pati de fason: (1) **cron Vercel chak jou** (`vercel.json` → `/api/daily?action=reminders`, 13:00 UTC) ; (2) kòm sekou, **premye vizit jounen an** yon kont Logistique fè nan paj la. Yo pataje menm vèwou (lock) pa jou, donk pesonn pa resevwa l de fwa.
-- Chak moun Logistique Deka dwe **aktive notifikasyon** sou aparèy li (kat «Notifikasyon sou aparèy ou» anlè paj Pèman Bill yo).
-- Nan paj la: yon bannyè wouj + «N jou depi chèk la rive» sou chak bill an reta, ak yon bouton **Konfime** sou chak bill (konfime yon sèl bill, ak dat jodi a deja ranpli).
-- Opsyonèl men rekòmande: mete `CRON_SECRET` nan Vercel (Settings → Environment Variables) pou sèlman cron Vercel la ka rele `/api/daily?action=reminders`.
-- API: `api/_lib/lgreminders.js` · Tès: `tests/payments.test.js`
-
-### Foto chèk la
-
-- Nan fòm peman an («Peman» / «Konfime» sou yon bill): bouton **Pran foto chèk la** (kamera telefòn nan) ak **Chwazi nan galri**. Foto a redui nan navigatè a (≈1200 px, JPEG, anjeneral 100–200 Ko) anvan l voye, kidonk li pa pran anpil espas.
-- Chak bill ki gen foto montre yon bouton **Foto chèk** pou wè l nenpòt ki lè (ak «Efase foto»). Si w chwazi plizyè bill, foto a anrejistre pou chak.
-- Estokaj: yon kle Redis pa bill (`dl:lgcheck:<id>`), san chanje tab `lg_bills` la. Kòd: `api/_lib/lgchecks.js`, `public/js/photo.js`.
-
-### PDF
-
-- Bouton **Telechaje PDF** (anlè paj Pèman Bill yo): li fè yon PDF an franse ak lis bill yo jan yo parèt sou ekran an (filt divizyon, estati, rechèch ak «an reta» aplike). Kolòn: Bill, Pwodwi, Divizyon, Montan, dat chèk la rive, dat peye, dat konfimasyon, estati, brokè — ak total konfime / pou konfime nan tèt paj la.
-- Kòd: `public/js/lgpdf.js` (itilize jeneratè PDF `pdf.js` la).
+- **Fich Livrezon** (`views/delivery.js`, API `/api/slips` → `api/_lib/slips.js`, rele via `api/goods.js` pou rete nan limit 12 fonksyon): fich papye Deka Group (konpayi, Bon #, kliyan, Fakti #, liy pwodwi, magazinye/chofè/resevwa pa, «Livre le»). Chak liy chwazi yon pwodwi ki nan estòk la.
+- **Rapò Livrezon Jounalye**: tout fich yon jou + total pa pwodwi (PDF).
+- **Inventè** (`js/inventory.js`, `views/inventory.js`): estòk = Antre Estòk − Fich Livrezon − Avarye + Retounen, kalkile pou kont li. Pwodwi = Bill + deskripsyon + inite. Sa ki soti premye se sa ki ekspire pi bonè.
+- **Antre Estòk** gen kounye a yon **Dat Ekspirasyon** opsyonèl (`stock_entries.expires_on`).
+- Baz done: tab `delivery_slips` + kolòn `expires_on` kreye otomatikman (SCHEMA_VERSION 14).
+- Tès: `tests/slips.test.js`, `tests/inventory.client.test.mjs`.

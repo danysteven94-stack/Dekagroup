@@ -123,10 +123,6 @@ export const state = {
     newForm: null,
     filterDivision: "",
     filterStatus: "",
-    filterOverdue: false,
-    photoBusy: false,
-    photoMsg: "",
-    photoView: null,
     search: ""
   },
   goodsIncidents: [],
@@ -135,10 +131,30 @@ export const state = {
   goodsErr: "",
   goodsBusy: false,
   goodsFilterBill: "",
-  deliveryFilterBill: "",
-  deliveryFrom: "",
-  deliveryTo: "",
-  dailyDeliveryDate: ""
+  slips: [],
+  slipsLoaded: false,
+  slipsLoading: false,
+  slipsErr: "",
+  slipsBusy: false,
+  slipSearch: "",
+  slipFrom: "",
+  slipTo: "",
+  slipDraft: {
+    division: "",
+    slipNumber: "",
+    slipDate: "",
+    clientName: "",
+    invoiceNumber: "",
+    storekeeper: "",
+    driver: "",
+    receivedBy: "",
+    deliveredOn: "",
+    remarks: "",
+    items: [{ key: "", quantity: "" }]
+  },
+  dailySlipDate: "",
+  invSearch: "",
+  invFilter: ""
 };
 
 export const TAB_ID = Math.random().toString(36).slice(2, 10) + Date.now().toString(36);

@@ -17,9 +17,14 @@ import {
   truckingGroupOf
 } from "./utils.js";
 import {
-  downloadDailyDeliveryRows,
-  downloadDeliveryReportRows
+  dailyReportLines,
+  dailyReportTotals,
+  dailySlipDateValue
 } from "./views/delivery.js";
+import {
+  expiryText,
+  filteredInventory
+} from "./views/inventory.js";
 
 // PDFs are formal documents (sent to clients, accountants, customs) and are always produced in
 // French, regardless of the app's own Kreyòl/Français display setting.
@@ -74,7 +79,7 @@ function fitText(text, size, bold, maxWidth) {
 }
 
 // colWeights (optional): relative width of each column, same length as headers. Default: equal columns.
-export function buildTablePdf(rows, title, headers, colWeights, subtitleExtra) {
+export function buildTablePdf(rows, title, headers, colWeights) {
   var o = 842;
   var a = 595;
   var l = 30;
@@ -90,7 +95,7 @@ export function buildTablePdf(rows, title, headers, colWeights, subtitleExtra) {
     return `${ h } ${ F } ${ G } rg ${ k } ${ O } ${ z } ${ w } re f\n`;
   }
   var A = today();
-  var r = `Généré le ${ formatDateShort(A) } — Total : ${ rows.length } ligne${ rows.length > 1 ? "s" : "" }${ subtitleExtra ? " — " + subtitleExtra : "" }`;
+  var r = `Généré le ${ formatDateShort(A) } — Total : ${ rows.length } ligne${ rows.length > 1 ? "s" : "" }`;
   var d = headers;
   var _nc = d.length;
   var _tw = 812 - l;
@@ -473,20 +478,11 @@ export function downloadGoodsReport(kind) {
   }, 4000);
 }
 
-// Rapò Livrezon: deliveries registered by hand (Bill + product + quantity + client) — no container link.
-export function downloadDeliveryReport() {
-  var bytes = buildTablePdf(downloadDeliveryReportRows(), "RAPPORT DE LIVRAISON", [
-    "#",
-    "Bill",
-    "Produit",
-    "Quantit\u00E9",
-    "Client",
-    "Date"
-  ]);
+function saveBlobPdf(bytes, fileName) {
   var url = URL.createObjectURL(new Blob([bytes], { type: "application/pdf" }));
   var a = document.createElement("a");
   a.href = url;
-  a.download = "deka-log-rapport-livraison-" + today() + ".pdf";
+  a.download = fileName;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
@@ -495,27 +491,64 @@ export function downloadDeliveryReport() {
   }, 4000);
 }
 
-// Livrezon Jounalye: deliveries registered for one chosen day only.
+function pdfQty(n) {
+  var v = Number(n) || 0;
+  return v % 1 === 0 ? String(v) : v.toFixed(2);
+}
+
+// Rapport de livraison journalière: every product line of every delivery slip of the chosen day, then the totals per product.
 export function downloadDailyDelivery() {
-  var date = state.dailyDeliveryDate || today();
-  var bytes = buildTablePdf(downloadDailyDeliveryRows(), "LIVRAISON JOURNALI\u00C8RE \u2014 " + formatDateShort(date), [
+  var date = dailySlipDateValue();
+  var lines = dailyReportLines(date);
+  var rows = lines.map(function (l) {
+    return { cells: [l.slipNumber, l.clientName, l.invoiceNumber, l.description, pdfQty(l.quantity) + " " + l.unit, l.driver] };
+  });
+  dailyReportTotals(lines).forEach(function (t, i) {
+    rows.push({ cells: [i === 0 ? "TOTAUX" : "", "", "", t.description, pdfQty(t.quantity) + " " + t.unit, ""] });
+  });
+  var bytes = buildTablePdf(rows, "RAPPORT DE LIVRAISON JOURNALI\u00C8RE \u2014 " + formatDateShort(date), [
     "#",
-    "Bill",
+    "Bon #",
+    "Client",
+    "Facture #",
     "Produit",
     "Quantit\u00E9",
-    "Client",
-    "Date"
-  ]);
-  var url = URL.createObjectURL(new Blob([bytes], { type: "application/pdf" }));
-  var a = document.createElement("a");
-  a.href = url;
-  a.download = "deka-log-livrezon-jounalye-" + date + ".pdf";
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  setTimeout(function () {
-    URL.revokeObjectURL(url);
-  }, 4000);
+    "Chauffeur"
+  ], [0.4, 0.9, 1.8, 1.1, 2.4, 1.1, 1.3]);
+  saveBlobPdf(bytes, "deka-log-rapport-livraison-journaliere-" + date + ".pdf");
+}
+
+// Inventaire: stock left for each product (stock entries - delivery slips - damaged + returned) with the next expiry date.
+export function downloadInventory() {
+  var list = filteredInventory();
+  var rows = list.map(function (r) {
+    var exp = expiryText(r);
+    var expFr = !exp ? "\u2014" : r.expiryStatus === "expired" ? "EXPIR\u00C9 \u2014 " + formatDateShort(r.nextExpiry) : formatDateShort(r.nextExpiry);
+    return {
+      cells: [
+        r.description,
+        r.billNumewo || "\u2014",
+        pdfQty(r.entered),
+        pdfQty(r.delivered),
+        pdfQty(r.damaged),
+        pdfQty(r.returned),
+        pdfQty(r.current) + " " + r.unit,
+        expFr
+      ]
+    };
+  });
+  var bytes = buildTablePdf(rows, "INVENTAIRE DU D\u00C9P\u00D4T \u2014 " + formatDateShort(today()), [
+    "#",
+    "Produit",
+    "Bill",
+    "Entr\u00E9es",
+    "Livr\u00E9",
+    "Avari\u00E9",
+    "Retourn\u00E9",
+    "Stock actuel",
+    "Expiration"
+  ], [0.4, 2.6, 1.1, 0.9, 0.9, 0.9, 0.9, 1.3, 1.6]);
+  saveBlobPdf(bytes, "deka-log-inventaire-" + today() + ".pdf");
 }
 
 // ============================================================================
@@ -1061,11 +1094,23 @@ function dsCenterX(str, size, bold) {
   return LS_MARGIN + ((LS_PAGE_W - 2 * LS_MARGIN) - w) / 2;
 }
 
-function dsLabelLine(x, y, label, lineEndX) {
+function dsLabelLine(x, y, label, lineEndX, value) {
   var w = lsText("F2", 9.5, x, y, label);
   var lx = x + label.length * 9.5 * 0.62 + 5;
   w += dsLine(lx, y - 2, lineEndX, y - 2, [0.1, 0.13, 0.18]);
+  if (value) {
+    w += lsText("F1", 9.5, lx + 3, y, lsClip(value, lineEndX - lx - 6, 9.5));
+  }
   return w;
+}
+
+// The "LIVR\u00C9 LE" stamp the depot presses on the slip: company name, and the date the goods left.
+function dsStamp(x, y, w, h, company, dateStr) {
+  var c = dsLine(x, y, x + w, y, LS_NAVY) + dsLine(x + w, y, x + w, y + h, LS_NAVY) + dsLine(x + w, y + h, x, y + h, LS_NAVY) + dsLine(x, y + h, x, y, LS_NAVY);
+  c += dsDiamond(x + 22, y + h / 2, 11);
+  c += lsText("F2", 10, x + 42, y + h - 20, company);
+  c += lsText("F1", 8, x + 42, y + 12, "LIVR\u00C9 LE : " + dateStr);
+  return c;
 }
 
 function dsQty(n) {
@@ -1079,6 +1124,8 @@ export function buildDeliverySlipPdf(opts) {
   var factureNumber = opts.factureNumber || "";
   var checkedCompany = opts.checkedCompany || null;
   var rows = (opts.rows || []).slice(0, 30);
+  var bonNumber = opts.bonNumber || "";
+  var stampDate = opts.deliveredOn || "";
 
   var x0 = LS_MARGIN;
   var x1 = LS_PAGE_W - LS_MARGIN;
@@ -1103,7 +1150,7 @@ export function buildDeliverySlipPdf(opts) {
   // ---- Date / Bon# / client / facture# ----
   var y = top - 72;
   c += lsText("F2", 9.5, x0, y, "Date : " + date);
-  c += dsLabelLine(x1 - 150, y, "Bon # :", x1);
+  c += dsLabelLine(x1 - 150, y, "Bon # :", x1, bonNumber);
 
   y -= 22;
   var clientLabel = "Je (client) : ";
@@ -1124,7 +1171,7 @@ export function buildDeliverySlipPdf(opts) {
   var tableTop = y - 14;
   var bottomReserve = 110;
   var colSplit = x1 - 130;
-  var nRows = Math.max(rows.length + 2, 10);
+  var nRows = Math.max(rows.length + (stampDate ? 6 : 2), 10);
   var rowH = Math.max(11, Math.min(17, (tableTop - bottomReserve) / (nRows + 1)));
   var headH = rowH + 4;
   var tableBottom = tableTop - headH - nRows * rowH;
@@ -1147,12 +1194,16 @@ export function buildDeliverySlipPdf(opts) {
     }
   }
 
+  if (stampDate) {
+    c += dsStamp(x0 + 40, tableBottom + 8, 200, Math.min(46, rowH * 3.4), opts.stampCompany || checkedCompany || "DEKA GROUP", stampDate);
+  }
+
   // ---- signatures + footer note ----
   y = tableBottom - 24;
-  c += dsLabelLine(x0, y, "Magasinier :", x0 + 190);
-  c += dsLabelLine(x0 + 210, y, "Chauffeur :", x1);
+  c += dsLabelLine(x0, y, "Magasinier :", x0 + 190, opts.storekeeper || "");
+  c += dsLabelLine(x0 + 210, y, "Chauffeur :", x1, opts.driver || "");
   y -= 22;
-  c += dsLabelLine(x0, y, "Re\u00E7u par :", x1);
+  c += dsLabelLine(x0, y, "Re\u00E7u par :", x1, opts.receivedBy || "");
 
   y -= 22;
   c += lsText("F2", 8, x0, y, "N.B.");
@@ -1220,4 +1271,27 @@ export function downloadDeliverySlip(invoiceId) {
   setTimeout(function () {
     URL.revokeObjectURL(url);
   }, 4000);
+}
+
+// Builds and downloads the Fiche de Livraison of one registered delivery slip (company box, Bon #, client, facture #,
+// product lines, magasinier / chauffeur / re\u00e7u par and the "LIVR\u00C9 LE" stamp), laid out like the paper pad.
+export function downloadSlip(slipId) {
+  var slip = state.slips.find(function (x) { return x.id === slipId; });
+  if (!slip) return;
+  var rows = (slip.items || []).map(function (it) { return [it.description, dsQty(it.quantity) + " " + (it.unit || "")]; });
+  var bytes = buildDeliverySlipPdf({
+    date: formatDateShort(slip.slipDate || today()),
+    bonNumber: slip.slipNumber || "",
+    clientName: slip.clientName || "",
+    factureNumber: slip.invoiceNumber || "",
+    // a division that is not printed on the pad has no box to tick: it still shows on the stamp
+    checkedCompany: DS_COMPANIES.indexOf(slip.division) !== -1 ? slip.division : null,
+    stampCompany: slip.division || "",
+    rows: rows,
+    storekeeper: slip.storekeeper || "",
+    driver: slip.driver || "",
+    receivedBy: slip.receivedBy || "",
+    deliveredOn: slip.deliveredOn ? formatDateShort(slip.deliveredOn) : ""
+  });
+  saveBlobPdf(bytes, "deka-log-fiche-livraison-" + (slip.slipNumber || slip.id) + ".pdf");
 }

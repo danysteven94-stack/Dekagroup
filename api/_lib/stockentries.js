@@ -13,7 +13,7 @@ const MAX_LEGACY = 20000;
 const COLS = [
   ["id", "id"], ["billId", "bill_id"], ["entryDate", "entry_date"], ["description", "description"],
   ["quantity", "quantity"], ["unit", "unit"], ["containerNumewo", "container_numewo"], ["remarks", "remarks"],
-  ["registeredBy", "registered_by"], ["createdAt", "created_at"],
+  ["expiresOn", "expires_on"], ["registeredBy", "registered_by"], ["createdAt", "created_at"],
 ];
 
 function newId() {
@@ -63,9 +63,9 @@ async function create(fields, poolKey) {
     const have = await d.query("SELECT * FROM stock_entries WHERE id = $1", [row.id]);
     if (have.length) return markDup(fromSql(have[0]));
     await d.query(
-      "INSERT INTO stock_entries (id, bill_id, entry_date, description, quantity, unit, container_numewo, remarks, registered_by, created_at) " +
-      "VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)",
-      [row.id, row.billId, row.entryDate, row.description, row.quantity, row.unit, row.containerNumewo, row.remarks, row.registeredBy, row.createdAt]
+      "INSERT INTO stock_entries (id, bill_id, entry_date, description, quantity, unit, container_numewo, remarks, expires_on, registered_by, created_at) " +
+      "VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)",
+      [row.id, row.billId, row.entryDate, row.description, row.quantity, row.unit, row.containerNumewo, row.remarks, row.expiresOn || null, row.registeredBy, row.createdAt]
     );
     return row;
   }

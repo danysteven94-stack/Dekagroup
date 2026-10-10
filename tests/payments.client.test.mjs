@@ -72,7 +72,7 @@ const submit = (id) => { let stopped = false; (listeners.submit || []).forEach((
 const html = () => { render(); return root.innerHTML; };
 
 const BASE = [
-  { id: "b1", division: "CRISTO S.A", numewo: "BILL-1", product: "Diri" }, { id: "b2", division: "CRISTO S.A", numewo: "BILL-2", product: "Sik" },
+  { id: "b1", division: "DEKAV", numewo: "BILL-1", product: "Diri" }, { id: "b2", division: "DEKAV", numewo: "BILL-2", product: "Sik" },
   { id: "b3", division: "ACS", numewo: "BILL-3", product: "Sel" }, { id: "b4", division: "ACS", numewo: "BILL-4", product: "Lwil" },
 ];
 const pay = (billId, o) => Object.assign({ id: billId, amount: null, currency: "HTG", checkDate: null, paidDate: null, confirmedDate: null, broker: null, reference: null, notes: null, batchId: null }, BASE.find((b) => b.id === billId), o);
@@ -269,7 +269,7 @@ await test("Logistique Deka has its own bills: it never uses the containers/bill
   assert.ok(!h.includes("OTHER-BILL"), "a Bill of the other interfaces never shows here");
   state.pay.tab = "summary";
   h = html();
-  for (const d of ["ACS", "ENERSOL", "ENERSOL", "CRISTO S.A", "ACS", "MIKADO", "LA COLLECTION", "MOBILITY"]) assert.ok(h.includes(d), d + " is listed");
+  for (const d of ["CRISTO AL", "CRISTO COMM", "CONFIDEKA", "DEKAV", "ACS", "MIKADO", "LA COLLECTION", "DEKA TIRES"]) assert.ok(h.includes(d), d + " is listed");
   setPay([]); state.lgBills = [];
   state.pay.tab = "bills";
   assert.ok(html().includes("Nouvo bill") && html().includes("Poko gen bill."), "empty state invites to add a bill");
@@ -280,7 +280,7 @@ await test("new bill: the form asks division + number, sends them, and the bill 
   click("pay-new-open");
   let h = html();
   assert.ok(h.includes('id="pay-new-form"') && h.includes("Divizyon *") && h.includes("Nimewo bill *"));
-  for (const d of ["ACS", "ACS", "MIKADO", "MOBILITY"]) assert.ok(h.includes('<option value="' + d + '"'), d + " can be chosen");
+  for (const d of ["CRISTO AL", "ACS", "MIKADO", "DEKA TIRES"]) assert.ok(h.includes('<option value="' + d + '"'), d + " can be chosen");
   submit("pay-new-form");
   await tick();
   assert.strictEqual(server.calls.length, 0, "nothing is sent without division and number");
@@ -321,21 +321,6 @@ await test("an error creating a bill (duplicate) stays in the form", async () =>
   assert.ok(html().includes("Bill sa a deja egziste nan divizyon sa a."));
   assert.ok(state.pay.newForm && state.pay.newForm.numewo === "BILL-3", "what was typed is kept");
   assert.strictEqual(state.paymentsBusy, false);
-});
-
-await test("PDF of the bills: a real PDF with the bill numbers, the three dates, the step and the totals; follows the filters", async () => {
-  reset();
-  const L = await import("../public/js/lgpdf.js");
-  setPay([pay("b1", { amount: 1500.5, checkDate: "2026-10-01", paidDate: "2026-10-02", confirmedDate: "2026-10-03" }), pay("b2", { amount: 200, currency: "USD", checkDate: "2026-09-01" })]);
-  const text = (u8) => Array.from(u8).map((c) => String.fromCharCode(c)).join("");
-  let pdf = text(L.buildLgBillsPdf());
-  assert.ok(pdf.startsWith("%PDF-1.4") && pdf.includes("%%EOF"), "it is a PDF");
-  assert.ok(pdf.includes("BILL-1") && pdf.includes("BILL-2") && pdf.includes("03/10/2026"), "bills and dates");
-  assert.ok(pdf.includes("1 500,50 HTG") && pdf.includes("Paiement confirm"), "amount and step");
-  assert.ok(pdf.includes("200,00 USD"), "totals line");
-  change("pay-filter-division", "ACS");
-  pdf = text(L.buildLgBillsPdf());
-  assert.ok(!pdf.includes("BILL-1"), "the filters of the screen apply");
 });
 
 let bad = 0;

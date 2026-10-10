@@ -3,14 +3,10 @@
 import {
   clearPaymentStage,
   createLgBill,
-  deleteCheckPhoto,
   deleteLgBill,
   loadPayments,
-  savePayments,
-  uploadCheckPhoto,
-  viewCheckPhoto
+  savePayments
 } from "./payments.js";
-import { downloadLgBillsPdf } from "./lgpdf.js";
 import { render } from "./render.js";
 import { state } from "./state.js";
 import { today } from "./utils.js";
@@ -54,27 +50,6 @@ document.addEventListener("click", function (event) {
     P.amounts = {};
     afterSelectionChange([id]);
     if (typeof window !== "undefined" && window.scrollTo) window.scrollTo(0, 0);
-  } else if (a === "pay-confirm") {
-    // confirm the payment of THIS bill only: the form opens for it alone, with today's date ready in "Dat ou konfime"
-    P.sel = {};
-    P.sel[id] = true;
-    P.amounts = {};
-    P.form = prefillForm([id]);
-    if (!P.form.confirmedDate) P.form.confirmedDate = today();
-    render();
-    if (typeof window !== "undefined" && window.scrollTo) window.scrollTo(0, 0);
-  } else if (a === "pay-filter-overdue") {
-    P.filterOverdue = !P.filterOverdue;
-    render();
-  } else if (a === "pay-pdf") {
-    downloadLgBillsPdf();
-  } else if (a === "pay-photo-view") {
-    viewCheckPhoto(id);
-  } else if (a === "pay-photo-close") {
-    P.photoView = null;
-    render();
-  } else if (a === "pay-photo-delete") {
-    if (window.confirm("Efase foto chèk la ?")) deleteCheckPhoto(id);
   } else if (a === "pay-select-all") {
     filteredBills().forEach(function (b) {
       var rec = b;
@@ -105,7 +80,7 @@ document.addEventListener("click", function (event) {
   } else if (a === "pay-retry") {
     loadPayments();
   } else if (a === "pay-new-open") {
-    P.newForm = { division: P.filterDivision || "", numewo: "", product: "", amount: "", checkDate: "", currency: "HTG", err: "" };
+    P.newForm = { division: P.filterDivision || "", numewo: "", product: "", amount: "", currency: "HTG", err: "" };
     render();
   } else if (a === "pay-new-cancel") {
     P.newForm = null;
@@ -166,12 +141,6 @@ document.addEventListener("input", function (event) {
 document.addEventListener("change", function (event) {
   var t = event.target;
   if (!t) return;
-  if (t.id === "pay-photo-input" || t.id === "pay-photo-gallery") {
-    var file = t.files && t.files[0];
-    t.value = "";
-    if (file) uploadCheckPhoto(file);
-    return;
-  }
   var nfc = t.getAttribute && t.getAttribute("data-newf");
   if (nfc && state.pay.newForm) {
     state.pay.newForm[nfc] = t.value;

@@ -18,6 +18,10 @@ function text(v, max) {
 }
 
 module.exports = async function handler(req, res) {
+  // /api/slips (delivery slips) shares this function: Vercel Hobby plan is limited to 12 Serverless Functions.
+  if (req.query && req.query.action === "slips") {
+    return require("./_lib/slips")(req, res);
+  }
   try {
     if (req.method === "GET") {
       const session = await A.requireAuth(req, res, ["admin", "depot", "daily"]);

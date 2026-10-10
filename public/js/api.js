@@ -54,6 +54,10 @@ function restoreSnapshot(snap) {
     state.goodsIncidents = snap.goods;
     state.goodsLoaded = true;
   }
+  if (snap.slips) {
+    state.slips = snap.slips;
+    state.slipsLoaded = true;
+  }
   if (snap.dr) {
     state.dr.checks = snap.dr.checks || {};
     state.dr.overrides = snap.dr.overrides || {};
@@ -617,8 +621,30 @@ export function apiJson(url, body2) {
   });
 }
 
+// Same checks as the server's, for a delivery slip waiting for the network.
+function validateSlipOffline(p) {
+  if (!String(p.clientName || "").trim()) {
+    return "Non kliyan an obligatwa.";
+  }
+  var lines = p.items || [];
+  if (!lines.length) {
+    return "Ajoute omwen yon pwodwi sou fich la.";
+  }
+  var badLine = lines.some(function (it) {
+    var q = String(it.quantity || "").trim();
+    return !it.billId || !String(it.description || "").trim() || !String(it.unit || "").trim() || !/^\d+(\.\d{1,2})?$/.test(q) || Number(q) <= 0;
+  });
+  if (badLine) {
+    return "Chak liy dwe gen yon pwodwi ak yon kantite ki pi gran pase 0.";
+  }
+  return "";
+}
+
 // Same checks as the server's, used only when the request has to wait for the network.
 function validateOffline(kind, p) {
+  if (kind === "slip") {
+    return validateSlipOffline(p);
+  }
   if (!p.billId || !state.bills.some(function (b) {
       return b.id === p.billId;
     })) {
@@ -761,6 +787,7 @@ export function createStockEntry(payload) {
         unit: p.unit,
         containerNumewo: p.containerNumewo || null,
         remarks: p.remarks || null,
+        expiresOn: p.expiresOn || null,
         registeredBy: state.username,
         createdAt: new Date().toISOString()
       };
@@ -892,6 +919,67 @@ export function createGoodsIncident(payload) {
         quantity: p.quantity,
         unit: p.unit,
         reason: p.reason,
+        remarks: p.remarks || null,
+        registeredBy: state.username,
+        createdAt: new Date().toISOString()
+      };
+    }
+  });
+}
+
+export function loadSlips() {
+  loadList({ url: "/api/slips", field: "slips", list: "slips", loaded: "slipsLoaded", loading: "slipsLoading", err: "slipsErr" });
+}
+
+function emptySlipDraft() {
+  return {
+    division: "",
+    slipNumber: "",
+    slipDate: "",
+    clientName: "",
+    invoiceNumber: "",
+    storekeeper: "",
+    driver: "",
+    receivedBy: "",
+    deliveredOn: "",
+    remarks: "",
+    items: [{ key: "", quantity: "" }]
+  };
+}
+
+// A delivery slip: online it is saved at once; without network it is kept on the device and sent later (the inventory
+// already counts it, because the slip is shown in the list straight away marked as waiting).
+export function createSlip(payload) {
+  createOrQueue({
+    kind: "slip",
+    url: "/api/slips",
+    payload: payload,
+    busy: "slipsBusy",
+    err: "slipsErr",
+    list: "slips",
+    field: "slip",
+    after: function () {
+      state.slipDraft = emptySlipDraft();
+    },
+    label: function (p) {
+      return "Fich livrezon: " + (p.slipNumber ? "Bon # " + p.slipNumber + " \u2014 " : "") + p.clientName;
+    },
+    done: function () {
+      return "Fich livrezon an anrejistre.";
+    },
+    build: function (p) {
+      return {
+        id: p.clientId,
+        slipNumber: p.slipNumber || null,
+        division: p.division || null,
+        slipDate: p.slipDate || today(),
+        clientName: p.clientName,
+        invoiceNumber: p.invoiceNumber || null,
+        items: p.items,
+        storekeeper: p.storekeeper || null,
+        driver: p.driver || null,
+        receivedBy: p.receivedBy || null,
+        deliveredOn: p.deliveredOn || p.slipDate || today(),
         remarks: p.remarks || null,
         registeredBy: state.username,
         createdAt: new Date().toISOString()

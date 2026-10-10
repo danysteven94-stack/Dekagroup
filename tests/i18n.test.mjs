@@ -41,6 +41,16 @@ function leftovers(html) {
   return bad;
 }
 
+const DEPOT_STOCK = () => [
+  { id: "s1", billId: "b1", entryDate: "2026-09-01", description: "Diri 50lb", quantity: "1000", unit: "sak", expiresOn: "2026-10-20", registeredBy: "x", createdAt: "2026-09-01T10:00:00Z" },
+  { id: "s2", billId: "b1", entryDate: "2026-09-02", description: "Diri 50lb", quantity: "500", unit: "sak", expiresOn: "2027-06-01", registeredBy: "x", createdAt: "2026-09-02T10:00:00Z" },
+  { id: "s3", billId: "b2", entryDate: "2026-09-03", description: "Sik", quantity: "50", unit: "sak", expiresOn: "2026-09-30", registeredBy: "x", createdAt: "2026-09-03T10:00:00Z" },
+  { id: "s4", billId: "b2", entryDate: "2026-09-03", description: "Lwil", quantity: "20", unit: "bwat", registeredBy: "x", createdAt: "2026-09-03T11:00:00Z" },
+];
+const DEPOT_SLIPS = () => [
+  { id: "f1", slipNumber: "296001", division: "ACS", slipDate: "2026-10-05", clientName: "La Voma Louis", invoiceNumber: "120661C", items: [{ billId: "b1", description: "Diri 50lb", unit: "sak", quantity: "400" }, { billId: "b2", description: "Sik", unit: "sak", quantity: "60" }], storekeeper: "Robenson", driver: "Lucson", receivedBy: "", deliveredOn: "2026-10-05", remarks: "Rete 2 sak", registeredBy: "x", createdAt: "2026-10-05T10:00:00Z" },
+];
+
 const base = () => {
   Object.assign(state, { authChecking: false, authRole: null, unlocked: false, depotUnlocked: false, drUnlocked: false, gate2fa: false, help: false, acct: false, needs: null, loadingData: false, loadError: false, modal: null, confirmModal: null, toasts: [], tab: "dashboard", search: "", filterStatus: "tout", filterBillStatus: "", sessionRole: null });
   state.containers = [
@@ -135,6 +145,14 @@ const SCREENS = {
   "depot dashboard": () => show(() => { state.authRole = "depot"; state.depotUnlocked = true; state.depotTab = "dashboard"; }),
   "depot list": () => show(() => { state.authRole = "depot"; state.depotUnlocked = true; state.depotTab = "list"; }),
   "depot division": () => show(() => { state.authRole = "depot"; state.depotUnlocked = true; state.depotTab = "dashboard"; state.depotDivision = "ACS"; }),
+  "depot stock entries (expiry)": () => show(() => { state.authRole = "depot"; state.depotUnlocked = true; state.depotTab = "stock"; state.stockLoaded = true; state.stockEntries = DEPOT_STOCK(); }),
+  "depot delivery slips": () => show(() => { state.authRole = "depot"; state.depotUnlocked = true; state.depotTab = "delivery"; state.stockLoaded = true; state.slipsLoaded = true; state.goodsLoaded = true; state.stockEntries = DEPOT_STOCK(); state.slips = DEPOT_SLIPS(); state.slipDraft.items = [{ key: "b1|diri 50lb|sak", quantity: "500" }, { key: "", quantity: "" }]; state.slipDraft.division = "ACS"; state.slipsErr = "Liy 2: chwazi yon pwodwi."; }),
+  "depot delivery slips (no stock)": () => show(() => { state.authRole = "depot"; state.depotUnlocked = true; state.depotTab = "delivery"; state.stockLoaded = true; state.slipsLoaded = true; state.goodsLoaded = true; state.stockEntries = []; state.slips = []; }),
+  "depot daily delivery report": () => show(() => { state.authRole = "depot"; state.depotUnlocked = true; state.depotTab = "dailydelivery"; state.slipsLoaded = true; state.goodsLoaded = true; state.slips = DEPOT_SLIPS(); state.dailySlipDate = "2026-10-05"; state.goodsIncidents = [{ id: "g1", kind: "livrezon", billId: "b1", entryDate: "2026-10-05", description: "Diri 50lb", quantity: "3", unit: "sak", reason: "Kliyan Ansyen" }]; }),
+  "depot daily delivery report (none)": () => show(() => { state.authRole = "depot"; state.depotUnlocked = true; state.depotTab = "dailydelivery"; state.slipsLoaded = true; state.goodsLoaded = true; state.slips = []; state.dailySlipDate = "2026-10-05"; }),
+  "depot inventory": () => show(() => { state.authRole = "depot"; state.depotUnlocked = true; state.depotTab = "inventory"; state.stockLoaded = true; state.slipsLoaded = true; state.goodsLoaded = true; state.stockEntries = DEPOT_STOCK(); state.slips = DEPOT_SLIPS(); }),
+  "depot inventory (empty)": () => show(() => { state.authRole = "depot"; state.depotUnlocked = true; state.depotTab = "inventory"; state.stockLoaded = true; state.slipsLoaded = true; state.goodsLoaded = true; state.stockEntries = []; state.slips = []; }),
+  "depot inventory (filter none)": () => show(() => { state.authRole = "depot"; state.depotUnlocked = true; state.depotTab = "inventory"; state.stockLoaded = true; state.slipsLoaded = true; state.goodsLoaded = true; state.stockEntries = DEPOT_STOCK(); state.invSearch = "zzz"; }),
   "logistique": () => show(() => { state.authRole = "logistique"; state.logistiqueUnlocked = true; state.paymentsLoaded = true; state.lgBills = LOG_PAYMENTS(); }),
   "logistique (loading payments)": () => show(() => { state.authRole = "logistique"; state.logistiqueUnlocked = true; state.paymentsLoading = true; }),
   "logistique (error)": () => show(() => { state.authRole = "logistique"; state.logistiqueUnlocked = true; state.paymentsLoaded = true; state.paymentsErr = "Ou pa gen entènèt. Eseye ankò lè koneksyon an tounen."; }),

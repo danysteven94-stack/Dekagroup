@@ -3,8 +3,8 @@
 // A Bill goes through: Pa peye -> Chèk resevwa (check received) -> Peye (the broker took it and paid it) -> Konfime.
 // Every date is typed in by hand. One payment can cover one Bill or several Bills at once.
 import {
+  ALL_DIVISIONS,
   COLORS,
-  LOGISTIQUE_DIVISIONS,
   LOGO_URL
 } from "../constants.js";
 import { icon } from "../icons.js";
@@ -16,7 +16,6 @@ import {
   formatTime,
   today
 } from "../utils.js";
-import { pushCard } from "../push.js";
 import { accountButton } from "./account.js";
 import { helpButton } from "./help.js";
 
@@ -40,17 +39,6 @@ export function stageOf(p) {
   return "poko";
 }
 
-// A bill whose check was received 3 days ago (or more) and whose payment is still not confirmed.
-export var OVERDUE_DAYS = 3;
-
-export function daysSince(date) {
-  return Math.floor((Date.parse(today() + "T00:00:00Z") - Date.parse(date + "T00:00:00Z")) / 86400000);
-}
-
-export function isOverdue(rec) {
-  return !!(rec && rec.checkDate && !rec.confirmedDate && daysSince(rec.checkDate) >= OVERDUE_DAYS);
-}
-
 export function stageInfo(id) {
   return STAGES.find(function (s) { return s.id === id; }) || STAGES[0];
 }
@@ -58,15 +46,6 @@ export function stageInfo(id) {
 // A Logistique Deka bill carries its own payment steps: the record itself is the payment.
 export function paymentOf(billId) {
   return state.lgBills.find(function (p) { return p.id === billId; }) || null;
-}
-
-// The six divisions of Logistique Deka, plus any older division still found on an existing bill (never hidden).
-export function lgDivisions() {
-  var list = LOGISTIQUE_DIVISIONS.slice();
-  state.lgBills.forEach(function (b) {
-    if (b && b.division && list.indexOf(b.division) === -1) list.push(b.division);
-  });
-  return list;
 }
 
 export function billDivisions(bill) {
@@ -104,7 +83,6 @@ export function filteredBills() {
   return state.lgBills.filter(function (b) {
     if (P.filterDivision && billDivision(b) !== P.filterDivision) return false;
     if (P.filterStatus && stageOf(paymentOf(b.id)) !== P.filterStatus) return false;
-    if (P.filterOverdue && !isOverdue(paymentOf(b.id))) return false;
     if (q && (String(b.numewo || "") + " " + String(b.product || "")).toLowerCase().indexOf(q) === -1) return false;
     return true;
   }).sort(function (a, b) {
@@ -159,25 +137,6 @@ function dateFieldHtml(field, label, hint, value) {
   return `<div><span class="field-label">${ label }</span><div style="display:flex;gap:6px"><input class="input" type="date" data-payf="${ field }" max="${ today() }" value="${ escapeHtml(value || "") }" /><button type="button" class="btn small ghost" data-action="pay-today" data-field="${ field }" style="white-space:nowrap">Jodi a</button></div><div style="font-size:11px;color:var(--muted-light);margin-top:3px">${ hint }</div></div>`;
 }
 
-// Photo of the check: take it with the camera (or pick one), it is shrunk and kept for the chosen Bill(s).
-function photoSectionHtml(ids) {
-  var P = state.pay;
-  var one = ids.length === 1 ? ids[0] : "";
-  var rec = one ? paymentOf(one) : null;
-  var has = !!(rec && rec.hasPhoto);
-  var dis = P.photoBusy ? " opacity:.6;pointer-events:none" : "";
-  var view = has ? `<button type="button" class="btn small ghost" data-action="pay-photo-view" data-id="${ escapeHtml(one) }">Wè foto chèk la</button>` : "";
-  var hint = ids.length > 1 ? "Foto a ap anrejistre pou chak bill ou chwazi yo." : "Foto a redui otomatikman pou l pa pran espas.";
-  return `<div><span class="field-label">Foto chèk la</span><div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><label class="btn small teal" for="pay-photo-input" style="${ dis }">${ P.photoBusy ? "K ap voye..." : (has ? "Refè foto chèk la" : "Pran foto chèk la") }</label><label class="btn small ghost" for="pay-photo-gallery" style="${ dis }">Chwazi nan galri</label>${ view }<input id="pay-photo-input" type="file" accept="image/*" capture="environment" style="display:none" /><input id="pay-photo-gallery" type="file" accept="image/*" style="display:none" /></div><div style="font-size:11px;color:var(--muted-light);margin-top:3px">${ hint }</div>${ P.photoMsg ? `<div style="font-size:12.5px;font-weight:600;margin-top:4px;color:${ /anrejistre/.test(P.photoMsg) ? COLORS.green : COLORS.rust }">${ escapeHtml(P.photoMsg) }</div>` : "" }</div>`;
-}
-
-function photoOverlayHtml() {
-  var v = state.pay.photoView;
-  if (!v) return "";
-  var body = v.loading ? `<div style="color:#fff">K ap chaje foto a...</div>` : v.err ? `<div class="alert" style="margin:0">${ escapeHtml(v.err) }</div>` : `<img src="${ escapeHtml(v.src) }" alt="Foto chèk la" style="max-width:100%;max-height:78vh;border-radius:6px;background:#fff" />`;
-  return `<div style="position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,.88);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:16px"><div style="overflow:auto;max-width:100%">${ body }</div><div style="display:flex;gap:10px"><button class="btn ghost" data-action="pay-photo-close" style="background:#fff">Fèmen</button>${ v.src ? `<button class="btn ghost" data-action="pay-photo-delete" data-id="${ escapeHtml(v.id) }" style="background:#fff;color:${ COLORS.urgent }">Efase foto</button>` : "" }</div></div>`;
-}
-
 function paymentFormHtml() {
   var P = state.pay;
   var f = P.form;
@@ -205,7 +164,6 @@ function paymentFormHtml() {
       <div><span class="field-label">Nimewo chèk / Referans</span><input class="input" data-payf="reference" placeholder="Opsyonèl" value="${ escapeHtml(f.reference || "") }" /></div>
     </div>
     <div><span class="field-label">Remak</span><input class="input" data-payf="notes" placeholder="Opsyonèl" value="${ escapeHtml(f.notes || "") }" /></div>
-    ${ photoSectionHtml(ids) }
     <div style="font-size:11.5px;color:var(--muted-light)">Ranpli sèlman etap ki fèt yo. Etap ou kite vid yo rete jan yo ye.</div>
     ${ f.err ? `<div class="alert" style="margin:0">${ icon("alert", 14) }${ escapeHtml(f.err) }</div>` : "" }
     <div style="display:flex;justify-content:flex-end"><button class="btn teal" type="submit"${ state.paymentsBusy ? " disabled" : "" }>${ icon("check", 15, "#fff") } ${ state.paymentsBusy ? "K ap konfime..." : "Konfime Peman an" }</button></div>
@@ -217,7 +175,7 @@ function paymentFormHtml() {
 function newBillFormHtml() {
   var f = state.pay.newForm;
   if (!f) return "";
-  var opts = `<option value=""${ f.division ? "" : " selected" }>— Chwazi —</option>` + lgDivisions().map(function (d) {
+  var opts = `<option value=""${ f.division ? "" : " selected" }>— Chwazi —</option>` + ALL_DIVISIONS.map(function (d) {
     return `<option value="${ escapeHtml(d) }"${ f.division === d ? " selected" : "" }>${ escapeHtml(d) }</option>`;
   }).join("");
   return `<form id="pay-new-form" class="card" style="padding:16px;margin-bottom:18px;display:flex;flex-direction:column;gap:12px;border:2px solid ${ COLORS.navy || "#1B2A4A" }">
@@ -229,7 +187,6 @@ function newBillFormHtml() {
     </div>
     <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap">
       <div style="flex:1;min-width:150px"><span class="field-label">Montan (si ou konnen l)</span><input class="input" type="number" inputmode="decimal" min="0" step="0.01" data-newf="amount" placeholder="Opsyonèl" value="${ escapeHtml(f.amount || "") }" /></div>
-      <div style="min-width:170px"><span class="field-label">Dat chèk la rive</span><input class="input" type="date" data-newf="checkDate" max="${ today() }" value="${ escapeHtml(f.checkDate || "") }" /></div>
       <select class="input" data-newf="currency" style="max-width:110px"><option value="HTG"${ f.currency === "USD" ? "" : " selected" }>HTG</option><option value="USD"${ f.currency === "USD" ? " selected" : "" }>USD</option></select>
     </div>
     ${ f.err ? `<div class="alert" style="margin:0">${ icon("alert", 14) }${ escapeHtml(f.err) }</div>` : "" }
@@ -245,31 +202,25 @@ function billRowHtml(bill) {
   var checked = !!state.pay.sel[bill.id];
   var divs = billDivisions(bill);
   var dates = [];
+  if (rec && rec.checkDate) dates.push("Chèk: " + formatDateShort(rec.checkDate));
   if (rec && rec.paidDate) dates.push("Peye: " + formatDateShort(rec.paidDate));
+  if (rec && rec.confirmedDate) dates.push("Konfimasyon: " + formatDateShort(rec.confirmedDate));
   var extra = [];
   if (rec && rec.broker) extra.push("Brokè: " + rec.broker);
   if (rec && rec.reference) extra.push("Chèk #: " + rec.reference);
   var last = rec ? (rec.confirmedDate ? "confirmed" : rec.paidDate ? "paid" : rec.checkDate ? "check" : "") : "";
   var undo = last ? `<button class="btn small ghost" data-action="pay-undo" data-id="${ escapeHtml(bill.id) }" data-stage="${ last }" title="Defèt dènye etap la">${ icon("undo", 13, COLORS.urgent) } Defèt</button>` : "";
   var del = rec && rec.confirmedDate ? "" : `<button class="btn small ghost" data-action="pay-delete" data-id="${ escapeHtml(bill.id) }" title="Efase bill la">${ icon("x", 13, COLORS.urgent) } Efase</button>`;
-  var late = isOverdue(rec);
-  var lateChip = late ? `<div class="row-sub" style="color:${ COLORS.urgent };font-weight:700">${ icon("alert", 12, COLORS.urgent) } ${ daysSince(rec.checkDate) } jou depi chèk la rive — peman poko konfime</div>` : "";
-  var photoBtn = rec && rec.hasPhoto ? `<button class="btn small ghost" data-action="pay-photo-view" data-id="${ escapeHtml(bill.id) }" title="Wè foto chèk la">Foto chèk</button>` : "";
-  var canConfirm = !!(rec && rec.checkDate && !rec.confirmedDate);
-  var confirmBtn = canConfirm ? `<button class="btn small teal" data-action="pay-confirm" data-id="${ escapeHtml(bill.id) }" title="Konfime peman bill sa a sèlman">${ icon("check", 13, "#fff") } Konfime</button>` : "";
-  return `<div class="row" style="border-left:4px solid ${ late ? COLORS.urgent : st.color };align-items:flex-start">
+  return `<div class="row" style="border-left:4px solid ${ st.color };align-items:flex-start">
     <label style="display:flex;align-items:center;padding-top:2px;cursor:pointer"><input type="checkbox" data-action="pay-toggle" data-id="${ escapeHtml(bill.id) }"${ checked ? " checked" : "" } style="width:20px;height:20px" aria-label="Chwazi bill la" /></label>
     <div class="row-min" style="flex:1;min-width:190px"><span class="plate" style="border-color:${ st.color }">${ escapeHtml(bill.numewo) }</span>
       <div class="row-sub">Pwodwi: <strong style="color:var(--navy)">${ bill.product ? escapeHtml(bill.product) : "\u2014" }</strong></div>
       <div class="row-sub light">Divizyon: <strong style="color:var(--muted)">${ divs.length ? escapeHtml(divs.join(", ")) : "\u2014" }</strong></div>
-      ${ lateChip }
       ${ dates.length ? `<div class="row-sub light">${ dates.map(escapeHtml).join(" · ") }</div>` : "" }
       ${ extra.length ? `<div class="row-sub light">${ extra.map(escapeHtml).join(" · ") }</div>` : "" }</div>
-    <div class="mini">Dat chèk la rive<strong style="color:var(--navy)">${ rec && rec.checkDate ? escapeHtml(formatDateShort(rec.checkDate)) : "\u2014" }</strong></div>
-    <div class="mini">Dat peman konfime<strong style="color:${ rec && rec.confirmedDate ? COLORS.green : "var(--navy)" }">${ rec && rec.confirmedDate ? escapeHtml(formatDateShort(rec.confirmedDate)) : "\u2014" }</strong></div>
     <div class="mini">Montan<strong style="color:var(--navy)">${ rec && rec.amount > 0 ? escapeHtml(money(rec.amount, rec.currency)) : "Poko mete" }</strong></div>
     <div class="mini">Estati<strong style="color:${ st.color }">${ st.label }</strong></div>
-    <div style="margin-left:auto;display:flex;gap:6px;flex-wrap:wrap">${ photoBtn }${ confirmBtn }<button class="btn small ${ stageOf(rec) === "konfime" ? "ghost" : canConfirm ? "ghost" : "teal" }" data-action="pay-open" data-id="${ escapeHtml(bill.id) }">${ stageOf(rec) === "konfime" ? "Modifye" : "Peman" }</button>${ undo }${ del }</div>
+    <div style="margin-left:auto;display:flex;gap:6px;flex-wrap:wrap"><button class="btn small ${ stageOf(rec) === "konfime" ? "ghost" : "teal" }" data-action="pay-open" data-id="${ escapeHtml(bill.id) }">${ stageOf(rec) === "konfime" ? "Modifye" : "Peman" }</button>${ undo }${ del }</div>
   </div>`;
 }
 
@@ -286,7 +237,7 @@ function kpiRowHtml() {
 }
 
 function divisionOptionsHtml() {
-  var list = lgDivisions();
+  var list = ALL_DIVISIONS.slice();
   return `<option value=""${ state.pay.filterDivision ? "" : " selected" }>Tout divizyon</option>` + list.map(function (d) {
     return `<option value="${ escapeHtml(d) }"${ state.pay.filterDivision === d ? " selected" : "" }>${ escapeHtml(d) }</option>`;
   }).join("");
@@ -296,13 +247,6 @@ function statusOptionsHtml() {
   return `<option value=""${ state.pay.filterStatus ? "" : " selected" }>Tout estati</option>` + STAGES.map(function (s) {
     return `<option value="${ s.id }"${ state.pay.filterStatus === s.id ? " selected" : "" }>${ s.label }</option>`;
   }).join("");
-}
-
-function overdueBannerHtml() {
-  var n = state.lgBills.filter(function (b) { return isOverdue(b); }).length;
-  if (!n) return "";
-  var on = !!state.pay.filterOverdue;
-  return `<div class="alert" style="margin-bottom:16px;align-items:center">${ icon("alert", 16, COLORS.urgent) }<div style="flex:1;min-width:180px"><strong>${ n } bill gen ${ OVERDUE_DAYS } jou oswa plis san konfimasyon peman.</strong></div><button class="btn small ghost" data-action="pay-filter-overdue">${ on ? "Wè tout bill yo" : "Wè yo sèlman" }</button></div>`;
 }
 
 function billsTabView() {
@@ -320,7 +264,7 @@ function billsTabView() {
   }
   var err = state.paymentsErr ? `<div class="alert">${ icon("alert", 14) }<div style="flex:1">${ escapeHtml(state.paymentsErr) }</div><button class="btn small ghost" data-action="pay-retry">Eseye Ankò</button></div>` : "";
   var pending = list.filter(function (b) { return stageOf(paymentOf(b.id)) !== "konfime"; }).length;
-  return `<div class="section-head"><div><div class="eyebrow">${ list.length } bill</div><h2 class="h2">Pèman Bill yo</h2></div><div class="toolbar"><button class="btn ghost" data-action="pay-pdf" title="Telechaje lis bill yo an PDF (selon filt ki aktif yo)">Telechaje PDF</button><button class="btn teal" data-action="pay-new-open">${ icon("plus", 14, "#fff") } Nouvo bill</button></div></div>${ err }${ pushCard() }${ overdueBannerHtml() }${ newBillFormHtml() }${ kpiRowHtml() }${ paymentFormHtml() }
+  return `<div class="section-head"><div><div class="eyebrow">${ list.length } bill</div><h2 class="h2">Pèman Bill yo</h2></div><div class="toolbar"><button class="btn teal" data-action="pay-new-open">${ icon("plus", 14, "#fff") } Nouvo bill</button></div></div>${ err }${ newBillFormHtml() }${ kpiRowHtml() }${ paymentFormHtml() }
   <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px">
     <input class="input" id="pay-search" placeholder="Chèche bill oswa pwodwi..." value="${ escapeHtml(state.pay.search || "") }" style="flex:1;min-width:160px" />
     <select class="input" id="pay-filter-division" style="width:auto;min-width:140px">${ divisionOptionsHtml() }</select>
@@ -333,7 +277,7 @@ function billsTabView() {
 // ---- summary by division
 
 function summaryTabView() {
-  var names = lgDivisions();
+  var names = ALL_DIVISIONS.slice();
   var cards = names.map(function (dv) {
     var bills = state.lgBills.filter(function (b) { return (billDivision(b) || "") === dv; });
     var counts = { poko: 0, chek: 0, peye: 0, konfime: 0 };
@@ -366,5 +310,5 @@ export function logistiqueView() {
   var body = cur === "summary" ? summaryTabView() : billsTabView();
   var drawerOpen = !!state.navDrawerOpen;
   var drawer = `<div class="nav-drawer-overlay${ drawerOpen ? " open" : "" }" data-action="close-nav-drawer"></div><nav class="nav-drawer${ drawerOpen ? " open" : "" }"><div class="nav-drawer-head"><div class="sidebar-logo"><img src="${ LOGO_URL }" alt="Deka Group" /></div><div style="flex:1;min-width:0"><div class="drawer-brand">DEKA LOG<span class="depot-badge">Logistique Deka</span></div><div class="drawer-user">${ escapeHtml(state.sessionName || state.username || "") }</div></div><button class="drawer-close" data-action="close-nav-drawer" aria-label="Fèmen">${ icon("x", 16, "#fff") }</button></div><div class="nav-drawer-nav">${ drawerNav }</div><div class="nav-drawer-foot">${ state.lastSyncTime ? `<div class="drawer-sync">Dènye sinkwonizasyon · ${ formatTime(state.lastSyncTime) }</div>` : "" }<div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:10px">${ helpButton("#C9D6DE") + accountButton("#C9D6DE") }</div><button class="drawer-logout" data-action="logout">${ icon("logout", 15) } Dekonekte</button></div></nav>`;
-  return `<div style="min-height:100vh;background:var(--bg)">${ photoOverlayHtml() }${ drawer }<header class="depot-header"><button class="hamburger-btn" data-action="toggle-nav-drawer" aria-label="Meni">${ icon("menu", 18, "#fff") }</button><div class="sidebar-logo"><img src="${ LOGO_URL }" alt="Deka Group" /></div><div style="flex:1;min-width:180px"><div style="color:#fff;font-weight:800;font-size:16px">DEKA LOG<span class="depot-badge">Logistique Deka</span></div><div class="depot-desktop-actions" style="color:rgba(255,255,255,.8);font-size:11.5px;margin-top:2px">Konfimasyon pèman bill yo · ${ formatLongDate() }</div></div><div class="depot-desktop-actions" style="display:flex;align-items:center;gap:14px">${ state.lastSyncTime ? `<div style="color:rgba(255,255,255,.75);font-size:10.5px;text-align:right">Dènye sinkwonizasyon<br/>${ formatTime(state.lastSyncTime) }</div>` : "" }${ helpButton("#fff") + accountButton("#fff") }<button class="linklike" data-action="logout" style="color:#fff">${ icon("undo", 12) } Dekonekte</button></div></header><main class="content" style="max-width:860px;margin:0 auto">${ tabs }${ body }</main><div style="text-align:center;font-size:10px;color:var(--muted-light);padding:20px">© ${ new Date().getFullYear() } Deka Group · v1.0</div></div>`;
+  return `<div style="min-height:100vh;background:var(--bg)">${ drawer }<header class="depot-header"><button class="hamburger-btn" data-action="toggle-nav-drawer" aria-label="Meni">${ icon("menu", 18, "#fff") }</button><div class="sidebar-logo"><img src="${ LOGO_URL }" alt="Deka Group" /></div><div style="flex:1;min-width:180px"><div style="color:#fff;font-weight:800;font-size:16px">DEKA LOG<span class="depot-badge">Logistique Deka</span></div><div class="depot-desktop-actions" style="color:rgba(255,255,255,.8);font-size:11.5px;margin-top:2px">Konfimasyon pèman bill yo · ${ formatLongDate() }</div></div><div class="depot-desktop-actions" style="display:flex;align-items:center;gap:14px">${ state.lastSyncTime ? `<div style="color:rgba(255,255,255,.75);font-size:10.5px;text-align:right">Dènye sinkwonizasyon<br/>${ formatTime(state.lastSyncTime) }</div>` : "" }${ helpButton("#fff") + accountButton("#fff") }<button class="linklike" data-action="logout" style="color:#fff">${ icon("undo", 12) } Dekonekte</button></div></header><main class="content" style="max-width:860px;margin:0 auto">${ tabs }${ body }</main><div style="text-align:center;font-size:10px;color:var(--muted-light);padding:20px">© ${ new Date().getFullYear() } Deka Group · v1.0</div></div>`;
 }

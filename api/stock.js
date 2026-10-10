@@ -10,6 +10,13 @@ const { ApiError } = require("./_lib/errors");
 const ID_RE = /^[A-Za-z0-9_-]{1,64}$/;
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
+// A real calendar day: "2027-02-31" has the right shape but does not exist.
+function isRealDate(v) {
+  if (!DATE_RE.test(v)) return false;
+  const d = new Date(v + "T00:00:00Z");
+  return !isNaN(d.getTime()) && d.toISOString().slice(0, 10) === v;
+}
+
 function text(v, max) {
   return typeof v === "string" ? v.trim().slice(0, max) : "";
 }
@@ -59,6 +66,13 @@ module.exports = async function handler(req, res) {
       const entryDate = DATE_RE.test(body.entryDate || "") ? body.entryDate : S.today();
       const containerNumewo = text(body.containerNumewo, 40) || null;
       const remarks = text(body.remarks, 300) || null;
+      // Expiry date: optional, but when given it must be a real calendar date.
+      const expiresRaw = text(body.expiresOn, 10);
+      if (expiresRaw && !isRealDate(expiresRaw)) {
+        res.status(400).json({ error: "Dat ekspirasyon an pa valid.", code: "invalid" });
+        return;
+      }
+      const expiresOn = expiresRaw || null;
 
       // The Bill must exist in the shared data set.
       const r = await repo.readAll(session.pool);
@@ -79,6 +93,7 @@ module.exports = async function handler(req, res) {
         unit: unit,
         containerNumewo: containerNumewo,
         remarks: remarks,
+        expiresOn: expiresOn,
         registeredBy: session.username,
       }, session.pool);
       if (entry.duplicate) {

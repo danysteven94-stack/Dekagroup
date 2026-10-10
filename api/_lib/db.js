@@ -84,7 +84,7 @@ function configuredPools() {
 }
 
 // Portable DDL (same statements run on PostgreSQL in production and on SQLite in the tests).
-const SCHEMA_VERSION = 13;
+const SCHEMA_VERSION = 14;
 const DDL = [
   "CREATE TABLE IF NOT EXISTS meta (name TEXT PRIMARY KEY, value BIGINT NOT NULL)",
   "CREATE TABLE IF NOT EXISTS bills (" +
@@ -129,6 +129,16 @@ const DDL = [
     "quantity TEXT, unit TEXT, container_numewo TEXT, remarks TEXT, registered_by TEXT, " +
     "created_at TEXT NOT NULL)",
   "CREATE INDEX IF NOT EXISTS stock_entries_bill_idx ON stock_entries (bill_id)",
+  // Expiry date of the goods of a stock entry (optional). Shown in "Inventè" so the soonest-expiring stock is seen first.
+  "ALTER TABLE stock_entries ADD COLUMN IF NOT EXISTS expires_on TEXT",
+  // Delivery slips ("Fich Livrezon"): one paper slip per delivery to a client (Bon #, client, facture #, several product lines,
+  // magasinier, chauffeur, reçu par). items is a JSON array of { billId, description, unit, quantity }: each line takes goods out of the
+  // stock built by the stock entries (see public/js/inventory.js). No link to any container.
+  "CREATE TABLE IF NOT EXISTS delivery_slips (" +
+    "id TEXT PRIMARY KEY, slip_number TEXT, division TEXT, slip_date TEXT NOT NULL, client_name TEXT NOT NULL, invoice_number TEXT, " +
+    "items TEXT NOT NULL, storekeeper TEXT, driver TEXT, received_by TEXT, delivered_on TEXT, remarks TEXT, " +
+    "registered_by TEXT, created_at TEXT NOT NULL)",
+  "CREATE INDEX IF NOT EXISTS delivery_slips_date_idx ON delivery_slips (slip_date)",
   // Invoices ("Fakti"): registered as a draft ("anrejistre") against a Bill, then locked ("fini").
   "CREATE TABLE IF NOT EXISTS invoices (" +
     "id TEXT PRIMARY KEY, bill_id TEXT NOT NULL, invoice_number TEXT NOT NULL, invoice_date TEXT NOT NULL, " +

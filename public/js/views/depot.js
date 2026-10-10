@@ -30,11 +30,12 @@ import {
   returnedGoodsTabView
 } from "./goods.js";
 import {
-  dailyDeliveryTabView,
-  deliveryReportTabView
+  dailyReportTabView,
+  deliverySlipTabView
 } from "./delivery.js";
+import { inventoryTabView } from "./inventory.js";
 
-// Grouped into visual clusters (Kontenè · Estòk & Dokiman · Fakti · Machandiz · Livrezon) — a separator
+// Grouped into visual clusters (Kontenè · Estòk & Dokiman · Fakti · Machandiz · Livrezon · Inventè) — a separator
 // is drawn between clusters so the ten tabs read as related sets instead of one long row of buttons.
 var DEPOT_TABS = [
   { id: "list", label: "Kontenè Full", icon: "boxes" },
@@ -45,10 +46,11 @@ var DEPOT_TABS = [
   { id: "invfin", label: "Fakti Fini", icon: "check" },
   { id: "returned", label: "Machandiz Retounen", icon: "undo" },
   { id: "damaged", label: "Machandiz Avarye", icon: "alert" },
-  { id: "delivery", label: "Rapò Livrezon", icon: "grid" },
-  { id: "dailydelivery", label: "Livrezon Jounalye", icon: "boxes" }
+  { id: "delivery", label: "Fich Livrezon", icon: "grid" },
+  { id: "dailydelivery", label: "Rapò Livrezon Jounalye", icon: "boxes" },
+  { id: "inventory", label: "Inventè", icon: "boxes" }
 ];
-var DEPOT_TAB_GROUP_BREAKS = ["stock", "invreg", "returned", "delivery"];
+var DEPOT_TAB_GROUP_BREAKS = ["stock", "invreg", "returned", "delivery", "inventory"];
 
 function depotDivisionView() {
   var e = state.containers.filter(function (container) {
@@ -131,9 +133,11 @@ export function depotView() {
   } else if (curTab === "damaged") {
     body = damagedGoodsTabView();
   } else if (curTab === "delivery") {
-    body = deliveryReportTabView();
+    body = deliverySlipTabView();
   } else if (curTab === "dailydelivery") {
-    body = dailyDeliveryTabView();
+    body = dailyReportTabView();
+  } else if (curTab === "inventory") {
+    body = inventoryTabView();
   } else {
     body = `<div class="section-head"><div><div class="eyebrow">${ e.length } kontenè full</div><h2 class="h2">Kontenè nan Depo yo</h2></div></div><div style="display:flex;flex-direction:column;gap:8px">${ n }</div>`;
   }

@@ -242,6 +242,7 @@ export function saveSnapshot() {
     stock: state.stockLoaded ? state.stockEntries : null,
     invoices: state.invoicesLoaded ? state.invoices : null,
     goods: state.goodsLoaded ? state.goodsIncidents : null,
+    slips: state.slipsLoaded ? state.slips : null,
     dr: state.dr && state.dr.loaded ? { checks: state.dr.checks, overrides: state.dr.overrides } : null
   };
   return DB.kvSet(snapKey(), snap);

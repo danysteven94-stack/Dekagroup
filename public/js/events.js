@@ -6,12 +6,14 @@ import {
 import {
   createGoodsIncident,
   createInvoice,
+  createSlip,
   createStockEntry,
   finishInvoice,
   loadData,
   loadContainerHistory,
   loadGoodsIncidents,
   loadInvoices,
+  loadSlips,
   loadStockEntries,
   saveData,
   showToast
@@ -44,15 +46,16 @@ import {
 import { exportContainersCsv } from "./csv.js";
 import {
   downloadDailyDelivery,
-  downloadDeliveryReport,
   downloadDeliverySlip,
   downloadDknReport,
   downloadDknAllReport,
   downloadDknLeftReport,
   downloadGoodsReport,
+  downloadInventory,
   downloadInvoice,
   downloadLandingSheet,
-  downloadReport
+  downloadReport,
+  downloadSlip
 } from "./pdf.js";
 import { normalizePlate } from "./iso6346.js";
 import { render } from "./render.js";
@@ -75,6 +78,7 @@ import {
   loadSecurityTab
 } from "./views/security.js";
 import { loadUsers } from "./views/users.js";
+import { currentInventory } from "./views/delivery.js";
 
 function readInvoiceItemsFromDom() {
   return Array.prototype.map.call(document.querySelectorAll(".inv-item-row"), function (row) {
@@ -84,6 +88,41 @@ function readInvoiceItemsFromDom() {
       unitPrice: row.querySelector(".inv-item-price").value
     };
   });
+}
+
+
+// Everything typed in the delivery slip form, read back into state.slipDraft (so adding/removing a line or re-drawing the
+// screen never loses what was already typed).
+function readSlipDraftFromDom() {
+  var val = function (id) {
+    var n = document.getElementById(id);
+    return n ? n.value : "";
+  };
+  var ticked = document.querySelector(".slip-company:checked");
+  return {
+    division: ticked ? ticked.value : "",
+    slipNumber: val("slip-f-number").trim(),
+    slipDate: val("slip-f-date"),
+    clientName: val("slip-f-client").trim(),
+    invoiceNumber: val("slip-f-invoice").trim(),
+    storekeeper: val("slip-f-keeper").trim(),
+    driver: val("slip-f-driver").trim(),
+    receivedBy: val("slip-f-received").trim(),
+    deliveredOn: val("slip-f-delivered"),
+    remarks: val("slip-f-remarks").trim(),
+    items: Array.prototype.map.call(document.querySelectorAll(".slip-line"), function (row) {
+      return {
+        key: row.querySelector(".slip-line-product").value,
+        quantity: row.querySelector(".slip-line-qty").value
+      };
+    })
+  };
+}
+
+function saveSlipDraft() {
+  if (document.getElementById("slip-form")) {
+    state.slipDraft = readSlipDraftFromDom();
+  }
 }
 
 document.addEventListener("submit", function (event) {
@@ -183,6 +222,7 @@ document.addEventListener("submit", function (event) {
       quantity: document.getElementById("stock-f-qty").value,
       unit: document.getElementById("stock-f-unit").value.trim(),
       containerNumewo: document.getElementById("stock-f-container").value.trim(),
+      expiresOn: document.getElementById("stock-f-expires").value,
       description: document.getElementById("stock-f-desc").value.trim(),
       remarks: document.getElementById("stock-f-remarks").value.trim()
     });
@@ -203,20 +243,43 @@ document.addEventListener("submit", function (event) {
       remarks: document.getElementById("goods-f-remarks").value.trim()
     });
   }
-  if (event.target && event.target.id === "delivery-form") {
+  if (event.target && event.target.id === "slip-form") {
     event.preventDefault();
-    if (state.goodsBusy) {
+    if (state.slipsBusy) {
       return;
     }
-    createGoodsIncident({
-      kind: "livrezon",
-      billId: document.getElementById("delivery-f-bill").value,
-      entryDate: document.getElementById("delivery-f-date").value,
-      quantity: document.getElementById("delivery-f-qty").value,
-      unit: document.getElementById("delivery-f-unit").value.trim(),
-      description: document.getElementById("delivery-f-desc").value.trim(),
-      reason: document.getElementById("delivery-f-client").value.trim(),
-      remarks: document.getElementById("delivery-f-remarks").value.trim()
+    var draft = readSlipDraftFromDom();
+    state.slipDraft = draft;
+    var inventory = currentInventory();
+    var items = [];
+    var missing = false;
+    draft.items.forEach(function (it) {
+      var row = inventory.find(function (r) {
+        return r.key === it.key;
+      });
+      if (!row || !it.quantity) {
+        missing = true;
+        return;
+      }
+      items.push({ billId: row.billId, description: row.description, unit: row.unit, quantity: it.quantity });
+    });
+    if (missing || !items.length) {
+      state.slipsErr = "Chak liy dwe gen yon pwodwi ak yon kantite.";
+      render();
+      return;
+    }
+    createSlip({
+      division: draft.division,
+      slipNumber: draft.slipNumber,
+      slipDate: draft.slipDate,
+      clientName: draft.clientName,
+      invoiceNumber: draft.invoiceNumber,
+      storekeeper: draft.storekeeper,
+      driver: draft.driver,
+      receivedBy: draft.receivedBy,
+      deliveredOn: draft.deliveredOn,
+      remarks: draft.remarks,
+      items: items
     });
   }
   if (event.target && event.target.id === "invoice-form") {
@@ -268,8 +331,15 @@ document.addEventListener("click", function (event) {
       if ((state.depotTab === "invreg" || state.depotTab === "invfin") && !state.invoicesLoaded && !state.invoicesLoading) {
         loadInvoices();
       }
-      if ((state.depotTab === "returned" || state.depotTab === "damaged" || state.depotTab === "delivery" || state.depotTab === "dailydelivery") && !state.goodsLoaded && !state.goodsLoading) {
+      if ((state.depotTab === "returned" || state.depotTab === "damaged" || state.depotTab === "delivery" || state.depotTab === "dailydelivery" || state.depotTab === "inventory") && !state.goodsLoaded && !state.goodsLoading) {
         loadGoodsIncidents();
+      }
+      // Slips, stock entries and returned/damaged goods together give the inventory (and the product list of a slip).
+      if ((state.depotTab === "delivery" || state.depotTab === "dailydelivery" || state.depotTab === "inventory") && !state.slipsLoaded && !state.slipsLoading) {
+        loadSlips();
+      }
+      if ((state.depotTab === "delivery" || state.depotTab === "inventory") && !state.stockLoaded && !state.stockLoading) {
+        loadStockEntries();
       }
       render();
     } else if (i === "toggle-nav-drawer") {
@@ -400,10 +470,22 @@ document.addEventListener("click", function (event) {
       downloadDeliverySlip(o);
     } else if (i === "download-goods-report") {
       downloadGoodsReport(n.getAttribute("data-kind"));
-    } else if (i === "download-delivery-report") {
-      downloadDeliveryReport();
+    } else if (i === "download-slip") {
+      downloadSlip(o);
+    } else if (i === "download-inventory") {
+      downloadInventory();
     } else if (i === "download-daily-delivery") {
       downloadDailyDelivery();
+    } else if (i === "slip-add-line") {
+      saveSlipDraft();
+      state.slipDraft.items.push({ key: "", quantity: "" });
+      render();
+    } else if (i === "slip-remove-line") {
+      saveSlipDraft();
+      if (state.slipDraft.items.length > 1) {
+        state.slipDraft.items.splice(parseInt(n.getAttribute("data-index"), 10), 1);
+      }
+      render();
     } else if (i === "export-containers-csv") {
       exportContainersCsv();
     } else if (i === "retry-load") {
@@ -529,24 +611,40 @@ document.addEventListener("change", function (event) {
     render();
     return;
   }
-  if (event.target && event.target.id === "delivery-filter-bill") {
-    state.deliveryFilterBill = event.target.value;
+  if (event.target && event.target.id === "slip-filter-from") {
+    state.slipFrom = event.target.value;
     render();
     return;
   }
-  if (event.target && event.target.id === "delivery-filter-from") {
-    state.deliveryFrom = event.target.value;
+  if (event.target && event.target.id === "slip-filter-to") {
+    state.slipTo = event.target.value;
     render();
     return;
   }
-  if (event.target && event.target.id === "delivery-filter-to") {
-    state.deliveryTo = event.target.value;
+  if (event.target && event.target.id === "daily-slip-date") {
+    state.dailySlipDate = event.target.value;
     render();
     return;
   }
-  if (event.target && event.target.id === "daily-delivery-date") {
-    state.dailyDeliveryDate = event.target.value;
+  if (event.target && event.target.id === "inv-filter") {
+    state.invFilter = event.target.value;
     render();
+    return;
+  }
+  if (event.target && event.target.closest && event.target.closest("#slip-form")) {
+    // Only one company box can be ticked, like on the paper pad.
+    if (event.target.classList.contains("slip-company") && event.target.checked) {
+      Array.prototype.forEach.call(document.querySelectorAll(".slip-company"), function (box) {
+        if (box !== event.target) {
+          box.checked = false;
+        }
+      });
+    }
+    saveSlipDraft();
+    // A product or a quantity changed: redraw so the "disponib" lines are right (typed text is kept in the draft).
+    if (event.target.classList.contains("slip-line-product") || event.target.classList.contains("slip-line-qty")) {
+      render();
+    }
     return;
   }
   if (event.target && event.target.classList) {
@@ -705,6 +803,19 @@ document.addEventListener("input", function (event) {
       var pv = ps.value;
       ps.value = "";
       ps.value = pv;
+    }
+  }
+  if (event.target && (event.target.id === "slip-search" || event.target.id === "inv-search")) {
+    var isSlip = event.target.id === "slip-search";
+    var sid = event.target.id;
+    state[isSlip ? "slipSearch" : "invSearch"] = event.target.value;
+    render();
+    var sn = document.getElementById(sid);
+    if (sn) {
+      sn.focus();
+      var sv = sn.value;
+      sn.value = "";
+      sn.value = sv;
     }
   }
   if (event.target && event.target.id === "f-inv-search") {

@@ -32,6 +32,10 @@
     {
       "source": "/api/leave",
       "destination": "/api/daily?action=leave"
+    },
+    {
+      "source": "/api/slips",
+      "destination": "/api/goods?action=slips"
     }
   ],
   "headers": [
@@ -99,11 +103,5 @@
     "api/scan.js": {
       "maxDuration": 60
     }
-  },
-  "crons": [
-    {
-      "path": "/api/daily?action=reminders",
-      "schedule": "0 13 * * *"
-    }
-  ]
+  }
 }

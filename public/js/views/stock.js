@@ -37,6 +37,7 @@ function stockEntryFormHtml() {
       <div><span class="field-label">Dat *</span><input class="input" type="date" id="stock-f-date" value="${ today() }" required /></div>
       <div><span class="field-label">Kantite *</span><input class="input" type="number" min="0.01" step="0.01" id="stock-f-qty" placeholder="Egz. 120" required /></div>
       <div><span class="field-label">Inite *</span><input class="input" list="stock-units" id="stock-f-unit" placeholder="Egz. sak, kolo, bwat" required /><datalist id="stock-units"><option value="sak"/><option value="kolo"/><option value="bwat"/><option value="palèt"/><option value="lb"/><option value="gallon"/><option value="pyès"/></datalist></div>
+      <div><span class="field-label">Dat Ekspirasyon</span><input class="input" type="date" id="stock-f-expires" /></div>
       <div><span class="field-label">Kontenè (opsyonèl)</span><input class="input" id="stock-f-container" placeholder="Egz. MSCU1234567" /></div>
     </div>
     <div><span class="field-label">Deskripsyon Machandiz *</span><input class="input" id="stock-f-desc" placeholder="Egz. Rís Miami — sak 50lb" required /></div>
@@ -48,7 +49,7 @@ function stockEntryFormHtml() {
 
 function stockEntryRowHtml(entry) {
   var bill = billById(entry.billId);
-  return `<div class="row"><div class="row-min"><span class="plate" style="border-color:${ COLORS.full }">${ escapeHtml(entry.description) }</span><div class="row-sub">Bill: <strong style="color:var(--navy)">${ bill ? escapeHtml(bill.numewo) : "\u2014" }</strong></div><div class="row-sub light">Kantite: <strong style="color:var(--muted)">${ escapeHtml(String(entry.quantity)) } ${ escapeHtml(entry.unit || "") }</strong></div>${ entry.containerNumewo ? `<div class="row-sub light">Kontenè: <strong style="color:var(--muted)">${ escapeHtml(entry.containerNumewo) }</strong></div>` : "" }${ entry.remarks ? `<div class="row-sub light">Nòt: ${ escapeHtml(entry.remarks) }</div>` : "" }</div><div class="mini">Dat<strong style="color:var(--rust)">${ formatDateShort(entry.entryDate) }</strong></div></div>`;
+  return `<div class="row"><div class="row-min"><span class="plate" style="border-color:${ COLORS.full }">${ escapeHtml(entry.description) }</span><div class="row-sub">Bill: <strong style="color:var(--navy)">${ bill ? escapeHtml(bill.numewo) : "\u2014" }</strong></div><div class="row-sub light">Kantite: <strong style="color:var(--muted)">${ escapeHtml(String(entry.quantity)) } ${ escapeHtml(entry.unit || "") }</strong></div>${ entry.expiresOn ? `<div class="row-sub light">Ekspirasyon: <strong style="color:${ entry.expiresOn < today() ? COLORS.urgent : "var(--muted)" }">${ formatDateShort(entry.expiresOn) }</strong></div>` : "" }${ entry.containerNumewo ? `<div class="row-sub light">Kontenè: <strong style="color:var(--muted)">${ escapeHtml(entry.containerNumewo) }</strong></div>` : "" }${ entry.remarks ? `<div class="row-sub light">Nòt: ${ escapeHtml(entry.remarks) }</div>` : "" }</div><div class="mini">Dat<strong style="color:var(--rust)">${ formatDateShort(entry.entryDate) }</strong></div></div>`;
 }
 
 export function stockEntryTabView() {
