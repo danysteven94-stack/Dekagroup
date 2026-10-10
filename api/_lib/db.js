@@ -86,7 +86,7 @@ function configuredPools() {
 }
 
 // Portable DDL (same statements run on PostgreSQL in production and on SQLite in the tests).
-const SCHEMA_VERSION = 15;
+const SCHEMA_VERSION = 16;
 const DDL = [
   "CREATE TABLE IF NOT EXISTS meta (name TEXT PRIMARY KEY, value BIGINT NOT NULL)",
   "CREATE TABLE IF NOT EXISTS bills (" +
@@ -141,6 +141,8 @@ const DDL = [
     "items TEXT NOT NULL, storekeeper TEXT, driver TEXT, received_by TEXT, delivered_on TEXT, remarks TEXT, " +
     "registered_by TEXT, created_at TEXT NOT NULL)",
   "CREATE INDEX IF NOT EXISTS delivery_slips_date_idx ON delivery_slips (slip_date)",
+  // First-login guide: the guide version each account has already seen (only goes up), so an account sees the guide once, on any device.
+  "CREATE TABLE IF NOT EXISTS tour_seen (username TEXT PRIMARY KEY, version INTEGER NOT NULL, updated_at TEXT NOT NULL)",
   // Invoices ("Fakti"): registered as a draft ("anrejistre") against a Bill, then locked ("fini").
   "CREATE TABLE IF NOT EXISTS invoices (" +
     "id TEXT PRIMARY KEY, bill_id TEXT NOT NULL, invoice_number TEXT NOT NULL, invoice_date TEXT NOT NULL, " +

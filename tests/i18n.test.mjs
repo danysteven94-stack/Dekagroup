@@ -73,7 +73,7 @@ const base = () => {
 };
 const T = await import("../public/js/views/tour.js");
 // the first-login tour is switched off for every screen test below (it has its own test)
-const seenAll = () => ["admin", "depot", "chofe", "daily", "pointeur", "logistique"].forEach((r) => localStorage.setItem("deka_tour_seen:" + r + ":", "1"));
+const seenAll = () => ["admin", "depot", "chofe", "daily", "pointeur", "logistique"].forEach((r) => localStorage.setItem("deka_tour_seen:" + r + ":", String(T.TOUR_VERSION)));
 const show = (setup) => { base(); seenAll(); state.tour = null; state.tourFor = ""; setup(); render(); return root.innerHTML; };
 const admin = (tab, extra) => show(() => { state.authRole = "admin"; state.unlocked = true; state.tab = tab; if (extra) extra(); });
 
@@ -346,7 +346,7 @@ await test("container detail (admin): history timeline shows what happened, who 
 
 await test("Logistique Deka: first-login guide steps through the screen and is fully French", () => {
   I.setLang("fr");
-  base(); state.tour = null; state.tourFor = ""; Object.assign(state, { authRole: "logistique", logistiqueUnlocked: true, paymentsLoaded: true, lgBills: LOG_PAYMENTS() });
+  base(); state.tour = null; state.tourFor = ""; state.tourSeen = 0; state.tourSeenFailed = false; state.tourSteps = null; Object.assign(state, { authRole: "logistique", logistiqueUnlocked: true, paymentsLoaded: true, lgBills: LOG_PAYMENTS() });
   localStorage.removeItem(T.tourKey());
   render();
   assert.ok(root.innerHTML.includes('data-action="tour-next"'), "the guide opens on the first login");
@@ -360,7 +360,7 @@ await test("Logistique Deka: first-login guide steps through the screen and is f
 });
 
 await test("first-login guide: opens once per account, steps through each role's screen, is fully French, can be reopened from Èd", () => {
-  const login = (role, extra) => { base(); state.tour = null; state.tourFor = ""; Object.assign(state, { authRole: role, unlocked: role === "admin", depotUnlocked: role === "depot", drUnlocked: role === "daily", tab: "dashboard" }, extra || {}); localStorage.removeItem(T.tourKey()); };
+  const login = (role, extra) => { base(); state.tour = null; state.tourFor = ""; state.tourSeen = 0; state.tourSeenFailed = false; state.tourSteps = null; Object.assign(state, { authRole: role, unlocked: role === "admin", depotUnlocked: role === "depot", drUnlocked: role === "daily", tab: "dashboard" }, extra || {}); localStorage.removeItem(T.tourKey()); };
   ["admin", "depot", "chofe", "daily"].forEach((role) => {
     I.setLang("fr");
     login(role);
@@ -398,6 +398,59 @@ await test("first-login guide: opens once per account, steps through each role's
   assert.ok(root.innerHTML.includes('data-action="tour-next"') && state.tour === 0 && state.help === false, "replay opens the first step");
   state.tour = null; state.help = false;
   I.setLang("fr");
+});
+
+await test("guide: seen once per account (server copy), later updates show only what is new, never on every login", () => {
+  const login = (role, local, server, extra) => {
+    base(); state.tour = null; state.tourFor = ""; state.tourSteps = null; state.tourMode = ""; state.tourSeenFailed = false;
+    state.tourSeen = server; Object.assign(state, { authRole: role, username: "u1", unlocked: role === "admin", depotUnlocked: role === "depot", drUnlocked: role === "daily", tab: "dashboard" }, extra || {});
+    localStorage.removeItem(T.tourKey()); if (local !== null) localStorage.setItem(T.tourKey(), String(local));
+  };
+  const shown = () => root.innerHTML.includes('data-action="tour-next"');
+  // the plan itself
+  assert.strictEqual(T.tourPlan("depot", 0).mode, "full");
+  assert.strictEqual(T.tourPlan("depot", 1).mode, "update");
+  assert.strictEqual(T.tourPlan("depot", 1).steps.length, 3);
+  assert.strictEqual(T.tourPlan("admin", 1).mode, "none");
+  assert.strictEqual(T.tourPlan("depot", T.TOUR_VERSION).mode, "none");
+  assert.ok(T.tourPlan("depot", 0).steps.length > T.tourPlan("depot", 1).steps.length - 1);
+  // already saw the old guide (this browser holds "1"): only the update opens, not the whole guide
+  I.setLang("fr");
+  login("depot", 1, 0); render();
+  assert.ok(shown(), "update guide opens"); assert.strictEqual(state.tourMode, "update");
+  assert.ok(root.innerHTML.includes("1 / 3"), "only the new steps");
+  // (this fake DOM does not translate in place: the text is translated by I.t, as the browser would)
+  assert.ok(texts(root.innerHTML).map((x) => I.t(x)).includes("Nouveau dans votre page"), "labelled as news");
+  let guard = 0;
+  while (state.tour !== null && guard++ < 20) { assert.deepStrictEqual(leftovers(root.innerHTML), [], "no Kreyòl in update step " + state.tour); T.tourNext(); render(); }
+  assert.strictEqual(localStorage.getItem(T.tourKey()), String(T.TOUR_VERSION), "marked as seen");
+  assert.strictEqual(state.tourSeen, T.TOUR_VERSION);
+  // signing in again: not shown
+  state.tourFor = ""; state.tour = null; render();
+  assert.ok(!shown(), "not shown again after it was seen");
+  // seen on ANOTHER device (server says up to date, this browser knows nothing): not shown
+  login("depot", null, T.TOUR_VERSION); render();
+  assert.ok(!shown(), "seen on another device -> not shown");
+  // a role with nothing new: silent, and remembered as up to date
+  login("admin", 1, 1); render();
+  assert.ok(!shown(), "no news for this role -> nothing shown");
+  assert.strictEqual(localStorage.getItem(T.tourKey()), String(T.TOUR_VERSION));
+  // brand new account: the whole guide, once
+  login("depot", null, 0); render();
+  assert.ok(shown() && state.tourMode === "full"); assert.ok(root.innerHTML.includes("1 / " + T.tourPlan("depot", 0).steps.length));
+  T.finishTour(); render(); state.tourFor = ""; render();
+  assert.ok(!shown(), "after the full guide it never comes back");
+  // waits for the server's answer instead of flashing; if the server cannot be reached the browser's copy decides
+  login("depot", null, null); render();
+  assert.ok(!shown(), "waits while the server has not answered");
+  state.tourSeenFailed = true; render();
+  assert.ok(shown(), "server unreachable and nothing seen on this browser -> guide opens");
+  state.tour = null; localStorage.setItem(T.tourKey(), String(T.TOUR_VERSION)); state.tourFor = ""; render();
+  assert.ok(!shown(), "server unreachable but this browser saw it -> not shown");
+  // replay from Èd still shows the whole guide
+  login("depot", T.TOUR_VERSION, T.TOUR_VERSION); T.startTour(); render();
+  assert.ok(shown() && state.tourMode === "full" && root.innerHTML.includes("1 / " + T.tourPlan("depot", 0).steps.length), "replay = full guide");
+  state.tour = null; state.tourSteps = null; I.setLang("fr");
 });
 
 await test("products tab: one dashboard-style card per product; tapping a card shows its containers", () => {

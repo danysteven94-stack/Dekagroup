@@ -16,6 +16,7 @@ import { render } from "./render.js";
 import { state } from "./state.js";
 import { storageRemove } from "./utils.js";
 import { loadTwoFactor } from "./views/account.js";
+import { loadTourSeen } from "./views/tour.js";
 
 export function switchDivision(pool) {
   if (!pool || pool === state.pool || state.divisionSwitching) return;
@@ -121,6 +122,10 @@ export function logout() {
   state.username = "";
   state.tour = null;
   state.tourFor = "";
+  state.tourSteps = null;
+  state.tourMode = "";
+  state.tourSeen = null;
+  state.tourSeenFailed = false;
   state.containers = [];
   state.bills = [];
   state.notifications = [];
@@ -208,6 +213,12 @@ export function applyAuth(role, username, name, needs, personal, divisions, pool
     pool: pool || "default",
     trucking: trucking || null
   });
+  // Which version of the first-login guide this account has already seen (the guide waits for the answer, so it never
+  // opens again for someone who saw it, on this device or another).
+  state.tourFor = "";
+  state.tourSteps = null;
+  state.tourMode = "";
+  loadTourSeen().then(render);
   if (state.needs) {
     render();
     if (state.needs === "2fa") {

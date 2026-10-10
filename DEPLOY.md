@@ -55,3 +55,10 @@ Kont demo (pataje): `logistic` / `demo-admin-1234`, `depotnord` / `demo-depot-12
 Divizyon yo: CRISTO AL, CRISTO COMM, CONFIDEKA, DEKAV (menm baz done), epi ACS, MIKADO, LA COLLECTION, MOBILITY, ENERSOL (chak gen pwòp baz done li).
 MOBILITY ranplase DEKA TIRES: li kontinye sèvi ak `DATABASE_URL_DEKATIRES` jiskaske ou mete `DATABASE_URL_MOBILITY`. ENERSOL bezwen pwòp `DATABASE_URL_ENERSOL`.
 Anciens enregistrements «DEKA TIRES» (kontenè, kont itilizatè, bill Logistique Deka, fich livrezon): yo chanje an MOBILITY otomatikman pwochen fwa baz done a louvri (SCHEMA_VERSION 15). Se menm konpayi a, se sèlman non an ki chanje.
+
+## Gid kòmansman (premye koneksyon)
+
+Chak kont wè gid la yon sèl fwa, sou nenpòt aparèy: nimewo vèsyon gid la ki deja wè a rete sou sèvè a (tab `tour_seen`, wout `/api/auth/tour`), epi yon kopi nan navigatè a. Konekte ankò pa louvri gid la ankò.
+Lè entèfas la gen yon mizajou: ajoute yon antre nan `UPDATES` (`public/js/views/tour.js`) epi monte `TOUR_VERSION`. Kont ki deja wè gid la wè **sèlman** etap nouvo yo pou wòl yo, yon sèl fwa. Yon wòl ki pa gen anyen nouvo pa wè anyen.
+Kont ki te deja wè ansyen gid la (navigatè a te sove «1») konte kòm vèsyon 1: yo pa wè gid konplè a ankò.
+Bouton «Èd» → «Rekòmanse gid la» toujou montre gid konplè a.

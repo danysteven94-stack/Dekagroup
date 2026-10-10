@@ -13,6 +13,7 @@ const handlers = {
   "2fa": require("./_lib/authHandlers/2fa"),
   email: require("./_lib/authHandlers/email"),
   division: require("./_lib/authHandlers/division"),
+  tour: require("./_lib/authHandlers/tour"),
 };
 
 module.exports = async function handler(req, res) {

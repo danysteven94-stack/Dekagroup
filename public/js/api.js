@@ -374,6 +374,10 @@ function sessionExpired() {
   state.username = "";
   state.tour = null;
   state.tourFor = "";
+  state.tourSteps = null;
+  state.tourMode = "";
+  state.tourSeen = null;
+  state.tourSeenFailed = false;
   state.unlocked = false;
   state.depotUnlocked = false;
   state.logistiqueUnlocked = false;
