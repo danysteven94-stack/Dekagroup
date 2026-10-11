@@ -108,18 +108,64 @@ const seed = () => H.setData({
     assert.strictEqual(def.noDivision, 2);
   });
 
-  await test("a database that is a copy of another one is flagged (never dropped), a different one is not", async () => {
-    const O = require("../api/_lib/overview");
-    const c = (id, n) => ({ id: id, numewo: n });
-    const mk = (pool, list) => ({ pool: pool, ok: true, containers: list });
-    const same = O._flagCopies([mk("default", [c("1", "A"), c("2", "B")]), mk("acs", [c("1", "A"), c("2", "B"), c("3", "C")])]);
-    assert.strictEqual(same[1].copyOf, "default");
-    assert.strictEqual(same[1].copyCount, 2);
-    assert.strictEqual(same[1].containers.length, 3, "nothing is removed");
-    assert.strictEqual(same[0].copyOf, undefined);
-    const other = O._flagCopies([mk("default", [c("1", "A")]), mk("acs", [c("9", "Z")])]);
-    assert.strictEqual(other[1].copyOf, undefined);
-    assert.strictEqual(O._flagCopies([mk("default", [c("1", "A")]), { pool: "acs", ok: false, containers: [] }])[1].copyOf, undefined);
+  await test("no duplicates: the most reliable record of a container or a bill is kept, a container that left never stays Full", async () => {
+    const { dedupe } = require("../api/_lib/dedupe");
+    const mk = (pool, o) => Object.assign({ pool: pool, ok: true, divisions: [], containers: [], bills: [], stock: [], goods: [], invoices: [], slips: [] }, o);
+    const c = (id, n, o) => Object.assign({ id: id, numewo: n, billId: "b1", size: "40", division: null, dateEntered: null, dateVerified: null, dateEmpty: null, dateLeft: null, depo: null, trucking: null }, o || {});
+    const bill = (id, n, o) => Object.assign({ id: id, numewo: n, product: "Diri", completedAt: null }, o || {});
+
+    // 1) entered by the depot (still Full), then added again from the Achiv once it left, with no empty date
+    let r = dedupe([mk("default", {
+      containers: [
+        c("c1", "TEMU5858003", { division: "CRISTO AL", dateEntered: "2026-09-01", dateVerified: "2026-09-02", depo: "Depo A", trucking: "CFC" }),
+        c("c2", "TEMU5858003", { dateEntered: "2026-09-01", dateLeft: "2026-09-20", plak: "AA 1" }),
+      ], bills: [bill("b1", "B-1")],
+    })])[0];
+    assert.strictEqual(r.containers.length, 1, "one record");
+    assert.ok(r.containers[0].dateLeft, "the one that left wins, it does not stay Full");
+    assert.strictEqual(r.containers[0].division, "CRISTO AL", "the gaps are filled from the other record");
+    assert.strictEqual(r.containers[0].depo, "Depo A");
+    assert.strictEqual(r.dupContainers, 1);
+
+    // 2) the same container coming back later on another trip is NOT a duplicate
+    r = dedupe([mk("default", {
+      containers: [
+        c("c1", "TEMU5858003", { division: "CRISTO AL", dateEntered: "2026-05-01", dateVerified: "2026-05-02", dateEmpty: "2026-05-10", dateLeft: "2026-05-12" }),
+        c("c2", "TEMU5858003", { billId: "b2", division: "CRISTO AL", dateEntered: "2026-10-01", dateVerified: "2026-10-02" }),
+      ], bills: [bill("b1", "B-1"), bill("b2", "B-2")],
+    })])[0];
+    assert.strictEqual(r.containers.length, 2, "two real trips are both kept");
+
+    // 3) two different bills are two different trips, even with no dates
+    r = dedupe([mk("default", { containers: [c("c1", "AAAA1", { billId: "b1" }), c("c2", "AAAA1", { billId: "b2" })], bills: [bill("b1", "B-1"), bill("b2", "B-2")] })])[0];
+    assert.strictEqual(r.containers.length, 2);
+
+    // 4) the same container in two databases is counted once, the most advanced record wins
+    const two = dedupe([
+      mk("default", { containers: [c("c1", "ZZZZ1", { division: "CRISTO AL", dateEntered: "2026-09-01", dateVerified: "2026-09-02" })], bills: [bill("b1", "B-1")] }),
+      mk("acs", { containers: [c("x9", "ZZZZ1", { dateEntered: "2026-09-01", dateLeft: "2026-09-15" })], bills: [bill("b9", "B-1")] }),
+    ]);
+    assert.strictEqual(two[0].containers.length + two[1].containers.length, 1);
+    assert.ok([].concat(two[0].containers, two[1].containers)[0].dateLeft);
+
+    // 5) a bill recorded twice in one database: kept once, its containers and stock follow it
+    r = dedupe([mk("default", {
+      containers: [c("c1", "AAAA1", { billId: "b1" }), c("c2", "AAAA2", { billId: "b1" }), c("c3", "AAAA3", { billId: "b1dup" })],
+      bills: [bill("b1", "B-1"), bill("b1dup", " b-1 ", { product: "" })],
+      stock: [{ id: "s1", billId: "b1dup", entryDate: "2026-09-03", description: "Diri", quantity: "10", unit: "sak" }],
+    })])[0];
+    assert.strictEqual(r.bills.length, 1);
+    assert.strictEqual(r.bills[0].id, "b1", "the bill with most containers is kept");
+    assert.ok(r.containers.every((x) => x.billId === "b1"), "containers follow the kept bill");
+    assert.strictEqual(r.stock[0].billId, "b1", "stock follows the kept bill");
+    assert.strictEqual(r.dupBills, 1);
+
+    // 6) the same stock entry twice is one stock entry
+    r = dedupe([mk("default", { bills: [bill("b1", "B-1")], stock: [
+      { id: "s1", billId: "b1", entryDate: "2026-09-03", description: "Diri", quantity: "10", unit: "sak" },
+      { id: "s2", billId: "b1", entryDate: "2026-09-03", description: "diri ", quantity: "10", unit: "sak" },
+    ] })])[0];
+    assert.strictEqual(r.stock.length, 1);
   });
 
   await test("a division whose database is not configured is reported, it does not break the others", async () => {

@@ -108,13 +108,14 @@ await test("same figures as the logistic administrator's Tableau de bord (568 / 
   const M = buildOverview(P, today());
   const S = summarize(M, "pool:default", today());
   assert.strictEqual(S.containers, 568);
-  assert.strictEqual(S.disponib, 3);
-  assert.strictEqual(S.pran, 0);
-  assert.strictEqual(S.pokoverifye, 1);
-  assert.strictEqual(S.fullAll, 10);
+  assert.strictEqual(S.disponib, 3, "Disponib (a container taken by a driver but not entered yet would count here too)");
+  assert.strictEqual(S.full, 10, "Full includes the one waiting for verification: no separate A vérifier");
   assert.strictEqual(S.vid, 17);
   assert.strictEqual(S.kite, 538);
-  assert.strictEqual(S.urgent, 7);
+  assert.strictEqual(S.disponib + S.full + S.vid + S.kite, S.containers, "the four states add up to the total");
+  assert.strictEqual(S.pran, undefined, "no Pran, Poko Verifye or Urgent in Administration DEKA");
+  assert.strictEqual(S.pokoverifye, undefined);
+  assert.strictEqual(S.urgent, undefined);
   assert.strictEqual(summarize(M, "", today()).containers, 568, "with one database, Tout = that database");
 });
 

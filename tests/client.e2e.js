@@ -248,7 +248,9 @@ async function test(name, fn) {
     assert.ok(pg.has("Apèsi") && pg.has("Lekti sèlman"), "the Administration DEKA overview opens");
     assert.ok(!pg.has('id="gate-form"'), "logged in");
     assert.ok(pg.has("CRISTO AL") && pg.has("DEKAV"), "the divisions are listed");
+    assert.ok(!pg.has("Poko Verifye") && !pg.has("Ijan") && !pg.has('kpi-label">Pran<'), "no Pran, Poko Verifye or Urgent on the overview");
     pg.click({ "data-action": "adm-tab", "data-tab": "containers" });
+    assert.ok(!pg.has("Poko Verifye") && !pg.has("Ijan") && !pg.has('data-status="pran"'), "nor in the containers filters");
     assert.ok(pg.has("FULL0000001") && pg.has("VIDD0000002") && pg.has("POKO0000003"), "every container of this database is listed");
     assert.ok(pg.has("ACSX0000009") && pg.has("OLDX0000010"), "nothing is left out: the same containers as the logistic admin, including archived ones with no division");
     pg.change({ id: "adm-division", value: "DEKAV" });

@@ -13,10 +13,16 @@ import { render } from "./render.js";
 import { state } from "./state.js";
 import {
   billStatus,
-  isUrgent,
   statusOf,
   today
 } from "./utils.js";
+
+// Only four states are shown: a container taken by a driver but not entered yet is still "Disponib", one entered but not
+// yet verified is already "Full".
+export function shownStatus(c) {
+  var s = statusOf(c);
+  return s === "pran" ? "disponib" : s === "pokoverifye" ? "full" : s;
+}
 
 // Division of a bill: the one written on its containers; else the only division of its database.
 function billDivision(bill, containers, poolDivisions) {
@@ -48,8 +54,9 @@ export function buildOverview(pools, todayStr) {
       total: (p.containers || []).length,
       noDivision: (p.containers || []).filter(function (c) { return !c.division; }).length,
       left: (p.containers || []).filter(function (c) { return !!c.dateLeft; }).length,
-      copyOf: p.copyOf || "",
-      copyCount: p.copyCount || 0
+      dupContainers: p.dupContainers || 0,
+      dupBills: p.dupBills || 0,
+      dupOther: p.dupOther || 0
     });
     if (!p.ok) {
       return;
@@ -72,7 +79,7 @@ export function buildOverview(pools, todayStr) {
       var bill = c.billId ? billById[c.billId] : null;
       return Object.assign({}, c, {
         _pool: p.pool,
-        status: statusOf(c),
+        status: shownStatus(c),
         billNumewo: bill ? bill.numewo : "",
         product: bill ? bill.product || "" : ""
       });
@@ -158,15 +165,11 @@ export function summarize(model, division, todayStr) {
   var bills = forDivision(model.bills, division);
   return {
     containers: cs.length,
+    // Administration DEKA only knows four states: Disponib (not entered yet), Full, Vid and Kite.
     disponib: count("disponib"),
-    pran: count("pran"),
-    pokoverifye: count("pokoverifye"),
     full: count("full"),
     vid: count("vid"),
     kite: count("kite"),
-    pran: count("pran"),
-    fullAll: count("full") + count("pokoverifye"),
-    urgent: cs.filter(isUrgent).length,
     billsAktif: bills.filter(function (b) { return b.status === "aktif"; }).length,
     billsPlanifye: bills.filter(function (b) { return b.status === "planifye"; }).length,
     billsFini: bills.filter(function (b) { return b.status === "fini"; }).length,

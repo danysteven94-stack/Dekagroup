@@ -4,7 +4,6 @@
 import {
   COLORS,
   LOGO_URL,
-  URGENT_AFTER_DAYS,
   STATUS_LABELS
 } from "../constants.js";
 import { icon } from "../icons.js";
@@ -21,7 +20,6 @@ import {
   formatDateShort,
   formatLongDate,
   formatTime,
-  isUrgent,
   truckingSearchText
 } from "../utils.js";
 import { accountButton } from "./account.js";
@@ -44,7 +42,7 @@ export var ADMINISTRATION_TITLES = {
   moves: "Mouvman Estòk ak Dokiman"
 };
 
-export var CONTAINER_STATUSES = ["disponib", "pran", "pokoverifye", "full", "vid", "kite"];
+export var CONTAINER_STATUSES = ["disponib", "full", "vid", "kite"];
 
 export var MOVE_KINDS = [
   { id: "stock", label: "Antre Estòk" },
@@ -156,19 +154,15 @@ function sourcesCard(M) {
   var cell = function (v) { return `<td class="num">${ v }</td>`; };
   var rows = M.poolStatus.map(function (p) {
     if (!p.ok) {
-      return `<tr class="adm-down"><td>${ dbLabel(p) } <span class="adm-muted">(pa disponib)</span></td>${ "<td class=\"num\">\u2014</td>".repeat(10) }</tr>`;
+      return `<tr class="adm-down"><td>${ dbLabel(p) } <span class="adm-muted">(pa disponib)</span></td>${ "<td class=\"num\">\u2014</td>".repeat(8) }</tr>`;
     }
     var s = summarize(M, "pool:" + p.pool);
-    var copy = p.copyOf ? ` <span style="color:${ COLORS.urgent };font-size:11px;font-weight:700" title="${ esc(p.copyOf) }">\u26A0</span>` : "";
-    return `<tr class="adm-click${ A.division === "pool:" + p.pool ? " adm-on" : "" }" data-action="adm-pick-div" data-div="pool:${ esc(p.pool) }"><td>${ dbLabel(p) }${ copy }</td>${ cell(s.containers) }${ cell(s.disponib) }${ cell(s.pran) }${ cell(s.pokoverifye) }${ cell(s.fullAll) }${ cell(s.vid) }${ cell(s.kite) }${ cell(s.urgent) }${ cell(s.billsAktif) }${ cell(s.billsFini) }</tr>`;
+    return `<tr class="adm-click${ A.division === "pool:" + p.pool ? " adm-on" : "" }" data-action="adm-pick-div" data-div="pool:${ esc(p.pool) }"><td>${ dbLabel(p) }</td>${ cell(s.containers) }${ cell(s.disponib) }${ cell(s.full) }${ cell(s.vid) }${ cell(s.kite) }${ cell(s.billsAktif) }${ cell(s.billsFini) }${ cell(p.dupContainers + p.dupBills + p.dupOther) }</tr>`;
   }).join("");
   var t = summarize(M, "");
-  var total = `<tr class="adm-total"><td><strong>Total</strong></td>${ [t.containers, t.disponib, t.pran, t.pokoverifye, t.fullAll, t.vid, t.kite, t.urgent, t.billsAktif, t.billsFini].map(function (v) { return `<td class="num"><strong>${ v }</strong></td>`; }).join("") }</tr>`;
-  var copies = M.poolStatus.filter(function (p) { return p.copyOf; }).map(function (p) {
-    var from = M.poolStatus.find(function (q) { return q.pool === p.copyOf; });
-    return `<div class="alert" style="margin-top:10px">${ icon("alert", 14) }<div>Baz ${ esc(p.divisions.join(", ")) } gen ${ p.copyCount } kontenè ki idantik ak baz ${ esc(from ? from.divisions.join(", ") : p.copyOf) }. Posib se menm done yo ki kopye: yo konte de fwa nan total la.</div></div>`;
-  }).join("");
-  return `<div class="card adm-card"><div class="h3">Pa Baz Done</div><div class="adm-table-wrap"><table class="adm-table"><thead><tr><th>Baz</th><th class="num">Total</th><th class="num">Disponib</th><th class="num">Pran</th><th class="num">Poko Verifye</th><th class="num">Full</th><th class="num">Vid</th><th class="num">Kite</th><th class="num">Ijan</th><th class="num">Bill aktif</th><th class="num">Bill fini</th></tr></thead><tbody>${ rows }${ total }</tbody></table></div><div class="form-hint" style="margin-top:8px">Chak liy se egzakteman sa Tablo de bord Lojistik la montre pou baz sa a (kontenè Achiv ki pa gen divizyon yo ladan l). Peze sou yon liy pou wè sèlman baz sa a.</div>${ copies }</div>`;
+  var dups = M.poolStatus.reduce(function (n, p) { return n + p.dupContainers + p.dupBills + p.dupOther; }, 0);
+  var total = `<tr class="adm-total"><td><strong>Total</strong></td>${ [t.containers, t.disponib, t.full, t.vid, t.kite, t.billsAktif, t.billsFini, dups].map(function (v) { return `<td class="num"><strong>${ v }</strong></td>`; }).join("") }</tr>`;
+  return `<div class="card adm-card"><div class="h3">Pa Baz Done</div><div class="adm-table-wrap"><table class="adm-table"><thead><tr><th>Baz</th><th class="num">Total</th><th class="num">Disponib</th><th class="num">Full</th><th class="num">Vid</th><th class="num">Kite</th><th class="num">Bill aktif</th><th class="num">Bill fini</th><th class="num">Doub retire</th></tr></thead><tbody>${ rows }${ total }</tbody></table></div><div class="form-hint" style="margin-top:8px">Pa gen done doub: yon kontenè oswa yon bill ki anrejistre plizyè fwa parèt yon sèl fwa, ak dosye ki pi fyab la (yon kontenè ki deja soti pa janm rete Full). «Doub retire» di konbyen dosye ki pa konte. Anyen pa efase nan baz yo. Peze sou yon liy pou wè sèlman baz sa a.</div></div>`;
 }
 
 function divisionDown(M, d) {
@@ -180,16 +174,13 @@ function divisionDown(M, d) {
 function overviewView(M) {
   var A = state.adm;
   var S = summarize(M, A.division);
-  // Same ten cards, in the same order and with the same wording as the logistic administrator's Tableau de bord.
+  // The cards of the logistic administrator's Tableau de bord, without Pran, Poko Verifye and Ijan.
   var kpis = [
     kpi("Total Kontenè", S.containers, COLORS.navy, "boxes", "containers", ` data-status=""`),
     kpi("Disponib", S.disponib, COLORS.disponib, "boxes", "containers", ` data-status="disponib"`, "Poko antre"),
-    kpi("Pran", S.pran, COLORS.pran, "boxes", "containers", ` data-status="pran"`, "Chofè pran, poko antre"),
-    kpi("Poko Verifye", S.pokoverifye, COLORS.pokoverifye, "boxes", "containers", ` data-status="pokoverifye"`, "Ap tann verifikasyon"),
-    kpi("Full", S.fullAll, COLORS.full, "boxes", "containers", ` data-status="full"`, "Ap tann vide"),
+    kpi("Full", S.full, COLORS.full, "boxes", "containers", ` data-status="full"`, "Ap tann vide"),
     kpi("Vid", S.vid, COLORS.vid, "boxes", "containers", ` data-status="vid"`, "Ap tann soti"),
     kpi("Kite", S.kite, COLORS.kite, "check", "containers", ` data-status="kite"`),
-    kpi("\u26A0 Ijan", S.urgent, COLORS.urgent, "alert", "containers", ` data-status="ijan"`, "Plis pase " + URGENT_AFTER_DAYS + " jou"),
     kpi("Bill Aktif", S.billsAktif, COLORS.teal, "clipboard", "products", ` data-bstatus="aktif"`),
     kpi("Bill Fini", S.billsFini, COLORS.green, "check", "products", ` data-bstatus="fini"`)
   ].join("");
@@ -199,18 +190,10 @@ function overviewView(M) {
     var rows = divisionsInData(M).concat(M.containers.concat(M.bills).some(function (x) { return !x.division; }) ? [NO_DIVISION] : []).map(function (d) {
       var s = summarize(M, d);
       var down = d === NO_DIVISION ? false : divisionDown(M, d);
-      return `<tr class="adm-click${ down ? " adm-down" : "" }" data-action="adm-pick-div" data-div="${ esc(d) }"><td>${ d === NO_DIVISION ? `<span class="adm-div">San divizyon</span> <span class="adm-muted">(achiv)</span>` : `<span class="adm-div">${ esc(d) }</span>` }${ down ? ` <span class="adm-muted">(pa disponib)</span>` : "" }</td><td class="num">${ s.containers }</td><td class="num">${ s.full + s.pokoverifye }</td><td class="num">${ s.vid }</td><td class="num">${ s.kite }</td><td class="num">${ s.billsAktif }</td><td class="num">${ s.inStock }</td><td class="num" style="color:${ s.expired ? COLORS.urgent : "inherit" }">${ s.expired }</td></tr>`;
+      return `<tr class="adm-click${ down ? " adm-down" : "" }" data-action="adm-pick-div" data-div="${ esc(d) }"><td>${ d === NO_DIVISION ? `<span class="adm-div">San divizyon</span> <span class="adm-muted">(achiv)</span>` : `<span class="adm-div">${ esc(d) }</span>` }${ down ? ` <span class="adm-muted">(pa disponib)</span>` : "" }</td><td class="num">${ s.containers }</td><td class="num">${ s.full }</td><td class="num">${ s.vid }</td><td class="num">${ s.kite }</td><td class="num">${ s.billsAktif }</td><td class="num">${ s.inStock }</td><td class="num" style="color:${ s.expired ? COLORS.urgent : "inherit" }">${ s.expired }</td></tr>`;
     }).join("");
     divisionTable = `<div class="card adm-card"><div class="h3">Pa Divizyon</div><div class="adm-table-wrap"><table class="adm-table"><thead><tr><th>Divizyon</th><th class="num">Kontenè</th><th class="num">Full</th><th class="num">Vid</th><th class="num">Kite</th><th class="num">Bill aktif</th><th class="num">Pwodwi ann estòk</th><th class="num">Ekspire</th></tr></thead><tbody>${ rows }</tbody></table></div><div class="form-hint" style="margin-top:8px">Peze sou yon divizyon pou wè sèlman li. «San divizyon» se kontenè ki deja soti yo ki antre nan Achiv la: yo konte nan total la.</div></div>`;
   }
-
-  var urgent = forDivision(M.containers, A.division).filter(isUrgent).map(function (c) {
-    var full = c.status === "full" || c.status === "pokoverifye";
-    return Object.assign({}, c, { jou: daysBetween(full ? c.dateEntered : c.dateEmpty) });
-  }).sort(function (a, b) { return b.jou - a.jou; });
-  var urgentHtml = urgent.length ? urgent.slice(0, 8).map(function (c) {
-    return `<div class="adm-line"><span class="plate" style="border-color:${ COLORS[c.status] }">${ esc(c.numewo) }</span><span class="adm-grow">${ divCell(c.division) } ${ statusChip(c.status) }</span><strong style="color:${ COLORS.urgent }">${ c.jou } jou</strong></div>`;
-  }).join("") + (urgent.length > 8 ? `<div class="form-hint" style="margin-top:6px">${ urgent.length - 8 } lòt ankò nan tab Kontenè.</div>` : "") : `<div class="adm-muted">Pa gen kontenè ki ijan.</div>`;
 
   var expiring = forDivision(M.inventory, A.division).filter(function (r) {
     return r.current > 0 && (r.expiryStatus === "soon" || r.expiryStatus === "expired");
@@ -227,7 +210,7 @@ function overviewView(M) {
     return `<div class="adm-line"><div class="adm-grow"><strong style="color:var(--navy)">Bon # ${ esc(s.slipNumber || "\u2014") }</strong><div class="adm-muted">${ divCell(s.division) } \u00B7 ${ esc(s.clientName || "\u2014") }</div></div><span class="adm-muted">${ formatDateShort(s.slipDate) }</span></div>`;
   }).join("") : `<div class="adm-muted">Poko gen fich livrezon.</div>`;
 
-  return `${ poolBanner(M) }<div class="grid-kpi">${ kpis }</div>${ sourcesCard(M) }${ divisionTable }<div class="adm-two"><div class="card adm-card"><div class="h3">Kontenè ki Ijan</div>${ urgentHtml }</div><div class="card adm-card"><div class="h3">Estòk k ap Ekspire</div>${ expiringHtml }</div></div><div class="card adm-card"><div class="h3">Dènye Fich Livrezon</div>${ slipsHtml }</div>`;
+  return `${ poolBanner(M) }<div class="grid-kpi">${ kpis }</div>${ sourcesCard(M) }${ divisionTable }<div class="adm-two"><div class="card adm-card"><div class="h3">Estòk k ap Ekspire</div>${ expiringHtml }</div><div class="card adm-card"><div class="h3">Dènye Fich Livrezon</div>${ slipsHtml }</div></div>`;
 }
 
 // ---- Kontenè ----
@@ -236,7 +219,7 @@ export function filteredContainers(M) {
   var A = state.adm;
   var q = query();
   return forDivision(M.containers, A.division).filter(function (c) {
-    return (!A.cStatus || (A.cStatus === "ijan" ? isUrgent(c) : c.status === A.cStatus)) && has(q, [c.numewo, c.billNumewo, c.product, c.depo, truckingSearchText(c.trucking), c.chofer, c.plak, c.division]);
+    return (!A.cStatus || c.status === A.cStatus) && has(q, [c.numewo, c.billNumewo, c.product, c.depo, truckingSearchText(c.trucking), c.chofer, c.plak, c.division]);
   }).sort(function (a, b) {
     return (b.dateEntered || b.dateExpected || "").localeCompare(a.dateEntered || a.dateExpected || "") || (a.numewo < b.numewo ? -1 : 1);
   });
@@ -244,7 +227,7 @@ export function filteredContainers(M) {
 
 function daysText(c) {
   var n = null;
-  if (c.status === "full" || c.status === "pokoverifye") {
+  if (c.status === "full") {
     n = daysBetween(c.dateEntered);
   } else if (c.status === "vid") {
     n = daysBetween(c.dateEmpty);
@@ -254,7 +237,7 @@ function daysText(c) {
   if (n === null) {
     return "\u2014";
   }
-  return isUrgent(c) ? `<strong style="color:${ COLORS.urgent }">${ n } jou</strong>` : n + " jou";
+  return n + " jou";
 }
 
 function containersView(M) {
@@ -263,7 +246,7 @@ function containersView(M) {
   var list = filteredContainers(M);
   var btns = filterBtn("adm-status", "data-status", "", "Tout", base.length, !A.cStatus) + CONTAINER_STATUSES.map(function (s) {
     return filterBtn("adm-status", "data-status", s, STATUS_LABELS[s], base.filter(function (c) { return c.status === s; }).length, A.cStatus === s);
-  }).join("") + filterBtn("adm-status", "data-status", "ijan", "\u26A0 Ijan", base.filter(isUrgent).length, A.cStatus === "ijan");
+  }).join("");
   var cols = [
     { h: "Nimewo", cls: "adm-sticky", cell: function (c) { return `<span class="plate" style="border-color:${ COLORS[c.status] }">${ esc(c.numewo) }</span>`; } },
     { h: "Divizyon", cell: function (c) { return divCell(c.division); } },
@@ -295,7 +278,7 @@ export function filteredBills(M) {
     var inv = M.inventory.filter(function (r) { return r._pool === b._pool && r.billId === b.id; });
     return Object.assign({}, b, {
       nTotal: cs.length,
-      nFull: cs.filter(function (c) { return c.status === "full" || c.status === "pokoverifye"; }).length,
+      nFull: cs.filter(function (c) { return c.status === "full"; }).length,
       nVid: cs.filter(function (c) { return c.status === "vid"; }).length,
       nKite: cs.filter(function (c) { return c.status === "kite"; }).length,
       nLines: inv.filter(function (r) { return r.current > 0; }).length

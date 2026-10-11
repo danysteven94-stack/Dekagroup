@@ -13,6 +13,7 @@ const StockEntries = require("./stockentries");
 const Goods = require("./goods");
 const Invoices = require("./invoices");
 const Slips = require("./slips");
+const { dedupe } = require("./dedupe");
 const { ApiError } = require("./errors");
 
 const ROLES = ["administration"];
@@ -47,32 +48,15 @@ async function readPool(pool) {
   }
 }
 
-// The figures are EXACTLY what the logistic administrator and the depot enter: nothing is filtered out, merged or dropped.
-// (Containers that already left and were added from the archive have no division: they are counted too.)
+// The figures are what the logistic administrator and the depot enter, WITHOUT duplicates: the same container or bill recorded
+// twice is shown once, from its most reliable record (see dedupe.js). Containers that already left and were added from the
+// archive have no division: they are counted too. Nothing is removed from any database.
 function counts(p) {
   if (!p.ok) return Object.assign(p, { total: 0, noDivision: 0 });
   return Object.assign(p, {
     total: p.containers.length,
     noDivision: p.containers.filter(function (c) { return !c.division; }).length,
   });
-}
-
-// Warns (never drops) when a database holds the very same containers as an earlier one: same id AND same number means the
-// data was copied, so the totals would count them twice. The screen shows the warning so it can be fixed at the source.
-function flagCopies(pools) {
-  const owner = {};
-  pools.forEach(function (p) {
-    if (!p.ok) return;
-    const hit = {};
-    p.containers.forEach(function (c) {
-      const k = c.id + "|" + c.numewo;
-      if (owner[k] && owner[k] !== p.pool) hit[owner[k]] = (hit[owner[k]] || 0) + 1;
-      else if (!owner[k]) owner[k] = p.pool;
-    });
-    const from = Object.keys(hit).sort(function (a, b) { return hit[b] - hit[a]; })[0];
-    if (from) { p.copyOf = from; p.copyCount = hit[from]; }
-  });
-  return pools;
 }
 
 module.exports = async function handler(req, res) {
@@ -85,7 +69,7 @@ module.exports = async function handler(req, res) {
     const session = await A.requireAuth(req, res, ROLES);
     if (!session) return;
     const pools = Div.poolsOf(Div.ALL);
-    const out = flagCopies((await Promise.all(pools.map(readPool))).map(counts));
+    const out = dedupe(await Promise.all(pools.map(readPool))).map(counts);
     res.status(200).json({ pools: out, at: new Date().toISOString() });
   } catch (err) {
     console.error("overview error:", err && err.message);
@@ -93,4 +77,3 @@ module.exports = async function handler(req, res) {
   }
 };
 module.exports.ROLES = ROLES;
-module.exports._flagCopies = flagCopies; // for the tests

@@ -17,6 +17,8 @@ Administratè a kreye kont lan nan «Itilizatè» epi chwazi wòl «Administrati
 - **Lekti sèlman**: pesonn pa ka chanje anyen ladan l. Wòl la pa ka ekri okenn done, ni li `/api/data`, `/api/payments` oswa jere kont yo.
 - Paj la: `public/js/views/administration.js` (+ `overview.js`, `events-administration.js`) · API: `api/_lib/overview.js` (rele via `/api/overview`, ki pataje fonksyon `api/admin.js` pou rete anba limit 12 fonksyon Vercel Hobby a).
 - Chak divizyon gen pwòp baz done li: API a li yo youn apre lòt. Si yon baz done pa konfigire oswa li pa reponn, paj la montre yon avètisman epi rès la kontinye afiche.
+- **Pa gen done doub** (`api/_lib/dedupe.js`): yon kontenè oswa yon bill ki anrejistre plizyè fwa parèt yon sèl fwa, ak dosye ki pi fyab la (sa ki pi avanse, epi sa ki gen plis enfòmasyon; yon kontenè ki deja soti pa janm rete «Full»). Menm kontenè ki tounen pita sou yon lòt bill/vwayaj rete de vwayaj diferan. Anyen pa efase nan baz yo.
+- Administration DEKA pa montre «Pran», «Poko Verifye» ni «Ijan»: yon kontenè pran men poko antre konte kòm «Disponib», yon kontenè ki antre men poko verifye konte kòm «Full».
 - Estòk la kalkile pou kont li (menm règ ak Inventè Depo a), baz done pa baz done, paske nimewo bill yo pa inik ant de baz done.
 - Sèvè demo lokal la (`node tools/dev-server.js`) gen yon kont `administration` / `demo-administration-1234`. Li gen yon sèl baz done, kidonk lòt divizyon yo make «pa disponib».
 

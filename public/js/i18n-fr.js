@@ -1035,6 +1035,8 @@ export const EXACT = {
   "Peze «Peman» sou yon bill. Mete ki monte li vo, epi dat ou resevwa chèk la, dat li peye (lè brokè a pote l ale), ak dat ou konfime.": "Appuyez sur « Paiement » sur un Bill. Indiquez sa valeur, puis la date de réception du chèque, la date du paiement (quand le courtier l'a emporté) et la date de confirmation.",
   "Koche plizyè bill epi konfime yon sèl peman pou yo tout. Ou mete montan chak bill separeman.": "Cochez plusieurs Bills et confirmez un seul paiement pour tous. Vous indiquez le montant de chaque Bill séparément.",
   // ---- Administration DEKA (read-only view over every division)
+  "Doub retire": "Doublons écartés",
+  "Pa gen done doub: yon kontenè oswa yon bill ki anrejistre plizyè fwa parèt yon sèl fwa, ak dosye ki pi fyab la (yon kontenè ki deja soti pa janm rete Full). «Doub retire» di konbyen dosye ki pa konte. Anyen pa efase nan baz yo. Peze sou yon liy pou wè sèlman baz sa a.": "Aucune donnée en double : un conteneur ou un Bill enregistré plusieurs fois n’apparaît qu’une fois, avec son enregistrement le plus fiable (un conteneur déjà sorti ne reste jamais Plein). « Doublons écartés » indique combien d’enregistrements ne sont pas comptés. Rien n’est supprimé dans les bases. Appuyez sur une ligne pour voir uniquement cette base.",
   "Pa Baz Done": "Par base de données",
   "Baz": "Base",
   "Bill fini": "Bills terminés",

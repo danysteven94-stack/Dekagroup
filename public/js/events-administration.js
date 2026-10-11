@@ -85,7 +85,7 @@ document.addEventListener("click", function (event) {
     if (tab === "stock" && !n.hasAttribute("data-filter")) A.invFilter = "";
   } else if (a === "adm-status") {
     var s = n.getAttribute("data-status");
-    A.cStatus = CONTAINER_STATUSES.indexOf(s) !== -1 || s === "ijan" ? s : "";
+    A.cStatus = CONTAINER_STATUSES.indexOf(s) !== -1 ? s : "";
     A.limit = PAGE;
   } else if (a === "adm-bstatus") {
     A.bStatus = n.getAttribute("data-bstatus") || "";
