@@ -268,3 +268,5 @@ div.adm-kpi{cursor:default;}
   .adm-division{flex:1;min-width:0;}
   .adm-search{max-width:none;}
 }
+.adm-on td{background:#E8F3F4;}
+.adm-total td{background:#F8FAFB;border-top:2px solid var(--line);}

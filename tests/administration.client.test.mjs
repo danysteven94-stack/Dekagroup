@@ -13,6 +13,7 @@ const results = [];
 const test = async (name, fn) => { try { await fn(); results.push([true, name]); } catch (e) { results.push([false, name, e]); } };
 
 const TODAY = "2026-10-10";
+const today = () => new Date().toISOString().slice(0, 10);
 // Two databases that both use bill id "b1" for a different product: they must never be mixed up.
 const POOLS = () => [
   { pool: "default", divisions: ["CRISTO AL", "CRISTO COMM", "CONFIDEKA", "DEKAV"], ok: true,
@@ -90,6 +91,38 @@ await test("containers with no division (archived, already left) count in the to
   assert.strictEqual(summarize(M, NO_DIVISION, TODAY).containers, 2);
   assert.strictEqual(M.poolStatus[0].noDivision, 2);
   assert.strictEqual(M.poolStatus[0].total, 5);
+});
+
+await test("same figures as the logistic administrator's Tableau de bord (568 / 3 / 0 / 1 / 10 / 17 / 538 / 7 / 15 / 206)", () => {
+  const day = (n) => new Date(Date.now() - n * 86400000).toISOString().slice(0, 10);
+  const cs = []; let n = 0;
+  const add = (count, fields) => { for (let i = 0; i < count; i++) { n++; cs.push(Object.assign({ id: "k" + n, numewo: "TST" + String(n).padStart(7, "0"), billId: "bl" + ((n % 221) + 1), size: "40", division: n % 3 ? "CRISTO AL" : null }, fields)); } };
+  add(3, {});                                                                        // Disponib
+  add(1, { dateEntered: day(2) });                                                   // Poko Verifye
+  add(9, { dateEntered: day(2), dateVerified: day(1) });                             // Full (+ the one above = the Plein card, 10)
+  add(10, { dateEntered: day(30), dateVerified: day(29), dateEmpty: day(1) });       // Vid
+  add(7, { dateEntered: day(30), dateVerified: day(29), dateEmpty: day(12) });       // Vid for more than 5 days = Urgent
+  add(538, { dateEntered: day(300), dateVerified: day(299), dateEmpty: day(200), dateLeft: day(100) }); // Kite (many from the Achiv)
+  const bills = []; for (let i = 1; i <= 221; i++) bills.push({ id: "bl" + i, numewo: "BL" + i, product: "X" });
+  const P = [{ pool: "default", divisions: ["CRISTO AL", "CRISTO COMM", "CONFIDEKA", "DEKAV"], ok: true, containers: cs, bills, stock: [], slips: [], goods: [], invoices: [] }];
+  const M = buildOverview(P, today());
+  const S = summarize(M, "pool:default", today());
+  assert.strictEqual(S.containers, 568);
+  assert.strictEqual(S.disponib, 3);
+  assert.strictEqual(S.pran, 0);
+  assert.strictEqual(S.pokoverifye, 1);
+  assert.strictEqual(S.fullAll, 10);
+  assert.strictEqual(S.vid, 17);
+  assert.strictEqual(S.kite, 538);
+  assert.strictEqual(S.urgent, 7);
+  assert.strictEqual(summarize(M, "", today()).containers, 568, "with one database, Tout = that database");
+});
+
+await test("a database can be looked at on its own, exactly like the logistic administrator does", () => {
+  const M = buildOverview(POOLS(), TODAY);
+  assert.strictEqual(forDivision(M.containers, "pool:default").length, 3);
+  assert.strictEqual(forDivision(M.containers, "pool:acs").length, 1);
+  assert.strictEqual(summarize(M, "pool:acs", TODAY).containers, 1);
 });
 
 await test("an empty or missing answer gives an empty model, not an error", () => {

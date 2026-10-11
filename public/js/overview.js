@@ -13,6 +13,7 @@ import { render } from "./render.js";
 import { state } from "./state.js";
 import {
   billStatus,
+  isUrgent,
   statusOf,
   today
 } from "./utils.js";
@@ -46,7 +47,9 @@ export function buildOverview(pools, todayStr) {
       pool: p.pool, divisions: p.divisions || [], ok: !!p.ok, error: p.error || "",
       total: (p.containers || []).length,
       noDivision: (p.containers || []).filter(function (c) { return !c.division; }).length,
-      left: (p.containers || []).filter(function (c) { return !!c.dateLeft; }).length
+      left: (p.containers || []).filter(function (c) { return !!c.dateLeft; }).length,
+      copyOf: p.copyOf || "",
+      copyCount: p.copyCount || 0
     });
     if (!p.ok) {
       return;
@@ -113,6 +116,13 @@ export function forDivision(list, division) {
   if (!division) {
     return list;
   }
+  if (division.indexOf("pool:") === 0) {
+    // one whole database, exactly as the logistic administrator sees it (archived containers with no division included)
+    var pool = division.slice(5);
+    return list.filter(function (x) {
+      return x._pool === pool;
+    });
+  }
   if (division === NO_DIVISION) {
     return list.filter(function (x) {
       return !x.division;
@@ -154,6 +164,9 @@ export function summarize(model, division, todayStr) {
     full: count("full"),
     vid: count("vid"),
     kite: count("kite"),
+    pran: count("pran"),
+    fullAll: count("full") + count("pokoverifye"),
+    urgent: cs.filter(isUrgent).length,
     billsAktif: bills.filter(function (b) { return b.status === "aktif"; }).length,
     billsPlanifye: bills.filter(function (b) { return b.status === "planifye"; }).length,
     billsFini: bills.filter(function (b) { return b.status === "fini"; }).length,

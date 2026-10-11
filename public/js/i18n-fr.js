@@ -1035,6 +1035,10 @@ export const EXACT = {
   "Peze «Peman» sou yon bill. Mete ki monte li vo, epi dat ou resevwa chèk la, dat li peye (lè brokè a pote l ale), ak dat ou konfime.": "Appuyez sur « Paiement » sur un Bill. Indiquez sa valeur, puis la date de réception du chèque, la date du paiement (quand le courtier l'a emporté) et la date de confirmation.",
   "Koche plizyè bill epi konfime yon sèl peman pou yo tout. Ou mete montan chak bill separeman.": "Cochez plusieurs Bills et confirmez un seul paiement pour tous. Vous indiquez le montant de chaque Bill séparément.",
   // ---- Administration DEKA (read-only view over every division)
+  "Pa Baz Done": "Par base de données",
+  "Baz": "Base",
+  "Bill fini": "Bills terminés",
+  "Chak liy se egzakteman sa Tablo de bord Lojistik la montre pou baz sa a (kontenè Achiv ki pa gen divizyon yo ladan l). Peze sou yon liy pou wè sèlman baz sa a.": "Chaque ligne correspond exactement à ce que le Tableau de bord Logistique affiche pour cette base (les conteneurs d’Archives sans division y sont inclus). Appuyez sur une ligne pour voir uniquement cette base.",
   "Deja soti": "Déjà sortis",
   "(achiv)": "(archives)",
   "Eta": "État",
@@ -1119,6 +1123,9 @@ export const PATTERNS = [
   // Chofè page (texts that were missing)
   [/^(\d+) kontenè vid pou (.+)$/, (n, t) => `${ n } conteneur${ plural(n, "", "s") } vide${ plural(n, "", "s") } pour ${ t }`],
   // Administration DEKA
+  [/^Baz: (.+)$/, (names) => `Base : ${ names }`],
+  [/^⚠ Ijan \((\d+)\)$/, (n) => `⚠ Urgent (${ n })`],
+  [/^Baz (.+) gen (\d+) kontenè ki idantik ak baz (.+)\. Posib se menm done yo ki kopye: yo konte de fwa nan total la\.$/, (a, n, b) => `La base ${ a } contient ${ n } conteneur${ Number(n) > 1 ? "s" : "" } identique${ Number(n) > 1 ? "s" : "" } à ceux de la base ${ b }. Les données ont peut-être été copiées : ils sont comptés deux fois dans le total.`],
   [/^(\d+) nan (\d+) kontenè$/, (n, m) => `${ n } sur ${ m } conteneur${ Number(m) > 1 ? "s" : "" }`],
   [/^(\d+) nan (\d+) liy pwodwi$/, (n, m) => `${ n } sur ${ m } ligne${ Number(m) > 1 ? "s" : "" } produit`],
   [/^Montre plis \((\d+) ankò\)$/, (n) => `Afficher plus (${ n } de plus)`],

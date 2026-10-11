@@ -108,6 +108,20 @@ const seed = () => H.setData({
     assert.strictEqual(def.noDivision, 2);
   });
 
+  await test("a database that is a copy of another one is flagged (never dropped), a different one is not", async () => {
+    const O = require("../api/_lib/overview");
+    const c = (id, n) => ({ id: id, numewo: n });
+    const mk = (pool, list) => ({ pool: pool, ok: true, containers: list });
+    const same = O._flagCopies([mk("default", [c("1", "A"), c("2", "B")]), mk("acs", [c("1", "A"), c("2", "B"), c("3", "C")])]);
+    assert.strictEqual(same[1].copyOf, "default");
+    assert.strictEqual(same[1].copyCount, 2);
+    assert.strictEqual(same[1].containers.length, 3, "nothing is removed");
+    assert.strictEqual(same[0].copyOf, undefined);
+    const other = O._flagCopies([mk("default", [c("1", "A")]), mk("acs", [c("9", "Z")])]);
+    assert.strictEqual(other[1].copyOf, undefined);
+    assert.strictEqual(O._flagCopies([mk("default", [c("1", "A")]), { pool: "acs", ok: false, containers: [] }])[1].copyOf, undefined);
+  });
+
   await test("a division whose database is not configured is reported, it does not break the others", async () => {
     const admin = await legacyAdmin();
     await seed();

@@ -168,7 +168,7 @@ state.drUnlocked = false;
 
 // Administration DEKA (read-only view over every division): what the person is looking at and the data loaded.
 export function freshAdm() {
-  return { tab: "apercu", division: "", search: "", cStatus: "", invFilter: "", moveKind: "stock", limit: 200, loaded: false, loading: false, err: "", model: null, at: null };
+  return { tab: "apercu", division: "", search: "", cStatus: "", bStatus: "", invFilter: "", moveKind: "stock", limit: 200, loaded: false, loading: false, err: "", model: null, at: null };
 }
 
 state.adm = freshAdm();

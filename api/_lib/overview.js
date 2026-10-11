@@ -57,6 +57,24 @@ function counts(p) {
   });
 }
 
+// Warns (never drops) when a database holds the very same containers as an earlier one: same id AND same number means the
+// data was copied, so the totals would count them twice. The screen shows the warning so it can be fixed at the source.
+function flagCopies(pools) {
+  const owner = {};
+  pools.forEach(function (p) {
+    if (!p.ok) return;
+    const hit = {};
+    p.containers.forEach(function (c) {
+      const k = c.id + "|" + c.numewo;
+      if (owner[k] && owner[k] !== p.pool) hit[owner[k]] = (hit[owner[k]] || 0) + 1;
+      else if (!owner[k]) owner[k] = p.pool;
+    });
+    const from = Object.keys(hit).sort(function (a, b) { return hit[b] - hit[a]; })[0];
+    if (from) { p.copyOf = from; p.copyCount = hit[from]; }
+  });
+  return pools;
+}
+
 module.exports = async function handler(req, res) {
   try {
     if (req.method !== "GET") {
@@ -67,7 +85,7 @@ module.exports = async function handler(req, res) {
     const session = await A.requireAuth(req, res, ROLES);
     if (!session) return;
     const pools = Div.poolsOf(Div.ALL);
-    const out = (await Promise.all(pools.map(readPool))).map(counts);
+    const out = flagCopies((await Promise.all(pools.map(readPool))).map(counts));
     res.status(200).json({ pools: out, at: new Date().toISOString() });
   } catch (err) {
     console.error("overview error:", err && err.message);
@@ -75,3 +93,4 @@ module.exports = async function handler(req, res) {
   }
 };
 module.exports.ROLES = ROLES;
+module.exports._flagCopies = flagCopies; // for the tests

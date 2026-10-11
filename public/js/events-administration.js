@@ -78,13 +78,17 @@ document.addEventListener("click", function (event) {
     var tab = n.getAttribute("data-tab");
     go(tab);
     if (n.hasAttribute("data-status")) A.cStatus = n.getAttribute("data-status");
+    A.bStatus = n.hasAttribute("data-bstatus") ? n.getAttribute("data-bstatus") : "";
     if (n.hasAttribute("data-filter")) A.invFilter = n.getAttribute("data-filter");
     if (n.hasAttribute("data-kind")) A.moveKind = n.getAttribute("data-kind");
     if (tab === "containers" && !n.hasAttribute("data-status")) A.cStatus = "";
     if (tab === "stock" && !n.hasAttribute("data-filter")) A.invFilter = "";
   } else if (a === "adm-status") {
     var s = n.getAttribute("data-status");
-    A.cStatus = CONTAINER_STATUSES.indexOf(s) !== -1 ? s : "";
+    A.cStatus = CONTAINER_STATUSES.indexOf(s) !== -1 || s === "ijan" ? s : "";
+    A.limit = PAGE;
+  } else if (a === "adm-bstatus") {
+    A.bStatus = n.getAttribute("data-bstatus") || "";
     A.limit = PAGE;
   } else if (a === "adm-inv-filter") {
     A.invFilter = n.getAttribute("data-filter") || "";
