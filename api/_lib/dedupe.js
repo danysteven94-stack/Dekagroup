@@ -84,6 +84,11 @@ function dedupe(pools) {
     if (p.ok) p.containers = p.containers.filter(function (c) { return !drop.has(c); });
   });
 
+  // ---- each container goes to the database of ITS division (ACS -> ACS, MIKADO -> MIKADO, CRISTO AL -> shared database ...).
+  // A container with no division stays where it is. Its bill follows it (an existing bill with the same number is reused), and when
+  // every container of a bill moved, the bill's stock, goods and invoices move with it, so the inventory stays right database by database.
+  rehome(pools);
+
   // ---- bills: the same bill number = the same bill. Keep the one with the most containers.
   const count = function (p, id) { return p.containers.filter(function (c) { return c.billId === id; }).length; };
   const used = function (p, id) {
@@ -150,6 +155,63 @@ function dedupe(pools) {
     p.dupOther = s.dupOther;
   });
   return pools;
+}
+
+// pools: same objects as dedupe(); moves records between them (nothing is written to any database).
+function rehome(pools) {
+  const byPool = {};
+  pools.forEach(function (p) { if (p.ok) byPool[p.pool] = p; });
+  const freeId = function (list, id) {
+    let n = id, i = 1;
+    while (list.some(function (x) { return x.id === n; })) n = id + "-" + (i++);
+    return n;
+  };
+  const stats = {};
+  pools.forEach(function (p) { if (p.ok) stats[p.pool] = 0; });
+  pools.forEach(function (S) {
+    if (!S.ok) return;
+    const moved = {}; // source bill id -> { T: target pool, tid: bill id there, mixed: bool }
+    S.containers.slice().forEach(function (c) {
+      const T = c.division ? byPool[Div.poolOf(c.division)] : null;
+      if (!T || T === S) return;
+      let tid = null;
+      if (c.billId) {
+        const sb = S.bills.find(function (b) { return b.id === c.billId; });
+        if (sb) {
+          let tb = T.bills.find(function (b) { return norm(b.numewo) && norm(b.numewo) === norm(sb.numewo); });
+          if (!tb) { tb = Object.assign({}, sb, { id: freeId(T.bills, sb.id) }); T.bills.push(tb); }
+          tid = tb.id;
+          const m = moved[sb.id];
+          if (!m) moved[sb.id] = { T: T, tid: tid, mixed: false };
+          else if (m.T !== T) m.mixed = true;
+        }
+      }
+      const nc = Object.assign({}, c, { billId: tid, id: freeId(T.containers, c.id) });
+      S.containers.splice(S.containers.indexOf(c), 1);
+      T.containers.push(nc);
+      stats[S.pool]--; stats[T.pool]++;
+    });
+    Object.keys(moved).forEach(function (bid) {
+      const m = moved[bid];
+      if (m.mixed || S.containers.some(function (c) { return c.billId === bid; })) return; // still used here: its records stay
+      ["stock", "goods", "invoices"].forEach(function (k) {
+        S[k] = S[k].filter(function (x) {
+          if (x.billId !== bid) return true;
+          m.T[k].push(Object.assign({}, x, { billId: m.tid }));
+          return false;
+        });
+      });
+      S.slips = S.slips.filter(function (sl) {
+        const items = Array.isArray(sl.items) ? sl.items : [];
+        const ok = items.length && items.every(function (it) { return it.billId === bid; }) && Div.poolOf(sl.division) === m.T.pool;
+        if (!ok) return true;
+        m.T.slips.push(Object.assign({}, sl, { items: items.map(function (it) { return Object.assign({}, it, { billId: m.tid }); }) }));
+        return false;
+      });
+      S.bills = S.bills.filter(function (b) { return b.id !== bid; });
+    });
+  });
+  pools.forEach(function (p) { if (p.ok) p.rehomed = stats[p.pool]; });
 }
 
 module.exports = { dedupe, rank };

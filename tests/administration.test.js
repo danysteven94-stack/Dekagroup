@@ -189,6 +189,37 @@ const seed = () => H.setData({
     assert.ok(!r[0].containers[0].division);
   });
 
+  await test("each container is counted in the database of its division; no division = stays where it is", async () => {
+    const { dedupe } = require("../api/_lib/dedupe");
+    const mk = (pool, o) => Object.assign({ pool: pool, ok: true, divisions: [], containers: [], bills: [], stock: [], goods: [], invoices: [], slips: [] }, o);
+    const c = (id, n, o) => Object.assign({ id: id, numewo: n, billId: "b1", division: null, dateEntered: "2026-09-01", dateVerified: "2026-09-02", dateEmpty: null, dateLeft: null }, o || {});
+    const bill = (id, n) => ({ id: id, numewo: n, product: "Diri", completedAt: null });
+    const r = dedupe([
+      // shared database holds everything (old data), with the division written on each container
+      mk("default", {
+        containers: [c("1", "K1", { division: "CRISTO AL" }), c("2", "K2", { division: "ACS" }), c("3", "K3", { division: "MIKADO", billId: "b2" }), c("4", "K4")],
+        bills: [bill("b1", "B-1"), bill("b2", "B-2")],
+        stock: [{ id: "s1", billId: "b2", entryDate: "2026-09-03", description: "Sik", quantity: "5", unit: "sak" }],
+      }),
+      // ACS database holds a copy of K2 (same bill number, other id)
+      mk("acs", { containers: [c("x", "K2", { division: "ACS", billId: "a1" })], bills: [bill("a1", "B-1")] }),
+      mk("mikado", {}),
+    ]);
+    const by = (n) => r.find((p) => p.pool === n);
+    const names = (p) => p.containers.map((x) => x.numewo).sort();
+    assert.deepStrictEqual(names(by("default")), ["K1", "K4"], "CRISTO AL and the one with no division stay in the shared database");
+    assert.deepStrictEqual(names(by("acs")), ["K2"], "ACS container is counted in ACS, once");
+    assert.deepStrictEqual(names(by("mikado")), ["K3"], "MIKADO container moved to the MIKADO database");
+    assert.strictEqual(by("acs").containers[0].billId, "a1", "it uses the bill that already exists in ACS");
+    const mb = by("mikado");
+    assert.strictEqual(mb.bills.length, 1);
+    assert.strictEqual(mb.containers[0].billId, mb.bills[0].id, "its bill followed it");
+    assert.strictEqual(mb.stock.length, 1, "the stock of the bill followed it");
+    assert.strictEqual(mb.stock[0].billId, mb.bills[0].id);
+    assert.strictEqual(by("default").stock.length, 0);
+    assert.ok(!by("default").containers.find((x) => x.numewo === "K4").division, "no division stays no division");
+  });
+
   await test("a division whose database is not configured is reported, it does not break the others", async () => {
     const admin = await legacyAdmin();
     await seed();
