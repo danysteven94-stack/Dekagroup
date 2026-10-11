@@ -168,6 +168,27 @@ const seed = () => H.setData({
     assert.strictEqual(r.stock.length, 1);
   });
 
+  await test("duplicated container: the division comes from the data; with no division anywhere it stays without division", async () => {
+    const { dedupe } = require("../api/_lib/dedupe");
+    const mk = (pool, o) => Object.assign({ pool: pool, ok: true, divisions: [], containers: [], bills: [], stock: [], goods: [], invoices: [], slips: [] }, o);
+    const c = (id, n, o) => Object.assign({ id: id, numewo: n, billId: "b1", division: null, dateEntered: "2026-09-01", dateVerified: null, dateEmpty: null, dateLeft: null }, o || {});
+    const bills = [{ id: "b1", numewo: "B-1", product: "Diri", completedAt: null }];
+    const all = (r) => [].concat.apply([], r.map((p) => p.containers));
+    // the most reliable record (it left) has no division: it takes the one written on the other record
+    let r = dedupe([mk("default", { containers: [c("1", "X1", { dateLeft: "2026-09-10" })], bills: bills }), mk("acs", { containers: [c("2", "X1", { division: "ACS" })], bills: bills })]);
+    assert.strictEqual(all(r).length, 1);
+    assert.strictEqual(all(r)[0].division, "ACS");
+    assert.ok(all(r)[0].dateLeft);
+    // no record has a division: the container is kept without division (never guessed from the database)
+    r = dedupe([mk("default", { containers: [c("1", "X2")], bills: bills }), mk("acs", { containers: [c("2", "X2", { dateLeft: "2026-09-10" })], bills: bills })]);
+    assert.strictEqual(all(r).length, 1);
+    assert.ok(!all(r)[0].division);
+    // a container with no duplicate and no division is left alone
+    r = dedupe([mk("acs", { containers: [c("3", "X3")], bills: bills })]);
+    assert.strictEqual(r[0].containers.length, 1);
+    assert.ok(!r[0].containers[0].division);
+  });
+
   await test("a division whose database is not configured is reported, it does not break the others", async () => {
     const admin = await legacyAdmin();
     await seed();

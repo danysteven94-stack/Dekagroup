@@ -9,6 +9,7 @@
 // Two records with the same container number are the same trip unless they clearly are two trips: two different bills, or one
 // trip started after the other one had already left (the container came back later).
 
+const Div = require("./divisions");
 const norm = (v) => String(v == null ? "" : v).trim().toUpperCase().replace(/\s+/g, " ");
 const has = (v) => v !== null && v !== undefined && v !== "";
 
@@ -60,6 +61,13 @@ function dedupe(pools) {
       t.sort(function (a, b) { return rank(b.c) - rank(a.c) || info(b.c) - info(a.c) || (b.c.division ? 1 : 0) - (a.c.division ? 1 : 0); });
       const best = t[0];
       const merged = Object.assign({}, best.c);
+      // Division of a duplicated container, taken from the data (never guessed): a division written on a record that lives in
+      // the database of that division is the strongest evidence; otherwise the most reliable record that has one. No record
+      // with a division = the container stays without division.
+      const withDiv = t.filter(function (r) { return has(r.c.division); });
+      const owned = withDiv.filter(function (r) { return Div.poolOf(r.c.division) === r.pool.pool; });
+      const pick = owned[0] || withDiv[0];
+      if (pick) merged.division = pick.c.division;
       t.slice(1).forEach(function (o) {
         FIELDS.forEach(function (f) {
           // dates of a later stage are never copied onto an earlier one (that would invent a status)
