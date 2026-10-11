@@ -1035,6 +1035,15 @@ export const EXACT = {
   "Peze «Peman» sou yon bill. Mete ki monte li vo, epi dat ou resevwa chèk la, dat li peye (lè brokè a pote l ale), ak dat ou konfime.": "Appuyez sur « Paiement » sur un Bill. Indiquez sa valeur, puis la date de réception du chèque, la date du paiement (quand le courtier l'a emporté) et la date de confirmation.",
   "Koche plizyè bill epi konfime yon sèl peman pou yo tout. Ou mete montan chak bill separeman.": "Cochez plusieurs Bills et confirmez un seul paiement pour tous. Vous indiquez le montant de chaque Bill séparément.",
   // ---- Administration DEKA (read-only view over every division)
+  "Pa disponib": "Indisponible",
+  "Baz Done yo": "Bases de données",
+  "Kontenè nan baz la": "Conteneurs dans la base",
+  "Konte": "Comptés",
+  "Lòt divizyon": "Autres divisions",
+  "Doub": "Doublons",
+  "Eta": "État",
+  "Yon kontenè konte yon sèl fwa, nan baz divizyon li an. Sa ki nan yon baz ki pa pou li oswa ki doub egzakteman pa konte (anyen pa efase nan baz yo).": "Un conteneur est compté une seule fois, dans la base de sa division. Ce qui se trouve dans une base qui n’est pas la sienne ou qui est en double exact n’est pas compté (rien n’est supprimé dans les bases).",
+  "Gade «Baz Done yo» anba a.": "Voir « Bases de données » ci-dessous.",
   "Chwazi trucking ou anlè a pou w wè kontenè vid ki pou ou yo.": "Choisissez votre trucking en haut pour voir les conteneurs vides qui vous sont destinés.",
   "Mouvman": "Mouvements",
   "Lekti sèlman · tout divizyon": "Lecture seule · toutes les divisions",
@@ -1113,6 +1122,8 @@ export const PATTERNS = [
   // Chofè page (texts that were missing)
   [/^(\d+) kontenè vid pou (.+)$/, (n, t) => `${ n } conteneur${ plural(n, "", "s") } vide${ plural(n, "", "s") } pour ${ t }`],
   // Administration DEKA
+  [/^(\d+) done pa konte paske yo pa nan bon baz la oswa yo doub\. Gade «Baz Done yo» anba a\.$/, (n) => `${ n } donnée${ Number(n) > 1 ? "s" : "" } non comptée${ Number(n) > 1 ? "s" : "" } (hors de la bonne base ou en double). Voir « Bases de données » ci-dessous.`],
+  [/^(\d+) pa konte$/, (n) => `${ n } non compté${ Number(n) > 1 ? "s" : "" }`],
   [/^(\d+) nan (\d+) kontenè$/, (n, m) => `${ n } sur ${ m } conteneur${ Number(m) > 1 ? "s" : "" }`],
   [/^(\d+) nan (\d+) liy pwodwi$/, (n, m) => `${ n } sur ${ m } ligne${ Number(m) > 1 ? "s" : "" } produit`],
   [/^Montre plis \((\d+) ankò\)$/, (n) => `Afficher plus (${ n } de plus)`],

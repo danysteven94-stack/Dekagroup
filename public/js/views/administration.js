@@ -143,6 +143,16 @@ function poolBanner(M) {
   return `<div class="alert" style="margin-bottom:16px">${ icon("alert", 14) }<div>Done sa yo pa disponib kounye a (baz done a pa konfigire oswa li pa reponn): <strong>${ esc(names) }</strong>. Sa ki afiche a pa gen yo.</div></div>`;
 }
 
+// What was read from each database and what was left out so the totals stay real.
+function sourcesCard(M) {
+  var rows = M.poolStatus.map(function (p) {
+    var left = p.foreign + p.duplicates;
+    var state = !p.ok ? `<span style="color:${ COLORS.rust }">Pa disponib</span>` : left ? `<span style="color:${ COLORS.rust }">${ left } pa konte</span>` : `<span style="color:${ COLORS.green }">OK</span>`;
+    return `<tr><td>${ p.divisions.map(function (d) { return `<span class="adm-div">${ esc(d) }</span>`; }).join(" ") }</td><td class="num">${ p.ok ? p.raw : "\u2014" }</td><td class="num">${ p.ok ? p.kept : "\u2014" }</td><td class="num">${ p.ok ? p.foreign : "\u2014" }</td><td class="num">${ p.ok ? p.duplicates : "\u2014" }</td><td>${ state }</td></tr>`;
+  }).join("");
+  return `<div class="card adm-card"><div class="h3">Baz Done yo</div><div class="adm-table-wrap"><table class="adm-table"><thead><tr><th>Divizyon</th><th class="num">Kontenè nan baz la</th><th class="num">Konte</th><th class="num">Lòt divizyon</th><th class="num">Doub</th><th>Eta</th></tr></thead><tbody>${ rows }</tbody></table></div><div class="form-hint" style="margin-top:8px">Yon kontenè konte yon sèl fwa, nan baz divizyon li an. Sa ki nan yon baz ki pa pou li oswa ki doub egzakteman pa konte (anyen pa efase nan baz yo).</div></div>`;
+}
+
 function divisionDown(M, d) {
   return M.poolStatus.some(function (p) { return !p.ok && p.divisions.indexOf(d) !== -1; });
 }
@@ -197,7 +207,9 @@ function overviewView(M) {
     return `<div class="adm-line"><div class="adm-grow"><strong style="color:var(--navy)">Bon # ${ esc(s.slipNumber || "\u2014") }</strong><div class="adm-muted">${ divCell(s.division) } \u00B7 ${ esc(s.clientName || "\u2014") }</div></div><span class="adm-muted">${ formatDateShort(s.slipDate) }</span></div>`;
   }).join("") : `<div class="adm-muted">Poko gen fich livrezon.</div>`;
 
-  return `${ poolBanner(M) }<div class="grid-kpi">${ kpis }</div>${ divisionTable }<div class="adm-two"><div class="card adm-card"><div class="h3">Kontenè ki Ijan</div>${ urgentHtml }</div><div class="card adm-card"><div class="h3">Estòk k ap Ekspire</div>${ expiringHtml }</div></div><div class="card adm-card"><div class="h3">Dènye Fich Livrezon</div>${ slipsHtml }</div>`;
+  var removed = M.poolStatus.reduce(function (t, p) { return t + p.foreign + p.duplicates; }, 0);
+  var removedBanner = removed ? `<div class="alert" style="margin-bottom:16px">${ icon("alert", 14) }<div>${ removed } done pa konte paske yo pa nan bon baz la oswa yo doub. Gade «Baz Done yo» anba a.</div></div>` : "";
+  return `${ poolBanner(M) }${ removedBanner }<div class="grid-kpi">${ kpis }</div>${ divisionTable }<div class="adm-two"><div class="card adm-card"><div class="h3">Kontenè ki Ijan</div>${ urgentHtml }</div><div class="card adm-card"><div class="h3">Estòk k ap Ekspire</div>${ expiringHtml }</div></div><div class="card adm-card"><div class="h3">Dènye Fich Livrezon</div>${ slipsHtml }</div>${ sourcesCard(M) }`;
 }
 
 // ---- Kontenè ----

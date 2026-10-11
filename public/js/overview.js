@@ -42,7 +42,10 @@ export function buildOverview(pools, todayStr) {
     poolStatus: []
   };
   (pools || []).forEach(function (p) {
-    m.poolStatus.push({ pool: p.pool, divisions: p.divisions || [], ok: !!p.ok, error: p.error || "" });
+    m.poolStatus.push({
+      pool: p.pool, divisions: p.divisions || [], ok: !!p.ok, error: p.error || "",
+      raw: p.raw || 0, kept: (p.containers || []).length, foreign: p.foreign || 0, duplicates: p.duplicates || 0
+    });
     if (!p.ok) {
       return;
     }

@@ -238,7 +238,8 @@ async function test(name, fn) {
   });
 
   await test("Administration DEKA: login opens the read-only view, every tab renders, division filter and search work, nothing is written", async () => {
-    await H.setData(seed());
+    const k = (id, n, division, extra) => Object.assign({ id: id, numewo: n, billId: null, size: "40", division: division, dateEntered: "2026-09-10", dateVerified: "2026-09-10", depo: "Depo A", trucking: "CFC", dateEmpty: null, dateLeft: null }, extra || {});
+    await H.setData({ containers: [k("c1", "FULL0000001", "CRISTO AL"), k("c2", "VIDD0000002", "CRISTO AL", { dateEmpty: "2026-09-15" }), k("c3", "POKO0000003", "DEKAV", { dateVerified: null }), k("c9", "ACSX0000009", "ACS")], bills: [], notifications: [], inventoryChecks: {} });
     const Users = require("../api/_lib/users"); const Auth = require("../api/_lib/auth");
     await Users.create({ username: "adm.paul", name: "Paul Administration", role: "administration", passHash: await Auth.hashPassword("Administration-Strong-Pass-9"), mustChange: false, divisions: [], createdBy: "test" });
     const b = H.browser(); const pg = openPage(b); await pg.settle();
@@ -246,9 +247,10 @@ async function test(name, fn) {
     await pg.settle();
     assert.ok(pg.has("Apèsi") && pg.has("Lekti sèlman"), "the Administration DEKA overview opens");
     assert.ok(!pg.has('id="gate-form"'), "logged in");
-    assert.ok(pg.has("ACS") && pg.has("DEKAV"), "the divisions are listed");
+    assert.ok(pg.has("CRISTO AL") && pg.has("DEKAV"), "the divisions are listed");
     pg.click({ "data-action": "adm-tab", "data-tab": "containers" });
-    assert.ok(pg.has("FULL0000001") && pg.has("VIDD0000002") && pg.has("POKO0000003"), "every container of every division is listed");
+    assert.ok(pg.has("FULL0000001") && pg.has("VIDD0000002") && pg.has("POKO0000003"), "every container of the divisions of this database is listed");
+    assert.ok(!pg.has("ACSX0000009"), "a container of another division found in this database is not counted");
     pg.change({ id: "adm-division", value: "DEKAV" });
     assert.ok(pg.has("POKO0000003") && !pg.has("FULL0000001"), "the division filter keeps one division");
     pg.change({ id: "adm-division", value: "" });
