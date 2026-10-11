@@ -106,7 +106,7 @@ await test("same figures as the logistic administrator's Tableau de bord (568 / 
   const bills = []; for (let i = 1; i <= 221; i++) bills.push({ id: "bl" + i, numewo: "BL" + i, product: "X" });
   const P = [{ pool: "default", divisions: ["CRISTO AL", "CRISTO COMM", "CONFIDEKA", "DEKAV"], ok: true, containers: cs, bills, stock: [], slips: [], goods: [], invoices: [] }];
   const M = buildOverview(P, today());
-  const S = summarize(M, "pool:default", today());
+  const S = summarize(M, "", today());
   assert.strictEqual(S.containers, 568);
   assert.strictEqual(S.disponib, 3, "Disponib (a container taken by a driver but not entered yet would count here too)");
   assert.strictEqual(S.full, 10, "Full includes the one waiting for verification: no separate A vérifier");
@@ -124,6 +124,15 @@ await test("a database can be looked at on its own, exactly like the logistic ad
   assert.strictEqual(forDivision(M.containers, "pool:default").length, 3);
   assert.strictEqual(forDivision(M.containers, "pool:acs").length, 1);
   assert.strictEqual(summarize(M, "pool:acs", TODAY).containers, 1);
+});
+
+await test("containers with no division are never counted with a database of divisions: they stay under San divizyon", () => {
+  const c = (id, d) => ({ id, numewo: "C" + id, billId: null, division: d, dateEntered: "2026-01-01", dateVerified: "2026-01-02", dateEmpty: "2026-01-03", dateLeft: "2026-01-04" });
+  const P = [{ pool: "default", divisions: ["CRISTO AL", "CRISTO COMM", "CONFIDEKA", "DEKAV"], ok: true, containers: [c(1, "CRISTO AL"), c(2, null), c(3, null)], bills: [], stock: [], slips: [], goods: [], invoices: [] }];
+  const M = buildOverview(P, TODAY);
+  assert.strictEqual(forDivision(M.containers, "pool:default").length, 1);
+  assert.strictEqual(forDivision(M.containers, NO_DIVISION).length, 2);
+  assert.strictEqual(summarize(M, "", TODAY).containers, 3, "the total still counts everything");
 });
 
 await test("an empty or missing answer gives an empty model, not an error", () => {

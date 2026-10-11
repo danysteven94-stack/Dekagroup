@@ -159,10 +159,15 @@ function sourcesCard(M) {
     var s = summarize(M, "pool:" + p.pool);
     return `<tr class="adm-click${ A.division === "pool:" + p.pool ? " adm-on" : "" }" data-action="adm-pick-div" data-div="pool:${ esc(p.pool) }"><td>${ dbLabel(p) }</td>${ cell(s.containers) }${ cell(s.disponib) }${ cell(s.full) }${ cell(s.vid) }${ cell(s.kite) }${ cell(s.billsAktif) }${ cell(s.billsFini) }${ cell(p.dupContainers + p.dupBills + p.dupOther) }</tr>`;
   }).join("");
+  var hasNone = M.containers.concat(M.bills).some(function (x) { return !x.division; });
+  if (hasNone) {
+    var n = summarize(M, NO_DIVISION);
+    rows += `<tr class="adm-click${ A.division === NO_DIVISION ? " adm-on" : "" }" data-action="adm-pick-div" data-div="${ NO_DIVISION }"><td><span class="adm-div">San divizyon</span></td>${ cell(n.containers) }${ cell(n.disponib) }${ cell(n.full) }${ cell(n.vid) }${ cell(n.kite) }${ cell(n.billsAktif) }${ cell(n.billsFini) }${ cell(0) }</tr>`;
+  }
   var t = summarize(M, "");
   var dups = M.poolStatus.reduce(function (n, p) { return n + p.dupContainers + p.dupBills + p.dupOther; }, 0);
   var total = `<tr class="adm-total"><td><strong>Total</strong></td>${ [t.containers, t.disponib, t.full, t.vid, t.kite, t.billsAktif, t.billsFini, dups].map(function (v) { return `<td class="num"><strong>${ v }</strong></td>`; }).join("") }</tr>`;
-  return `<div class="card adm-card"><div class="h3">Pa Baz Done</div><div class="adm-table-wrap"><table class="adm-table"><thead><tr><th>Baz</th><th class="num">Total</th><th class="num">Disponib</th><th class="num">Full</th><th class="num">Vid</th><th class="num">Kite</th><th class="num">Bill aktif</th><th class="num">Bill fini</th><th class="num">Doub retire</th></tr></thead><tbody>${ rows }${ total }</tbody></table></div><div class="form-hint" style="margin-top:8px">Pa gen done doub: yon kontenè oswa yon bill ki anrejistre plizyè fwa parèt yon sèl fwa, ak dosye ki pi fyab la (yon kontenè ki deja soti pa janm rete Full). «Doub retire» di konbyen dosye ki pa konte. Anyen pa efase nan baz yo. Peze sou yon liy pou wè sèlman baz sa a.</div></div>`;
+  return `<div class="card adm-card"><div class="h3">Pa Baz Done</div><div class="adm-table-wrap"><table class="adm-table"><thead><tr><th>Baz</th><th class="num">Total</th><th class="num">Disponib</th><th class="num">Full</th><th class="num">Vid</th><th class="num">Kite</th><th class="num">Bill aktif</th><th class="num">Bill fini</th><th class="num">Doub retire</th></tr></thead><tbody>${ rows }${ total }</tbody></table></div><div class="form-hint" style="margin-top:8px">Pa gen done doub: yon kontenè oswa yon bill ki anrejistre plizyè fwa parèt yon sèl fwa, ak dosye ki pi fyab la (yon kontenè ki deja soti pa janm rete Full). «Doub retire» di konbyen dosye ki pa konte. Anyen pa efase nan baz yo. Kontenè ki pa gen divizyon pa janm konte ak yon divizyon: yo gen pwòp liy yo, «San divizyon». Peze sou yon liy pou wè sèlman liy sa a.</div></div>`;
 }
 
 function divisionDown(M, d) {

@@ -124,10 +124,11 @@ export function forDivision(list, division) {
     return list;
   }
   if (division.indexOf("pool:") === 0) {
-    // one whole database, exactly as the logistic administrator sees it (archived containers with no division included)
+    // one database: only what has a division. What has no division is never counted with a division's database;
+    // it is shown on its own under "San divizyon".
     var pool = division.slice(5);
     return list.filter(function (x) {
-      return x._pool === pool;
+      return x._pool === pool && !!x.division;
     });
   }
   if (division === NO_DIVISION) {
