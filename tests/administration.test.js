@@ -85,30 +85,27 @@ const seed = () => H.setData({
     assert.ok(Array.isArray(def.invoices));
   });
 
-  await test("figures stay real: records of another division and exact duplicates are not counted", async () => {
+  await test("figures are exactly what the admin and the depot hold: archived containers with no division are counted, nothing is dropped", async () => {
     const admin = await legacyAdmin();
     const c = (id, n, division, extra) => Object.assign({ id: id, numewo: n, billId: "b1", size: "40", division: division, dateEntered: "2026-09-01", dateVerified: "2026-09-02", depo: "D", trucking: "CFC", dateEmpty: null, dateLeft: null, dateExpected: null }, extra || {});
     await H.setData({
       containers: [
         c("c1", "AAAA0000001", "CRISTO AL"),
         c("c2", "AAAA0000002", "DEKAV"),
-        c("c3", "AAAA0000001", "CRISTO AL"), // the very same record again
-        c("c4", "ZZZZ0000001", "ACS", { billId: "bx" }), // belongs to the ACS database, not this one
-        c("c5", "AAAA0000001", "CRISTO AL", { dateEmpty: "2026-09-20" }), // same number, other trip: a real, different record
+        c("c3", "OLD00000001", null, { billId: "b2", dateLeft: "2026-05-01", dateVerified: null, depo: null, trucking: null }), // from the Achiv: already left, no division
+        c("c4", "OLD00000002", null, { billId: "b2", dateLeft: "2026-05-02", dateVerified: null, depo: null, trucking: null }),
       ],
-      bills: [{ id: "b1", numewo: "B-1", product: "Diri" }, { id: "bx", numewo: "B-ACS", product: "Pneu" }],
+      bills: [{ id: "b1", numewo: "B-1", product: "Diri" }, { id: "b2", numewo: "B-OLD", product: "Ansyen", completedAt: "2026-05-02" }],
       notifications: [], inventoryChecks: {},
     });
-    await post(admin, A().stock, { action: "create", clientId: "stockadm00002", billId: "b1", entryDate: "2026-09-03", description: "Diri", quantity: "10", unit: "sak" });
-    await post(admin, A().stock, { action: "create", clientId: "stockadm00003", billId: "bx", entryDate: "2026-09-03", description: "Pneu", quantity: "5", unit: "pyès" });
     const ad = await onboard(admin, { username: "adm.paul", role: "administration", name: "Paul" }, "198.51.100.65");
     const def = (await ad.call(A().overview)).body.pools.find((p) => p.pool === "default");
-    assert.deepStrictEqual(def.containers.map((x) => x.id).sort(), ["c1", "c2", "c5"]);
-    assert.strictEqual(def.raw, 5);
-    assert.strictEqual(def.foreign, 1);
-    assert.strictEqual(def.duplicates, 1);
-    assert.deepStrictEqual(def.bills.map((b) => b.id), ["b1"], "the bill of the foreign container goes with it");
-    assert.deepStrictEqual(def.stock.map((e) => e.description), ["Diri"], "and so does its stock");
+    const mine = (await admin.call(A().data)).body;
+    assert.strictEqual(def.containers.length, mine.containers.length, "same number of containers as the logistic admin sees");
+    assert.deepStrictEqual(def.containers.map((x) => x.id).sort(), mine.containers.map((x) => x.id).sort());
+    assert.deepStrictEqual(def.bills.map((b) => b.id).sort(), mine.bills.map((b) => b.id).sort());
+    assert.strictEqual(def.total, 4);
+    assert.strictEqual(def.noDivision, 2);
   });
 
   await test("a division whose database is not configured is reported, it does not break the others", async () => {

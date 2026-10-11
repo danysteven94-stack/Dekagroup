@@ -9,6 +9,7 @@ import {
 import { icon } from "../icons.js";
 import { state } from "../state.js";
 import {
+  NO_DIVISION,
   divisionsInData,
   forDivision,
   summarize
@@ -143,14 +144,14 @@ function poolBanner(M) {
   return `<div class="alert" style="margin-bottom:16px">${ icon("alert", 14) }<div>Done sa yo pa disponib kounye a (baz done a pa konfigire oswa li pa reponn): <strong>${ esc(names) }</strong>. Sa ki afiche a pa gen yo.</div></div>`;
 }
 
-// What was read from each database and what was left out so the totals stay real.
+// What each database holds (the same containers the logistic administrator and the depot work on).
 function sourcesCard(M) {
   var rows = M.poolStatus.map(function (p) {
-    var left = p.foreign + p.duplicates;
-    var state = !p.ok ? `<span style="color:${ COLORS.rust }">Pa disponib</span>` : left ? `<span style="color:${ COLORS.rust }">${ left } pa konte</span>` : `<span style="color:${ COLORS.green }">OK</span>`;
-    return `<tr><td>${ p.divisions.map(function (d) { return `<span class="adm-div">${ esc(d) }</span>`; }).join(" ") }</td><td class="num">${ p.ok ? p.raw : "\u2014" }</td><td class="num">${ p.ok ? p.kept : "\u2014" }</td><td class="num">${ p.ok ? p.foreign : "\u2014" }</td><td class="num">${ p.ok ? p.duplicates : "\u2014" }</td><td>${ state }</td></tr>`;
+    var state = p.ok ? `<span style="color:${ COLORS.green }">OK</span>` : `<span style="color:${ COLORS.rust }">Pa disponib</span>`;
+    return `<tr><td>${ p.divisions.map(function (d) { return `<span class="adm-div">${ esc(d) }</span>`; }).join(" ") }</td><td class="num">${ p.ok ? p.total : "\u2014" }</td><td class="num">${ p.ok ? p.left : "\u2014" }</td><td class="num">${ p.ok ? p.noDivision : "\u2014" }</td><td>${ state }</td></tr>`;
   }).join("");
-  return `<div class="card adm-card"><div class="h3">Baz Done yo</div><div class="adm-table-wrap"><table class="adm-table"><thead><tr><th>Divizyon</th><th class="num">Kontenè nan baz la</th><th class="num">Konte</th><th class="num">Lòt divizyon</th><th class="num">Doub</th><th>Eta</th></tr></thead><tbody>${ rows }</tbody></table></div><div class="form-hint" style="margin-top:8px">Yon kontenè konte yon sèl fwa, nan baz divizyon li an. Sa ki nan yon baz ki pa pou li oswa ki doub egzakteman pa konte (anyen pa efase nan baz yo).</div></div>`;
+  var tot = M.poolStatus.reduce(function (t, p) { return t + p.total; }, 0);
+  return `<div class="card adm-card"><div class="h3">Baz Done yo</div><div class="adm-table-wrap"><table class="adm-table"><thead><tr><th>Divizyon</th><th class="num">Kontenè</th><th class="num">Deja soti</th><th class="num">San divizyon</th><th>Eta</th></tr></thead><tbody>${ rows }<tr><td><strong>Total</strong></td><td class="num"><strong>${ tot }</strong></td><td></td><td></td><td></td></tr></tbody></table></div><div class="form-hint" style="margin-top:8px">Se egzakteman sa entèfas Lojistik la ak entèfas Depo a gen: anyen pa retire. Kontenè ki deja soti yo ki antre nan Achiv la pa gen divizyon, men yo konte nan total la.</div></div>`;
 }
 
 function divisionDown(M, d) {
@@ -176,12 +177,12 @@ function overviewView(M) {
 
   var divisionTable = "";
   if (!A.division) {
-    var rows = divisionsInData(M).map(function (d) {
+    var rows = divisionsInData(M).concat(M.containers.concat(M.bills).some(function (x) { return !x.division; }) ? [NO_DIVISION] : []).map(function (d) {
       var s = summarize(M, d);
-      var down = divisionDown(M, d);
-      return `<tr class="adm-click${ down ? " adm-down" : "" }" data-action="adm-pick-div" data-div="${ esc(d) }"><td><span class="adm-div">${ esc(d) }</span>${ down ? ` <span class="adm-muted">(pa disponib)</span>` : "" }</td><td class="num">${ s.containers }</td><td class="num">${ s.full + s.pokoverifye }</td><td class="num">${ s.vid }</td><td class="num">${ s.kite }</td><td class="num">${ s.billsAktif }</td><td class="num">${ s.inStock }</td><td class="num" style="color:${ s.expired ? COLORS.urgent : "inherit" }">${ s.expired }</td></tr>`;
+      var down = d === NO_DIVISION ? false : divisionDown(M, d);
+      return `<tr class="adm-click${ down ? " adm-down" : "" }" data-action="adm-pick-div" data-div="${ esc(d) }"><td>${ d === NO_DIVISION ? `<span class="adm-div">San divizyon</span> <span class="adm-muted">(achiv)</span>` : `<span class="adm-div">${ esc(d) }</span>` }${ down ? ` <span class="adm-muted">(pa disponib)</span>` : "" }</td><td class="num">${ s.containers }</td><td class="num">${ s.full + s.pokoverifye }</td><td class="num">${ s.vid }</td><td class="num">${ s.kite }</td><td class="num">${ s.billsAktif }</td><td class="num">${ s.inStock }</td><td class="num" style="color:${ s.expired ? COLORS.urgent : "inherit" }">${ s.expired }</td></tr>`;
     }).join("");
-    divisionTable = `<div class="card adm-card"><div class="h3">Pa Divizyon</div><div class="adm-table-wrap"><table class="adm-table"><thead><tr><th>Divizyon</th><th class="num">Kontenè</th><th class="num">Full</th><th class="num">Vid</th><th class="num">Kite</th><th class="num">Bill aktif</th><th class="num">Pwodwi ann estòk</th><th class="num">Ekspire</th></tr></thead><tbody>${ rows }</tbody></table></div><div class="form-hint" style="margin-top:8px">Peze sou yon divizyon pou wè sèlman li.</div></div>`;
+    divisionTable = `<div class="card adm-card"><div class="h3">Pa Divizyon</div><div class="adm-table-wrap"><table class="adm-table"><thead><tr><th>Divizyon</th><th class="num">Kontenè</th><th class="num">Full</th><th class="num">Vid</th><th class="num">Kite</th><th class="num">Bill aktif</th><th class="num">Pwodwi ann estòk</th><th class="num">Ekspire</th></tr></thead><tbody>${ rows }</tbody></table></div><div class="form-hint" style="margin-top:8px">Peze sou yon divizyon pou wè sèlman li. «San divizyon» se kontenè ki deja soti yo ki antre nan Achiv la: yo konte nan total la.</div></div>`;
   }
 
   var urgent = forDivision(M.containers, A.division).filter(isUrgent).map(function (c) {
@@ -207,9 +208,7 @@ function overviewView(M) {
     return `<div class="adm-line"><div class="adm-grow"><strong style="color:var(--navy)">Bon # ${ esc(s.slipNumber || "\u2014") }</strong><div class="adm-muted">${ divCell(s.division) } \u00B7 ${ esc(s.clientName || "\u2014") }</div></div><span class="adm-muted">${ formatDateShort(s.slipDate) }</span></div>`;
   }).join("") : `<div class="adm-muted">Poko gen fich livrezon.</div>`;
 
-  var removed = M.poolStatus.reduce(function (t, p) { return t + p.foreign + p.duplicates; }, 0);
-  var removedBanner = removed ? `<div class="alert" style="margin-bottom:16px">${ icon("alert", 14) }<div>${ removed } done pa konte paske yo pa nan bon baz la oswa yo doub. Gade «Baz Done yo» anba a.</div></div>` : "";
-  return `${ poolBanner(M) }${ removedBanner }<div class="grid-kpi">${ kpis }</div>${ divisionTable }<div class="adm-two"><div class="card adm-card"><div class="h3">Kontenè ki Ijan</div>${ urgentHtml }</div><div class="card adm-card"><div class="h3">Estòk k ap Ekspire</div>${ expiringHtml }</div></div><div class="card adm-card"><div class="h3">Dènye Fich Livrezon</div>${ slipsHtml }</div>${ sourcesCard(M) }`;
+  return `${ poolBanner(M) }<div class="grid-kpi">${ kpis }</div>${ divisionTable }<div class="adm-two"><div class="card adm-card"><div class="h3">Kontenè ki Ijan</div>${ urgentHtml }</div><div class="card adm-card"><div class="h3">Estòk k ap Ekspire</div>${ expiringHtml }</div></div><div class="card adm-card"><div class="h3">Dènye Fich Livrezon</div>${ slipsHtml }</div>${ sourcesCard(M) }`;
 }
 
 // ---- Kontenè ----
@@ -479,9 +478,10 @@ function movesView(M) {
 
 function topbar() {
   var A = state.adm;
+  var noDiv = A.model && A.model.containers.concat(A.model.bills).some(function (x) { return !x.division; });
   var divOptions = `<option value="">Tout divizyon</option>` + (A.model ? divisionsInData(A.model) : []).map(function (d) {
     return `<option value="${ esc(d) }"${ A.division === d ? " selected" : "" }>${ esc(d) }</option>`;
-  }).join("");
+  }).join("") + (noDiv ? `<option value="${ NO_DIVISION }"${ A.division === NO_DIVISION ? " selected" : "" }>San divizyon</option>` : "");
   var tab = ADMINISTRATION_TABS.find(function (t) { return t.id === A.tab; }) || ADMINISTRATION_TABS[0];
   return `<header class="topbar"><button class="hamburger-btn" data-action="toggle-nav-drawer" aria-label="Meni" style="background:rgba(11,33,56,.08);color:var(--navy);margin-right:2px">${ icon("menu", 18, "var(--navy)") }</button><div><div class="topbar-eyebrow">${ tab.label }</div><div class="topbar-title">${ ADMINISTRATION_TITLES[A.tab] }</div></div><div class="adm-top-actions"><select class="input adm-division" id="adm-division" aria-label="Divizyon">${ divOptions }</select><button class="btn ghost" data-action="adm-refresh"${ A.loading ? " disabled" : "" }>${ icon("undo", 14) } ${ A.loading ? "K ap rafrechi..." : "Rafrechi" }</button></div></header>`;
 }

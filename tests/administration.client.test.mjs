@@ -8,7 +8,7 @@ globalThis.window = { addEventListener() {} };
 globalThis.localStorage = { _v: {}, getItem(k) { return this._v[k] || null; }, setItem(k, v) { this._v[k] = v; }, removeItem(k) { delete this._v[k]; } };
 globalThis.fetch = async () => ({ ok: true, status: 200, json: async () => ({}), clone() { return this; } });
 
-const { buildOverview, forDivision, summarize, divisionsInData } = await import("../public/js/overview.js");
+const { buildOverview, forDivision, summarize, divisionsInData, NO_DIVISION } = await import("../public/js/overview.js");
 const results = [];
 const test = async (name, fn) => { try { await fn(); results.push([true, name]); } catch (e) { results.push([false, name, e]); } };
 
@@ -77,6 +77,19 @@ await test("the division list always has the whole group, in the usual order", (
   const M = buildOverview(POOLS(), TODAY);
   const d = divisionsInData(M);
   ["CRISTO AL", "DEKAV", "ACS", "MIKADO"].forEach((x) => assert.ok(d.includes(x), x));
+});
+
+await test("containers with no division (archived, already left) count in the total and have their own filter", () => {
+  const P = POOLS();
+  P[0].containers.push({ id: "old1", numewo: "OLD1", billId: "b1", division: null, dateEntered: "2026-01-01", dateLeft: "2026-02-01" });
+  P[0].containers.push({ id: "old2", numewo: "OLD2", billId: "b1", division: null, dateEntered: "2026-01-02", dateLeft: "2026-02-02" });
+  const M = buildOverview(P, TODAY);
+  assert.strictEqual(summarize(M, "", TODAY).containers, 6, "all containers are in the total");
+  assert.strictEqual(summarize(M, "", TODAY).kite, 3);
+  assert.strictEqual(forDivision(M.containers, NO_DIVISION).length, 2);
+  assert.strictEqual(summarize(M, NO_DIVISION, TODAY).containers, 2);
+  assert.strictEqual(M.poolStatus[0].noDivision, 2);
+  assert.strictEqual(M.poolStatus[0].total, 5);
 });
 
 await test("an empty or missing answer gives an empty model, not an error", () => {

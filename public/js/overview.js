@@ -44,7 +44,9 @@ export function buildOverview(pools, todayStr) {
   (pools || []).forEach(function (p) {
     m.poolStatus.push({
       pool: p.pool, divisions: p.divisions || [], ok: !!p.ok, error: p.error || "",
-      raw: p.raw || 0, kept: (p.containers || []).length, foreign: p.foreign || 0, duplicates: p.duplicates || 0
+      total: (p.containers || []).length,
+      noDivision: (p.containers || []).filter(function (c) { return !c.division; }).length,
+      left: (p.containers || []).filter(function (c) { return !!c.dateLeft; }).length
     });
     if (!p.ok) {
       return;
@@ -103,10 +105,18 @@ export function buildOverview(pools, todayStr) {
   return m;
 }
 
-// Keeps what belongs to one division ("" = every division).
+// What the picker calls "no division": containers that already left and were added from the archive have none.
+export var NO_DIVISION = "__none__";
+
+// Keeps what belongs to one division ("" = every division, NO_DIVISION = the ones without a division).
 export function forDivision(list, division) {
   if (!division) {
     return list;
+  }
+  if (division === NO_DIVISION) {
+    return list.filter(function (x) {
+      return !x.division;
+    });
   }
   return list.filter(function (x) {
     return x.division === division;
