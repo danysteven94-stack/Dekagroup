@@ -32,6 +32,9 @@ const runs = [
   ["delivery slips (Redis)", "slips.test.js", {}],
   ["delivery slips (PostgreSQL layer)", "slips.test.js", { TEST_BACKEND: "pg" }],
   ["inventory (browser logic)", "inventory.client.test.mjs", {}],
+  ["administration (Redis)", "administration.test.js", {}],
+  ["administration (PostgreSQL layer)", "administration.test.js", { TEST_BACKEND: "pg" }],
+  ["administration (browser logic)", "administration.client.test.mjs", {}],
   ["translations (French)", "i18n.test.mjs", {}],
 ];
 let bad = 0;

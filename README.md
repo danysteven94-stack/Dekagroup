@@ -9,6 +9,17 @@ Aplikasyon jesyon konteneur (Lojistik, Depo, Chofè, Daily Report).
 
 Kòmanse rapid: `npm install && npm run demo` epi louvri http://localhost:3000
 
+## Administration DEKA (vi konplè an lekti sèlman)
+
+Wòl **Administration DEKA** wè **tout sa ki nan entèfas Lojistik la ak entèfas Depo a**, pou **tout divizyon yo ansanm**: kontenè, pwodwi (bill), estòk, antre estòk, fich livrezon, machandiz retounen ak avarye, fakti.
+Administratè a kreye kont lan nan «Itilizatè» epi chwazi wòl «Administration DEKA». Pa gen divizyon pou chwazi: moun nan **wè tout divizyon yo**.
+
+- **Lekti sèlman**: pesonn pa ka chanje anyen ladan l. Wòl la pa ka ekri okenn done, ni li `/api/data`, `/api/payments` oswa jere kont yo.
+- Paj la: `public/js/views/administration.js` (+ `overview.js`, `events-administration.js`) · API: `api/_lib/overview.js` (rele via `/api/overview`, ki pataje fonksyon `api/admin.js` pou rete anba limit 12 fonksyon Vercel Hobby a).
+- Chak divizyon gen pwòp baz done li: API a li yo youn apre lòt. Si yon baz done pa konfigire oswa li pa reponn, paj la montre yon avètisman epi rès la kontinye afiche.
+- Estòk la kalkile pou kont li (menm règ ak Inventè Depo a), baz done pa baz done, paske nimewo bill yo pa inik ant de baz done.
+- Sèvè demo lokal la (`node tools/dev-server.js`) gen yon kont `administration` / `demo-administration-1234`. Li gen yon sèl baz done, kidonk lòt divizyon yo make «pa disponib».
+
 ## Logistique Deka (bill yo ak konfimasyon pèman yo)
 
 Wòl **Logistique Deka** gen **pwòp done pa l**, apa de tout lòt entèfas yo (Lojistik, Depo, Chofè, Daily Report).

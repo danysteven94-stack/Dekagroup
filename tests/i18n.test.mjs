@@ -11,7 +11,8 @@ globalThis.window = { addEventListener() {} };
 globalThis.localStorage = { _v: {}, getItem(k) { return this._v[k] || null; }, setItem(k, v) { this._v[k] = v; }, removeItem(k) { delete this._v[k]; } };
 globalThis.fetch = async () => ({ ok: true, status: 200, json: async () => ({}), clone() { return this; } });
 
-const { state } = await import("../public/js/state.js");
+const { state, freshAdm } = await import("../public/js/state.js");
+const { buildOverview } = await import("../public/js/overview.js");
 const { render } = await import("../public/js/render.js");
 const I = await import("../public/js/i18n.js");
 const A = await import("../public/js/archive.js");
@@ -68,12 +69,13 @@ const base = () => {
     { id: "n4", billNumewo: "", date: "2026-06-09", message: "Kontenè MSKU0000001 transfere nan depo Depo A (te nan Depo B) — trucking: CFC." },
   ];
   state.inventoryChecks = {};
+  state.administrationUnlocked = false; state.adm = freshAdm();
   state.logistiqueUnlocked = false; state.lgBills = []; state.paymentsLoaded = false; state.paymentsLoading = false; state.paymentsErr = ""; state.paymentsBusy = false;
   state.pay = { tab: "bills", sel: {}, amounts: {}, form: null, newForm: null, filterDivision: "", filterStatus: "", search: "" };
 };
 const T = await import("../public/js/views/tour.js");
 // the first-login tour is switched off for every screen test below (it has its own test)
-const seenAll = () => ["admin", "depot", "chofe", "daily", "pointeur", "logistique"].forEach((r) => localStorage.setItem("deka_tour_seen:" + r + ":", String(T.TOUR_VERSION)));
+const seenAll = () => ["admin", "depot", "chofe", "daily", "pointeur", "logistique", "administration"].forEach((r) => localStorage.setItem("deka_tour_seen:" + r + ":", String(T.TOUR_VERSION)));
 const show = (setup) => { base(); seenAll(); state.tour = null; state.tourFor = ""; setup(); render(); return root.innerHTML; };
 const admin = (tab, extra) => show(() => { state.authRole = "admin"; state.unlocked = true; state.tab = tab; if (extra) extra(); });
 
@@ -103,6 +105,36 @@ const LOG_PAYMENTS = () => [
   { id: "b1", division: "DEKAV", numewo: "LMM0592084", product: "Diri", amount: 1250.5, currency: "USD", checkDate: "2026-10-01", paidDate: "2026-10-02", confirmedDate: null, broker: "Brokè Pierre", reference: "CHK-001", notes: null, batchId: null, updatedBy: "x", updatedAt: "2026-10-02T10:00:00Z", createdAt: "2026-10-01T10:00:00Z" },
   { id: "b2", division: "ACS", numewo: "CHN3429599", product: "Sik", amount: 300, currency: "HTG", checkDate: "2026-09-01", paidDate: "2026-09-02", confirmedDate: "2026-09-03", broker: null, reference: null, notes: null, batchId: null, updatedBy: "x", updatedAt: "2026-09-03T10:00:00Z", createdAt: "2026-09-01T10:00:00Z" },
 ];
+
+// Administration DEKA: two databases side by side (the second one is not reachable, to show the warning)
+const ADM_POOLS = () => [
+  { pool: "default", divisions: ["CRISTO AL", "CRISTO COMM", "CONFIDEKA", "DEKAV"], ok: true,
+    containers: [
+      { id: "a1", numewo: "CSQU3054383", billId: "b1", size: "40", division: "CRISTO AL", dateEntered: "2026-09-01", dateVerified: "2026-09-02", depo: "Depo A", trucking: "CFC", chofer: "Jean", plak: "AA 1234", dateEmpty: null, dateLeft: null, dateExpected: null },
+      { id: "a2", numewo: "MSKU0000001", billId: "b1", size: "20", division: "DEKAV", dateEntered: "2026-08-01", dateVerified: "2026-08-02", depo: "Depo B", trucking: "CTSA", dateEmpty: "2026-08-10", dateLeft: null, dateExpected: null },
+      { id: "a3", numewo: "TEMU5858003", billId: "b2", size: "40", division: "CRISTO AL", dateEntered: "2026-07-01", dateVerified: "2026-07-02", depo: "Depo B", trucking: "CFC", dateEmpty: "2026-07-10", dateLeft: "2026-07-20", dateExpected: null },
+      { id: "a4", numewo: "SEGU2843404", billId: "b1", size: "20", division: "CRISTO AL", dateEntered: null, dateVerified: null, depo: null, trucking: null, dateEmpty: null, dateLeft: null, dateExpected: "2026-10-20" },
+    ],
+    bills: [{ id: "b1", numewo: "LMM0592084", product: "LAIT", completedAt: null }, { id: "b2", numewo: "CHN3429599", product: "BROSSES", completedAt: "2026-07-20" }],
+    stock: [
+      { id: "s1", billId: "b1", entryDate: "2026-09-01", description: "Lait en poudre", quantity: "1000", unit: "sak", containerNumewo: "CSQU3054383", remarks: "Bon eta", expiresOn: "2026-10-20", registeredBy: "depo.marie", createdAt: "2026-09-01T10:00:00Z" },
+      { id: "s2", billId: "b2", entryDate: "2026-07-05", description: "Brosses", quantity: "50", unit: "kolo", registeredBy: "depo.marie", createdAt: "2026-07-05T10:00:00Z" },
+    ],
+    slips: [{ id: "f1", slipNumber: "296001", division: "CRISTO AL", slipDate: "2026-10-10", clientName: "La Voma Louis", invoiceNumber: "120661C", items: [{ billId: "b1", description: "Lait en poudre", unit: "sak", quantity: "400" }, { billId: "b2", description: "Brosses", unit: "kolo", quantity: "60" }], storekeeper: "Robenson", driver: "Lucson", receivedBy: "Marc", deliveredOn: "2026-10-10", createdAt: "2026-10-10T10:00:00Z" }],
+    goods: [
+      { id: "g1", kind: "avarye", billId: "b1", entryDate: "2026-10-06", description: "Lait en poudre", quantity: "10", unit: "sak", reason: "Mouye", remarks: null, registeredBy: "depo.marie", createdAt: "2026-10-06T10:00:00Z" },
+      { id: "g2", kind: "retounen", billId: "b1", entryDate: "2026-10-07", description: "Lait en poudre", quantity: "5", unit: "sak", reason: null, remarks: "Kliyan refize", registeredBy: "depo.marie", createdAt: "2026-10-07T10:00:00Z" },
+      { id: "g3", kind: "livrezon", billId: "b1", entryDate: "2026-09-20", description: "Lait en poudre", quantity: "20", unit: "sak", reason: "Kliyan X", remarks: null, registeredBy: "depo.marie", createdAt: "2026-09-20T10:00:00Z" },
+    ],
+    invoices: [{ id: "i1", billId: "b1", invoiceNumber: "F-100", invoiceDate: "2026-10-01", dueDate: "2026-11-01", clientName: "La Voma Louis", items: [{ description: "Lait", qty: "10", unitPrice: "25.5" }], status: "anrejistre", createdAt: "2026-10-01T10:00:00Z" }],
+  },
+  { pool: "acs", divisions: ["ACS"], ok: false, error: "not_configured", containers: [], bills: [], stock: [], slips: [], goods: [], invoices: [] },
+];
+const adm = (tab, extra) => show(() => {
+  state.authRole = "administration"; state.administrationUnlocked = true; state.adm = freshAdm();
+  state.adm.model = buildOverview(ADM_POOLS(), "2026-10-10"); state.adm.loaded = true; state.adm.tab = tab;
+  if (extra) extra(state.adm);
+});
 
 const SCREENS = {
   "login": () => show(() => {}),
@@ -165,6 +197,26 @@ const SCREENS = {
   "logistique (summary)": () => show(() => { state.authRole = "logistique"; state.logistiqueUnlocked = true; state.paymentsLoaded = true; state.lgBills = LOG_PAYMENTS(); state.pay.tab = "summary"; }),
   "logistique (summary, none)": () => show(() => { state.authRole = "logistique"; state.logistiqueUnlocked = true; state.paymentsLoaded = true; state.pay.tab = "summary"; state.lgBills = []; }),
   "logistique help": () => show(() => { state.authRole = "logistique"; state.help = true; }),
+  "administration: overview": () => adm("apercu"),
+  "administration: overview (one division)": () => adm("apercu", (a) => { a.division = "CRISTO AL"; }),
+  "administration: overview (loading)": () => show(() => { state.authRole = "administration"; state.administrationUnlocked = true; state.adm = freshAdm(); state.adm.loading = true; }),
+  "administration: overview (error)": () => show(() => { state.authRole = "administration"; state.administrationUnlocked = true; state.adm = freshAdm(); state.adm.err = "Ou pa gen entènèt. Eseye ankò lè koneksyon an tounen."; }),
+  "administration: containers": () => adm("containers"),
+  "administration: containers (full)": () => adm("containers", (a) => { a.cStatus = "full"; }),
+  "administration: containers (none)": () => adm("containers", (a) => { a.search = "zzz"; }),
+  "administration: products": () => adm("products"),
+  "administration: products (none)": () => adm("products", (a) => { a.search = "zzz"; }),
+  "administration: stock": () => adm("stock"),
+  "administration: stock (expiring)": () => adm("stock", (a) => { a.invFilter = "soon"; }),
+  "administration: stock (none)": () => adm("stock", (a) => { a.search = "zzz"; }),
+  "administration: moves, stock entries": () => adm("moves", (a) => { a.moveKind = "stock"; }),
+  "administration: moves, slips": () => adm("moves", (a) => { a.moveKind = "slips"; }),
+  "administration: moves, returned": () => adm("moves", (a) => { a.moveKind = "retounen"; }),
+  "administration: moves, damaged": () => adm("moves", (a) => { a.moveKind = "avarye"; }),
+  "administration: moves, invoices": () => adm("moves", (a) => { a.moveKind = "invoices"; }),
+  "administration: moves, old deliveries": () => adm("moves", (a) => { a.moveKind = "livrezon"; }),
+  "administration: moves (none)": () => adm("moves", (a) => { a.search = "zzz"; }),
+  "administration help": () => show(() => { state.authRole = "administration"; state.help = true; }),
   "driver": () => show(() => { state.authRole = "chofe"; state.role = "chofe"; }),
   "pointeur": () => show(() => { state.authRole = "pointeur"; state.username = "poin.un"; state.sessionName = "Jean Pointeur"; }),
   "pointeur (debarquement)": () => show(() => {
@@ -233,11 +285,11 @@ await test("driver page: taken containers leave the available list; available on
 await test("driver page: empty containers are split in a 40' box and a 20' box, and \"select all\" works per box", async () => {
   I.setLang("ht");
   state.containers = [
-    { id: "v1", numewo: "VID00000401", billId: "b1", size: "40", division: "ACS", dateEntered: "2026-09-01", dateVerified: "2026-09-02", depo: "D", dateEmpty: "2026-09-10", dateLeft: null },
-    { id: "v2", numewo: "VID00000402", billId: "b1", size: "40", division: "ACS", dateEntered: "2026-09-01", dateVerified: "2026-09-02", depo: "D", dateEmpty: "2026-09-11", dateLeft: null },
-    { id: "v3", numewo: "VID00000201", billId: "b1", size: "20", division: "ACS", dateEntered: "2026-09-01", dateVerified: "2026-09-02", depo: "D", dateEmpty: "2026-09-12", dateLeft: null },
+    { id: "v1", numewo: "VID00000401", billId: "b1", size: "40", division: "ACS", dateEntered: "2026-09-01", dateVerified: "2026-09-02", depo: "D", trucking: "CFC", dateEmpty: "2026-09-10", dateLeft: null },
+    { id: "v2", numewo: "VID00000402", billId: "b1", size: "40", division: "ACS", dateEntered: "2026-09-01", dateVerified: "2026-09-02", depo: "D", trucking: "CFC", dateEmpty: "2026-09-11", dateLeft: null },
+    { id: "v3", numewo: "VID00000201", billId: "b1", size: "20", division: "ACS", dateEntered: "2026-09-01", dateVerified: "2026-09-02", depo: "D", trucking: "CFC", dateEmpty: "2026-09-12", dateLeft: null },
   ];
-  state.authRole = "chofe"; state.role = "chofe"; state.driverSelected = { v3: true };
+  state.authRole = "chofe"; state.role = "chofe"; state.driverTrucking = "CFC"; state.driverSelected = { v3: true };
   render();
   let html = root.innerHTML;
   I.setLang("fr");

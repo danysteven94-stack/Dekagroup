@@ -13,7 +13,7 @@ import {
 } from "./constants.js";
 import { pushCheck } from "./push.js";
 import { render } from "./render.js";
-import { state } from "./state.js";
+import { freshAdm, state } from "./state.js";
 import { storageRemove } from "./utils.js";
 import { loadTwoFactor } from "./views/account.js";
 import { loadTourSeen } from "./views/tour.js";
@@ -133,6 +133,8 @@ export function logout() {
   state.unlocked = false;
   state.depotUnlocked = false;
   state.logistiqueUnlocked = false;
+  state.administrationUnlocked = false;
+  state.adm = freshAdm();
   state.lgBills = [];
   state.paymentsLoaded = false;
   state.paymentsErr = "";
@@ -170,6 +172,10 @@ export function applyAuth(role, username, name, needs, personal, divisions, pool
   state.unlocked = role === "admin";
   state.depotUnlocked = role === "depot";
   state.logistiqueUnlocked = role === "logistique";
+  state.administrationUnlocked = role === "administration";
+  if (role === "administration") {
+    state.adm = freshAdm();
+  }
   if (role === "logistique") {
     state.lgBills = [];
     state.paymentsLoaded = false;

@@ -119,6 +119,7 @@ export const state = {
   paymentsErr: "",
   paymentsBusy: false,
   logistiqueUnlocked: false,
+  administrationUnlocked: false,
   pay: {
     tab: "bills",
     sel: {},
@@ -164,6 +165,13 @@ export const state = {
 export const TAB_ID = Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
 
 state.drUnlocked = false;
+
+// Administration DEKA (read-only view over every division): what the person is looking at and the data loaded.
+export function freshAdm() {
+  return { tab: "apercu", division: "", search: "", cStatus: "", invFilter: "", moveKind: "stock", limit: 200, loaded: false, loading: false, err: "", model: null, at: null };
+}
+
+state.adm = freshAdm();
 
 state.dr = {
   checks: {},

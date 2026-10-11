@@ -17,7 +17,9 @@ import "./events-account.js";
 import "./events-archive.js";
 import "./events-lang.js";
 import "./events-logistique.js";
+import "./events-administration.js";
 import { loadPayments } from "./payments.js";
+import { loadOverview } from "./overview.js";
 
 setInterval(pollData, 15000);
 
@@ -29,6 +31,15 @@ setInterval(function () {
     loadPayments(true);
   }
 }, 30000);
+
+// Administration DEKA: refresh the figures quietly every minute, unless the person is typing.
+setInterval(function () {
+  var a = document.activeElement;
+  var typing = a && (a.tagName === "INPUT" || a.tagName === "SELECT" || a.tagName === "TEXTAREA");
+  if (state.administrationUnlocked && state.adm.loaded && state.online && !typing && !state.modal) {
+    loadOverview(true);
+  }
+}, 60000);
 
 initOffline();
 applyDocumentLang();

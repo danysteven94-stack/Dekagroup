@@ -91,6 +91,11 @@ const handlers = { audit: audit, health: health, backup: backup, history: histor
 module.exports = async function handler(req, res) {
   try {
     const action = req.query && req.query.action;
+    // Administration DEKA (/api/overview) shares this function to stay within the 12-function limit of the Vercel Hobby plan.
+    // It has its own role check (administration only) and is read-only.
+    if (action === "overview") {
+      return require("./_lib/overview")(req, res);
+    }
     const fn = handlers[action];
     if (!fn) {
       res.status(404).json({ error: "Wout la pa egziste.", code: "not_found" });

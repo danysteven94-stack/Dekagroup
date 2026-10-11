@@ -28,6 +28,7 @@ const CREDS = {
   depot: { user: "depotnord", pass: process.env.DEMO_DEPOT_PASS || "demo-depot-1234" },
   daily: { user: "logisticdepot", pass: process.env.DEMO_DAILY_PASS || "demo-daily-1234" },
   chofe: { user: "chofe", pass: process.env.DEMO_CHOFE_PASS || "demo-chofe-1234" },
+  administration: { user: "administration", pass: process.env.DEMO_ADMINISTRATION_PASS || "demo-administration-1234" },
 };
 process.env.APP_SECRET = process.env.APP_SECRET || "demo-app-secret-not-for-production-0123456789";
 process.env.AUTH_ADMIN_PASS = CREDS.admin.pass;
@@ -81,6 +82,17 @@ function readBody(req) {
 }
 
 async function serveApi(req, res, url) {
+  // Same /api rewrites as vercel.json (e.g. /api/overview -> /api/admin?action=overview, /api/auth/:action -> /api/auth?action=:action).
+  for (const r of vercel.rewrites || []) {
+    const names = [];
+    const re = new RegExp("^" + r.source.replace(/:([a-zA-Z]+)/g, (m, n) => { names.push(n); return "([^/]+)"; }) + "$");
+    const m = re.exec(url.pathname);
+    if (!m) continue;
+    const dest = new URL(r.destination.replace(/:([a-zA-Z]+)/g, (x, n) => encodeURIComponent(m[names.indexOf(n) + 1] || "")), "http://localhost");
+    url.pathname = dest.pathname;
+    dest.searchParams.forEach((v, k) => url.searchParams.set(k, v));
+    break;
+  }
   const name = url.pathname.replace(/^\/api\//, "");
   if (!/^[a-z0-9/-]+$/i.test(name) || name.split("/").some((p) => p.startsWith("_"))) { res.statusCode = 404; res.end("Not found"); return; }
   const file = path.join(root, "api", name + ".js");
@@ -127,6 +139,11 @@ function selfSigned() {
 async function start(port, opts) {
   opts = opts || {};
   await require("../api/_lib/repo")._testLoad(demoData()); // creates the tables and loads the demo data
+  try {
+    const A = require("../api/_lib/auth");
+    const Users = require("../api/_lib/users");
+    await Users.create({ username: CREDS.administration.user, name: "Administration DEKA (demo)", role: "administration", passHash: await A.hashPassword(CREDS.administration.pass), mustChange: false, divisions: [], createdBy: "demo" });
+  } catch (e) { console.log("demo administration account not created:", e && e.message); }
   const handler = async (req, res) => {
     try {
       if (!opts.https) cookieShim(req, res);

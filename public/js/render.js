@@ -9,6 +9,8 @@ import { adminContent } from "./views/admin.js";
 import { dailyReportView } from "./views/daily.js";
 import { depotView } from "./views/depot.js";
 import { logistiqueView } from "./views/logistique.js";
+import { administrationView } from "./views/administration.js";
+import { loadOverview } from "./overview.js";
 import { loadPayments } from "./payments.js";
 import { driverView } from "./views/driver.js";
 import { pointeurView } from "./views/pointeur.js";
@@ -62,6 +64,11 @@ export function render() {
       if (!state.paymentsLoaded && !state.paymentsLoading && !state.paymentsErr) {
         setTimeout(loadPayments, 0);
       }
+    }
+  } else if (state.administrationUnlocked) {
+    html = administrationView();
+    if (!state.adm.loaded && !state.adm.loading && !state.adm.err) {
+      setTimeout(loadOverview, 0);
     }
   } else if (state.drUnlocked) {
     if (state.loadingData) {

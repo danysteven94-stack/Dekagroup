@@ -125,7 +125,7 @@ module.exports = async function handler(req, res) {
       // A pointeur is attached to a depot account and sees exactly what that depot account sees (same divisions).
       const owner = role === "pointeur" ? await depotOwner(body.depotOf) : null;
       const temp = Users.tempPassword();
-      const u = await Users.create({ username: target, name: name, role: role, email: email || null, plate: plate || null, trucking: trucking || null, depotOf: owner ? owner.username : null, passHash: await A.hashPassword(temp), mustChange: true, divisions: owner ? owner.divisions || [] : role === "logistique" ? [] : divisions, createdBy: session.username });
+      const u = await Users.create({ username: target, name: name, role: role, email: email || null, plate: plate || null, trucking: trucking || null, depotOf: owner ? owner.username : null, passHash: await A.hashPassword(temp), mustChange: true, divisions: owner ? owner.divisions || [] : role === "logistique" || role === "administration" ? [] : divisions, createdBy: session.username });
       await A.audit(req, "user_create", { username: target, role: role, divisions: u.divisions, trucking: trucking || null, depotOf: u.depotOf }, session);
       res.status(200).json({ ok: true, user: safe(u), tempPassword: temp });
       return;
@@ -165,8 +165,8 @@ module.exports = async function handler(req, res) {
       if (role === "admin" && !Secret.available()) throw new ApiError(503, "no_app_secret", "APP_SECRET dwe konfigire pou fè yon administratè (2FA obligatwa).");
       if (user.role === "admin" && role !== "admin" && (await wouldLockOut(user.username, user.active, role))) throw new ApiError(409, "last_admin", "Sa ta kite pa gen okenn administratè aktif.");
       const patch = { role: role };
-      if (role === "logistique") {
-        // Logistique Deka works on every division: no division is assigned to this kind of account.
+      if (role === "logistique" || role === "administration") {
+        // Logistique Deka and Administration DEKA work on every division: no division is assigned to this kind of account.
         patch.divisions = [];
       }
       if (role === "pointeur") {
@@ -236,6 +236,7 @@ module.exports = async function handler(req, res) {
     if (action === "set_divisions") {
       if (user.role === "pointeur") throw new ApiError(400, "inherited", "Divizyon yon pointeur se sa kont Depo li an gen.");
       if (user.role === "logistique") throw new ApiError(400, "all_divisions", "Kont Logistique Deka a wè tout divizyon yo otomatikman.");
+      if (user.role === "administration") throw new ApiError(400, "all_divisions", "Kont Administration DEKA a wè tout divizyon yo otomatikman.");
       const divisions = cleanDivisions(body.divisions);
       await Users.update(user.username, { divisions: divisions });
       if (user.role === "depot") {

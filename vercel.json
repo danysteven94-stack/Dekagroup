@@ -22,6 +22,10 @@
       "destination": "/api/admin?action=history"
     },
     {
+      "source": "/api/overview",
+      "destination": "/api/admin?action=overview"
+    },
+    {
       "source": "/api/payments",
       "destination": "/api/daily?action=payments"
     },

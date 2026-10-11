@@ -97,6 +97,7 @@ export function usersView() {
     "chofe",
     "daily",
     "logistique",
+    "administration",
     "admin"
   ].map(function (r) {
     return `<option value="${ r }"${ f.role === r ? " selected" : "" }>${ escapeHtml(roleLabel(r)) }</option>`;
@@ -115,6 +116,7 @@ export function usersView() {
       "chofe",
       "daily",
       "logistique",
+      "administration",
       "admin"
     ].concat(u.role === "pointeur" ? ["pointeur"] : []).map(function (r) {
       return `<option value="${ r }"${ u.role === r ? " selected" : "" }>${ escapeHtml(roleLabel(r)) }</option>`;

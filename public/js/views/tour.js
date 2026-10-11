@@ -58,6 +58,14 @@ const TOURS = {
     ["Konfime depa", "Lè w fin chwazi, peze «Konfime Depa» anba paj la. Sa make kontenè yo kòm kite."],
     ["Èd ak kont ou", "Bouton «Èd» la louvri gid sa a ankò. Bouton «Kont mwen» sèvi pou chanje modpas ou."]
   ],
+  administration: [
+    ["Byenvini nan Administration DEKA", WELCOME],
+    ["Tout divizyon yo", "Anlè a, chwazi yon divizyon pou wè sèlman li, oswa kite «Tout divizyon» pou wè yo tout ansanm. Done yo soti nan entèfas Lojistik la ak entèfas Depo a."],
+    ["Apèsi", "Kat yo montre kontenè Full, Vid ak Kite, Bill aktif, ak pwodwi ann estòk, k ap ekspire oswa ki ekspire. Peze sou yon kat pou louvri lis la."],
+    ["Kontenè ak Pwodwi", "«Kontenè» se rejis konplè a. «Pwodwi» montre bill yo ak konbyen kontenè chak bill gen."],
+    ["Estòk ak Mouvman", "«Estòk» montre sa ki rete nan depo a pou chak pwodwi. «Mouvman» montre antre estòk, fich livrezon, machandiz retounen oswa avarye, ak fakti yo."],
+    ["Lekti sèlman", "Ou ka sèlman gade ak telechaje lis yo (.csv). Pesonn pa ka chanje anyen nan entèfas sa a. Bouton «Èd» la louvri gid sa a ankò."]
+  ],
   daily: [
     ["Byenvini nan Deka Log", WELCOME],
     ["Envantè jounalye", "Se menm lis kontenè ak Lojistik (Full, Poko Verifye, Vid), men chanjman ou fè isit yo rete apa. Yo pa modifye Lojistik."],

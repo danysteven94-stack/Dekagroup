@@ -110,7 +110,7 @@ async function enroll2fa(b) {
     r = await post(driver, A().password, { current: driverTemp, next: "Jan-Chofe-Strong-9" });
     assert.strictEqual(r.statusCode, 200, JSON.stringify(r.body));
 
-    await H.setData({ containers: [{ id: "cv1", numewo: "AUTO0000001", billId: null, size: "20", division: "ACS", dateEntered: "2026-09-01", dateVerified: "2026-09-02", depo: "D", trucking: "CFC", dateEmpty: "2026-09-15", dateLeft: null }], bills: [], notifications: [], inventoryChecks: {} });
+    await H.setData({ containers: [{ id: "cv1", numewo: "AUTO0000001", billId: null, size: "20", division: "ACS", dateEntered: "2026-09-01", dateVerified: "2026-09-02", depo: "D", trucking: null, dateEmpty: "2026-09-15", dateLeft: null }], bills: [], notifications: [], inventoryChecks: {} });
     const act = H.api("act");
     const dep = await driver.call(act, { method: "POST", body: { action: "depart", ids: ["cv1"], trucking: "CTSA" } });
     assert.strictEqual(dep.statusCode, 200, JSON.stringify(dep.body));
@@ -221,7 +221,7 @@ async function enroll2fa(b) {
 
     await H.setData({ containers: [
       { id: "t1", numewo: "TRUK0000001", billId: null, size: "20", division: "DEKAV", dateEntered: null, dateVerified: null, depo: null, trucking: null, dateEmpty: null, dateLeft: null },
-      { id: "t2", numewo: "TRUK0000002", billId: null, size: "20", division: "DEKAV", dateEntered: "2026-09-01", dateVerified: "2026-09-02", depo: "D", trucking: "CFC", dateEmpty: "2026-09-15", dateLeft: null },
+      { id: "t2", numewo: "TRUK0000002", billId: null, size: "20", division: "DEKAV", dateEntered: "2026-09-01", dateVerified: "2026-09-02", depo: "D", trucking: "DKN 003", dateEmpty: "2026-09-15", dateLeft: null },
       { id: "t3", numewo: "TRUK0000003", billId: null, size: "20", division: "DEKAV", dateEntered: null, dateVerified: null, depo: null, trucking: null, dateEmpty: null, dateLeft: null },
     ], bills: [], notifications: [], inventoryChecks: {} });
     const act = H.api("act");
@@ -237,7 +237,7 @@ async function enroll2fa(b) {
     assert.strictEqual(d.containers.find((x) => x.id === "t1").trucking, "CTSA");
     assert.strictEqual(d.containers.find((x) => x.id === "t3").trucking, "MAD");
     assert.ok(d.notifications[0].message.includes("CTSA") && !d.notifications[0].message.includes("MAD"), "the departure note names the account's trucking");
-    assert.strictEqual(d.containers.find((x) => x.id === "t2").trucking, "CTSA", "a container that leaves now carries the trucking that took it (was CFC)");
+    assert.strictEqual(d.containers.find((x) => x.id === "t2").trucking, "CTSA", "a container that leaves now carries the trucking that took it (was DKN 003, same company as CTSA)");
 
     // the administrator changes it, then clears it
     let r = await post(admin, A().users, { action: "set_trucking", username: "truck.un", trucking: "mad" });

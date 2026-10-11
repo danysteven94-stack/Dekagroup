@@ -8,7 +8,7 @@ const Email = require("../email");
 const { redis } = require("../redis");
 const { ApiError } = require("../errors");
 
-const ROLE_LABEL = { admin: "Administratè Lojistik", depot: "Depo", daily: "Daily Report", chofe: "Chofè", pointeur: "Pointeur", logistique: "Logistique Deka" };
+const ROLE_LABEL = { admin: "Administratè Lojistik", depot: "Depo", daily: "Daily Report", chofe: "Chofè", pointeur: "Pointeur", logistique: "Logistique Deka", administration: "Administration DEKA" };
 
 module.exports = async function handler(req, res) {
   res.setHeader("Cache-Control", "no-store");

@@ -42,6 +42,14 @@ const GUIDES = {
     ["Defèt yon etap", "Si w mete yon dat pa erè, peze «Defèt» sou bill la pou retire dènye etap la."],
     ["Rezime", "Tab «Rezime pa Divizyon» montre konbyen bill chak divizyon peye, konfime, ak montan yo."]
   ],
+  administration: [
+    ["Apèsi", "Se premye ekran an: konbyen kontenè ki Full, Vid ak Kite, konbyen Bill aktif, ak pwodwi ki ann estòk, k ap ekspire oswa ki ekspire deja. Peze sou yon kat pou louvri lis la."],
+    ["Divizyon", "Chwazi yon divizyon anlè a pou wè sèlman li, oswa kite «Tout divizyon» pou wè yo tout ansanm. Nan Apèsi, peze sou yon liy pou wè yon divizyon."],
+    ["Kontenè ak Pwodwi", "Tab «Kontenè» montre rejis konplè a (estati, bill, trucking, chofè, dat yo). Tab «Pwodwi» montre bill yo ak kontenè chak bill."],
+    ["Estòk", "Sa ki rete nan depo a pou chak pwodwi: antre, livre, avarye, retounen, ak dat ekspirasyon. Li kalkile pou kont li."],
+    ["Mouvman", "Antre Estòk, Fich Livrezon, Machandiz Retounen ak Avarye, ak Fakti yo. Peze «Telechaje (.csv)» pou jwenn lis la nan Excel."],
+    ["Lekti sèlman", "Nan entèfas sa a ou ka sèlman gade. Pesonn pa ka chanje anyen isit la."]
+  ],
   pointeur: [
     ["Kontenè pou debake", "Ou wè kontenè Full ki nan depo ou a. Se sa ou ap debake yo."],
     ["Debarquement", "Lè w kòmanse debake yon kontenè, peze «Debarquement». Administratè Lojistik la wè sa menm lè a, ak non ou."],

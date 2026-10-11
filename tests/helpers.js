@@ -19,7 +19,7 @@ Module._load = function (request, ...rest) {
 // api/auth.js, api/admin.js and api/daily.js are single router files that dispatch on ?action=... (kept
 // that way to stay under Vercel's Hobby-plan function limit) — tests call the old, pre-consolidation
 // path names, so route those through the real file with the right action already set.
-const ADMIN_ACTIONS = { audit: "audit", health: "health", backup: "backup", history: "history" };
+const ADMIN_ACTIONS = { audit: "audit", health: "health", backup: "backup", history: "history", overview: "overview" };
 const DAILY_ACTIONS = { verify: "verify", leave: "leave", payments: "payments" };
 const GOODS_ACTIONS = { slips: "slips" };
 function withAction(modulePath, action) {

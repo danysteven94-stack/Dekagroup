@@ -20,7 +20,7 @@ process.env.AUTH_CHOFE_PASS = PW.chofe;
 
 const routes = {
   "/api/auth/login": "auth/login", "/api/auth/me": "auth/me", "/api/auth/logout": "auth/logout",
-  "/api/data": "data", "/api/audit": "audit", "/api/backup": "backup", "/api/health": "health", "/api/email": "email", "/api/act": "act", "/api/daily": "daily", "/api/verify": "verify", "/api/push": "push",
+  "/api/data": "data", "/api/audit": "audit", "/api/backup": "backup", "/api/health": "health", "/api/email": "email", "/api/act": "act", "/api/daily": "daily", "/api/verify": "verify", "/api/push": "push", "/api/overview": "overview",
 };
 const today = () => new Date().toISOString().slice(0, 10);
 const seed = () => ({
@@ -201,14 +201,15 @@ async function test(name, fn) {
     assert.ok(pg.has('id="gate-form"'), "driver gets the login form, not the data");
     assert.ok(!pg.has("VIDD0000002"));
     await pg.login("chofe", PW.chofe, "chofe");
-    assert.ok(pg.has("VIDD0000002"), "driver sees the Vid container");
+    assert.ok(!pg.has("VIDD0000002"), "no empties are listed until the driver chooses a trucking");
+    pg.change({ id: "driver-trucking-select", value: "MAD" });
+    assert.ok(pg.has("VIDD0000002"), "driver sees the Vid container of his trucking");
     assert.ok(!pg.has("FULL0000001") && !pg.has("POKO0000003"), "driver does not see other containers");
-    pg.change({ id: "driver-trucking-select", value: "CTSA" });
     pg.click({ "data-action": "driver-toggle-select", "data-id": "c2" });
     pg.click({ "data-action": "driver-confirm" }); await pg.settle();
     const d = await H.getData();
     assert.strictEqual(d.containers[1].dateLeft, today());
-    assert.ok(d.notifications.some((n) => n.message.includes("kite ak chof\u00E8 CTSA")));
+    assert.ok(d.notifications.some((n) => n.message.includes("kite ak chof\u00E8 MAD")));
     assert.ok(!pg.has("VIDD0000002") || pg.has("Pa gen konten"), "container disappears from the driver's list");
   });
 
@@ -234,6 +235,34 @@ async function test(name, fn) {
     pg.click({ "data-action": "mark-empty", "data-id": "c1" }); await pg.settle();
     assert.ok(pg.has("Sesyon an fini"), "toast shown"); assert.ok(pg.has('id="gate-form"') && !pg.has("FULL0000001"));
     assert.strictEqual((await H.getData()).containers[0].dateEmpty, null, "nothing was changed");
+  });
+
+  await test("Administration DEKA: login opens the read-only view, every tab renders, division filter and search work, nothing is written", async () => {
+    await H.setData(seed());
+    const Users = require("../api/_lib/users"); const Auth = require("../api/_lib/auth");
+    await Users.create({ username: "adm.paul", name: "Paul Administration", role: "administration", passHash: await Auth.hashPassword("Administration-Strong-Pass-9"), mustChange: false, divisions: [], createdBy: "test" });
+    const b = H.browser(); const pg = openPage(b); await pg.settle();
+    await pg.login("adm.paul", "Administration-Strong-Pass-9", "administration");
+    await pg.settle();
+    assert.ok(pg.has("Apèsi") && pg.has("Lekti sèlman"), "the Administration DEKA overview opens");
+    assert.ok(!pg.has('id="gate-form"'), "logged in");
+    assert.ok(pg.has("ACS") && pg.has("DEKAV"), "the divisions are listed");
+    pg.click({ "data-action": "adm-tab", "data-tab": "containers" });
+    assert.ok(pg.has("FULL0000001") && pg.has("VIDD0000002") && pg.has("POKO0000003"), "every container of every division is listed");
+    pg.change({ id: "adm-division", value: "DEKAV" });
+    assert.ok(pg.has("POKO0000003") && !pg.has("FULL0000001"), "the division filter keeps one division");
+    pg.change({ id: "adm-division", value: "" });
+    pg.click({ "data-action": "adm-status", "data-status": "vid" });
+    assert.ok(pg.has("VIDD0000002") && !pg.has("FULL0000001"), "the status filter works");
+    ["products", "stock", "moves", "apercu"].forEach((t) => {
+      pg.click({ "data-action": "adm-tab", "data-tab": t });
+      assert.ok(pg.has("adm-division"), "tab " + t + " renders inside the shell");
+    });
+    pg.click({ "data-action": "adm-tab", "data-tab": "stock" });
+    assert.ok(pg.has("Estòk nan Depo"));
+    const before = JSON.stringify(await H.getData());
+    pg.click({ "data-action": "adm-refresh" }); await pg.settle();
+    assert.strictEqual(JSON.stringify(await H.getData()), before, "browsing never changes the data");
   });
 
   await test("a stolen non-admin session cannot rewrite the data set from the console", async () => {
