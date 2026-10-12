@@ -90,6 +90,9 @@ document.addEventListener("click", function (event) {
   } else if (a === "adm-bstatus") {
     A.bStatus = n.getAttribute("data-bstatus") || "";
     A.limit = PAGE;
+  } else if (a === "adm-product-group") {
+    var g = n.getAttribute("data-group") || "";
+    A.prodGroup = A.prodGroup === g ? "" : g;
   } else if (a === "adm-inv-filter") {
     A.invFilter = n.getAttribute("data-filter") || "";
     A.limit = PAGE;

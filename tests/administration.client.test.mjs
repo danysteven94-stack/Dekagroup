@@ -135,6 +135,27 @@ await test("containers with no division are never counted with a database of div
   assert.strictEqual(summarize(M, "", TODAY).containers, 3, "the total still counts everything");
 });
 
+await test("products tab: Full and Poko Verifye containers grouped by product, with the count for each product", async () => {
+  const { productGroups } = await import("../public/js/views/administration.js");
+  const c = (id, d, o) => Object.assign({ id, numewo: "C" + id, billId: "b" + (d || 0), division: d, dateEntered: "2026-09-01", dateVerified: null, dateEmpty: null, dateLeft: null }, o || {});
+  const P = [{ pool: "default", divisions: ["CRISTO AL", "CRISTO COMM", "CONFIDEKA", "DEKAV"], ok: true,
+    containers: [
+      c(1, "CRISTO AL", { billId: "b1", dateVerified: "2026-09-02" }),            // Full
+      c(2, "CRISTO AL", { billId: "b2" }),                                          // Poko Verifye (same product, other capitals)
+      c(3, "DEKAV", { billId: "b3", dateVerified: "2026-09-02" }),                 // Full, other product
+      c(4, "DEKAV", { billId: "b1", dateVerified: "2026-09-02", dateEmpty: "2026-09-05" }), // Vid: not shown
+      c(5, "DEKAV", { billId: "b1", dateVerified: "2026-09-02", dateEmpty: "2026-09-05", dateLeft: "2026-09-06" }), // Kite: not shown
+      c(6, null, { billId: null, dateVerified: "2026-09-02" })                    // Full, no product
+    ],
+    bills: [{ id: "b1", numewo: "B1", product: "Diaper" }, { id: "b2", numewo: "B2", product: "DIAPER " }, { id: "b3", numewo: "B3", product: "Whiskies" }],
+    stock: [], slips: [], goods: [], invoices: [] }];
+  const M = buildOverview(P, TODAY);
+  const g = productGroups(M, "");
+  assert.deepStrictEqual(g.map((x) => [x.name, x.containers.length, x.full, x.pokoverifye]), [["Diaper", 2, 1, 1], ["Whiskies", 1, 1, 0], ["", 1, 1, 0]]);
+  const d = productGroups(M, "DEKAV");
+  assert.deepStrictEqual(d.map((x) => [x.name, x.containers.length]), [["Whiskies", 1]], "follows the chosen division");
+});
+
 await test("an empty or missing answer gives an empty model, not an error", () => {
   const M = buildOverview([], TODAY);
   assert.strictEqual(M.containers.length, 0);

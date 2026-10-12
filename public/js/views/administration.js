@@ -20,6 +20,7 @@ import {
   formatDateShort,
   formatLongDate,
   formatTime,
+  statusOf,
   truckingSearchText
 } from "../utils.js";
 import { accountButton } from "./account.js";
@@ -294,6 +295,65 @@ export function filteredBills(M) {
   });
 }
 
+// The containers that are Full or Poko Verifye (full and not emptied yet), grouped by the product of their Bill, for the chosen division.
+// Same product written with other capitals/spaces is one group; containers whose Bill has no product go last.
+export function productGroups(M, division) {
+  var groups = {};
+  var order = [];
+  forDivision(M.containers, division).forEach(function (c) {
+    var st = statusOf(c);
+    if (st !== "full" && st !== "pokoverifye") {
+      return;
+    }
+    var name = c.product ? String(c.product).trim().replace(/\s+/g, " ") : "";
+    var key = name ? name.toUpperCase() : "__none";
+    if (!groups[key]) {
+      groups[key] = { key: key, name: name, containers: [], full: 0, pokoverifye: 0 };
+      order.push(key);
+    }
+    groups[key].containers.push({ c: c, st: st });
+    groups[key][st]++;
+  });
+  return order.map(function (k) { return groups[k]; }).sort(function (a, b) {
+    if (!a.name !== !b.name) {
+      return a.name ? -1 : 1;
+    }
+    return b.containers.length - a.containers.length || a.name.localeCompare(b.name);
+  });
+}
+
+function productTiles(M) {
+  var A = state.adm;
+  var groups = productGroups(M, A.division);
+  var total = groups.reduce(function (n, g) { return n + g.containers.length; }, 0);
+  var head = `<div class="section-head"><div><div class="eyebrow">${ total } kontenè \u00B7 ${ groups.length } pwodwi</div><h2 class="h2">Kontenè pa Pwodwi</h2></div></div>`;
+  if (!groups.length) {
+    return `${ head }<div class="form-hint" style="margin-bottom:18px">Pa gen kontenè Full oswa Poko Verifye kounye a.</div>`;
+  }
+  var picked = groups.find(function (g) { return g.key === A.prodGroup; });
+  var tiles = groups.map(function (g) {
+    var sub = (g.full ? `<div class="kpi-sub">Full: <strong style="color:${ COLORS.full };font-size:15px">${ g.full }</strong></div>` : "") +
+      (g.pokoverifye ? `<div class="kpi-sub">Poko Verifye: <strong style="color:${ COLORS.pokoverifye };font-size:15px">${ g.pokoverifye }</strong></div>` : "");
+    return `<div class="kpi sel-tile${ g === picked ? " selected" : "" }" data-action="adm-product-group" data-group="${ esc(g.key) }" style="--sel:${ COLORS.navy }" role="checkbox" aria-checked="${ g === picked ? "true" : "false" }"><div class="kpi-top"><span class="kpi-label">${ esc(g.name || "San pwodwi") }</span><div class="kpi-icon" style="background:${ COLORS.navy }1A;color:${ COLORS.navy }">${ icon("boxes", 14, COLORS.navy) }</div></div><div class="kpi-value">${ g.containers.length }</div>${ sub }</div>`;
+  }).join("");
+  var hint = `<p class="size-hint">${ picked ? "Peze ankò sou pwodwi a pou kache kontenè yo." : "Peze sou yon pwodwi pou wè kontenè li yo." }</p>`;
+  var details = "";
+  if (picked) {
+    var cols = [
+      { h: "Kontenè", cls: "adm-sticky", cell: function (r) { return `<span class="plate">${ esc(r.c.numewo) }</span>`; } },
+      { h: "Gwosè", cell: function (r) { return r.c.size ? esc(r.c.size) + "'" : "\u2014"; } },
+      { h: "Bill", cell: function (r) { return esc(r.c.billNumewo || "\u2014"); } },
+      { h: "Divizyon", cell: function (r) { return divCell(r.c.division); } },
+      { h: "Estati", cell: function (r) { return r.st === "full" ? chip(STATUS_LABELS.full, COLORS.full) : chip(STATUS_LABELS.pokoverifye, COLORS.pokoverifye); } },
+      { h: "Depo", cell: function (r) { return esc(r.c.depo || "\u2014"); } },
+      { h: "Antre", cell: function (r) { return formatDateShort(r.c.dateEntered); } },
+      { h: "Jou Full", cls: "num", cell: function (r) { return daysBetween(r.c.dateEntered, r.c.dateEmpty); } }
+    ];
+    details = `<div class="section-head" style="margin-top:8px"><div><div class="eyebrow">${ picked.containers.length } kontenè</div><h2 class="h2">${ esc(picked.name || "San pwodwi") }</h2></div></div>${ table(cols, picked.containers, "Pa gen kontenè.") }`;
+  }
+  return `${ head }<div class="grid-kpi">${ tiles }</div>${ hint }${ details }`;
+}
+
 function productsView(M) {
   var A = state.adm;
   var list = filteredBills(M);
@@ -309,7 +369,7 @@ function productsView(M) {
     { h: "Liy ann estòk", cls: "num", cell: function (b) { return b.nLines; } },
     { h: "Fini le", cell: function (b) { return formatDateShort(b.completedAt); } }
   ];
-  return `${ poolBanner(M) }<div class="section-head"><div><div class="eyebrow">${ list.length } bill</div><h2 class="h2">Pwodwi ak Bill</h2></div><div class="toolbar">${ csvBtn("products") }</div></div><div class="adm-filters">${ searchBox("Chèche bill oswa pwodwi...") }<div class="chiplist">${ ["", "aktif", "planifye", "fini"].map(function (s) { return filterBtn("adm-bstatus", "data-bstatus", s, s ? BILL_LABELS[s] : "Tout", undefined, A.bStatus === s); }).join("") }</div></div>${ table(cols, list, "Pa gen bill ki koresponn.") }`;
+  return `${ poolBanner(M) }${ productTiles(M) }<div class="section-head"><div><div class="eyebrow">${ list.length } bill</div><h2 class="h2">Pwodwi ak Bill</h2></div><div class="toolbar">${ csvBtn("products") }</div></div><div class="adm-filters">${ searchBox("Chèche bill oswa pwodwi...") }<div class="chiplist">${ ["", "aktif", "planifye", "fini"].map(function (s) { return filterBtn("adm-bstatus", "data-bstatus", s, s ? BILL_LABELS[s] : "Tout", undefined, A.bStatus === s); }).join("") }</div></div>${ table(cols, list, "Pa gen bill ki koresponn.") }`;
 }
 
 // ---- Estòk ----
